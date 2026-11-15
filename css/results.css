@@ -1,0 +1,118 @@
+/* After-action report — js/results.js */
+
+/* ---------------------------------------------------------------- After-action report */
+dialog.results-dialog {
+  max-inline-size: min(96dvw, 62rem);
+  inline-size: min(96dvw, 62rem);
+  overflow: auto;
+}
+
+.results-shell {
+  gap: 1rem;
+}
+
+.results-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.results-title {
+  margin: 0.3rem 0 0;
+  font-size: clamp(1.3rem, 2.6vw, 1.9rem);
+  letter-spacing: 0.05em;
+}
+
+.results-rank-box {
+  display: grid;
+  justify-items: center;
+  gap: 0.1rem;
+  padding-block: 0.4rem;
+  padding-inline: 1.2rem;
+  border-radius: 0.7rem;
+  background: rgb(255 255 255 / 0.04);
+  border: 1px solid rgb(148 180 218 / 0.25);
+}
+
+.results-rank-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+}
+
+.results-rank {
+  font-size: 3.4rem;
+  line-height: 1;
+  font-weight: 900;
+  font-family: var(--font-mono);
+  color: #fde68a;
+  text-shadow: 0 0 18px rgb(253 230 138 / 0.55);
+}
+
+.results-rank[data-rank="S"] { color: #fde047; text-shadow: 0 0 22px rgb(250 204 21 / 0.75); }
+.results-rank[data-rank="A"] { color: #86efac; text-shadow: 0 0 18px rgb(34 197 94 / 0.6); }
+.results-rank[data-rank="B"] { color: #7dd3fc; text-shadow: 0 0 16px rgb(56 189 248 / 0.55); }
+.results-rank[data-rank="C"] { color: #cbd5e1; text-shadow: none; }
+
+.results-score {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.6rem;
+}
+
+.result-card {
+  display: grid;
+  align-content: start;
+  gap: 0.2rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 0.55rem;
+  background: rgb(255 255 255 / 0.045);
+  border: 1px solid rgb(148 180 218 / 0.18);
+  animation: result-card-in 0.42s ease both;
+  animation-delay: calc(var(--i, 0) * 80ms);
+}
+
+/* During the report's boot-up the cards wait for the frame, then deal in one by one */
+.is-booting .result-card {
+  animation-delay: calc(0.92s + var(--i, 0) * 80ms);
+}
+
+.result-card h3 {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+}
+
+.result-value {
+  margin: 0;
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+}
+
+.result-sub {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes result-card-in {
+  from { opacity: 0; transform: translateY(0.6rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .result-card { animation: none; }
+}

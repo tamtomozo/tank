@@ -9,15 +9,11 @@
   // 'tactical' = start time followed by districts & compounds (in that order)
   const STEP_IDS = ['status', 'tactical', 'squad', 'enemies', 'terrain'];
 
-  const ENEMY_INFO = {
-    light: { name: '軽戦車', role: '高速で接近してくる突撃型。装甲は薄いが数が多い。' },
-    medium: { name: '中戦車', role: '火力と装甲のバランスが取れた主力。正面からの撃ち合いに強い。' },
-    bunker: { name: 'トーチカ', role: '拠点の固定砲台。移動しないが耐久が高く、射程も長い。' }
-  };
+  const { ENEMY_INFO, ENEMY_SPECS, DISTRICT_TEMPLATES } = global.GameData; // js/data/enemies.js
+  const { el } = global.TankUtil;
 
-  const CHARS_PER_SEC = 34;
   const OPEN_DELAY_MS = 900; // pause before the briefing window starts drawing
-  const BOOT_INTRO_MS = 1450; // boot-up sequence length before Mio starts talking (matches styles.css)
+  const BOOT_INTRO_MS = 1450; // boot-up sequence length before Mio starts talking (matches css/hudframe.css)
   const OPERATION_NAME = '砂塵の鉄槌'; // name of the Area 1 operation shown in the briefing
   const GENERAL = '惑星機甲軍 司令官 ハヤセ将軍'; // author of the strategic overview (original character)
   // 両軍のパワーバランス (司令書). Temporarily hidden: set to true to show it again.
@@ -41,11 +37,11 @@
       this.btnPrev = dialog.querySelector('#briefing-prev');
       this.btnNext = dialog.querySelector('#briefing-next');
 
+      this.mio = new global.Typewriter(this.mioText, this.mioSr); // Mio's narration
+
       this.step = 0;
       this.onStart = null;
-      this._typer = null;
       this._openTimer = null;
-      this._sayTimer = null;
 
       this.tabs.forEach((tab, i) => tab.addEventListener('click', () => this.goTo(i)));
       this.btnPrev.addEventListener('click', () => this.goTo(this.step - 1));
@@ -75,7 +71,7 @@
         return;
       }
       // Hold for a moment on the empty battlefield, then run the boot-up sequence
-      // (frame draws first, then the contents) — see styles.css
+      // (frame draws first, then the contents) — see css/hudframe.css
       if (this._openTimer != null) clearTimeout(this._openTimer);
       this._openTimer = setTimeout(() => {
         this._openTimer = null;
@@ -103,8 +99,8 @@
     // Enemy = every compound's garrison template (all districts, HP scaled per district tier);
     // ours = the player's tank + living wingmen with their current upgrades.
     _powerBalance() {
-      const specs = global.CombatManager.ENEMY_SPECS;
-      const tpls = global.CombatManager.DISTRICT_TEMPLATES;
+      const specs = ENEMY_SPECS;
+      const tpls = DISTRICT_TEMPLATES;
       const unitPower = (hp, dmg, reload) => hp * (dmg / Math.max(0.1, reload));
       let enemyPower = 0;
       let enemyTanks = 0;
@@ -205,12 +201,6 @@
       const combat = this.combat;
       const world = this.world;
       const st = this._status();
-      const el = (tag, cls, text) => {
-        const e = document.createElement(tag);
-        if (cls) e.className = cls;
-        if (text !== undefined) e.textContent = text;
-        return e;
-      };
       const kv = (label, value, strong = false) => {
         const row = el('div', 'briefing-kv');
         row.append(el('span', '', label), el(strong ? 'strong' : 'span', strong ? 'is-strong' : '', value));
@@ -315,7 +305,7 @@
       dTable.replaceChildren(head, ...rows);
 
       // 3. Enemy intel: enemy types only (no per-district / per-compound counts)
-      const specs = global.CombatManager.ENEMY_SPECS;
+      const specs = ENEMY_SPECS;
       const cards = this.dialog.querySelector('#briefing-enemies');
       cards.replaceChildren(...['light', 'medium', 'bunker'].map((kind) => {
         const spec = specs[kind];
@@ -381,7 +371,7 @@
       const g = c.getContext('2d');
       g.scale(dpr, dpr);
       g.translate(size / 2, size / 2 + 2);
-      const spec = global.CombatManager.ENEMY_SPECS[kind];
+      const spec = ENEMY_SPECS[kind];
       const tank = new global.Tank2D(this.world, { ...spec, kind, hullAngle: -Math.PI / 2 });
       g.scale(1.05, 1.05);
       if (tank.isBunker) tank._drawBunkerBase(g);
@@ -483,8 +473,8 @@
         g.globalAlpha = stepId === 'terrain' ? 0.55 : 1;
         g.translate(px, py);
         g.scale(0.55, 0.55);
-        if (global.drawFortGlyph) {
-          global.drawFortGlyph(g, b.cleared ? '#22c55e' : locked ? '#64748b' : '#ef4444', 'rgba(255,255,255,0.9)', 2);
+        if (global.FortIcon) {
+          global.FortIcon.draw(g, b.cleared ? '#22c55e' : locked ? '#64748b' : '#ef4444', 'rgba(255,255,255,0.9)', 2);
         }
         g.restore();
         g.font = '700 12px system-ui, "Segoe UI", sans-serif';
@@ -546,47 +536,13 @@
     }
 
     // ------------------------------------------------------------------ Mio narration
+    // Mio narrates the current step (after `delayMs` while the window is still booting up)
     _say(text, delayMs = 0) {
-      this._stopTyping();
-      if (this.mioSr) this.mioSr.textContent = text;
-      this.mioText.textContent = '';
-      if (delayMs > 0) {
-        // Wait for the window's boot-up sequence to finish before Mio starts talking
-        this._sayTimer = setTimeout(() => {
-          this._sayTimer = null;
-          this._startTyping(text);
-        }, delayMs);
-        return;
-      }
-      this._startTyping(text);
-    }
-
-    _startTyping(text) {
-      if (this.audio && this.audio.playRadio) this.audio.playRadio();
-      // Always typed out one character at a time (regardless of OS reduced-motion settings)
-      let shown = 0;
-      this.mioText.textContent = '';
-      this.mioText.classList.add('is-typing');
-      const started = performance.now();
-      this._typer = setInterval(() => {
-        shown = Math.min(text.length, Math.floor(((performance.now() - started) / 1000) * CHARS_PER_SEC));
-        this.mioText.textContent = text.slice(0, shown);
-        if (shown >= text.length) this._stopTyping();
-      }, 30);
+      this.mio.say(text, this.audio, delayMs);
     }
 
     _stopTyping() {
-      if (this._sayTimer) {
-        clearTimeout(this._sayTimer);
-        this._sayTimer = null;
-      }
-      if (this._typer) {
-        clearInterval(this._typer);
-        this._typer = null;
-      this._openTimer = null;
-      this._sayTimer = null;
-      }
-      if (this.mioText) this.mioText.classList.remove('is-typing');
+      this.mio.stop();
     }
   }
 

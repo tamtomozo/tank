@@ -5,10 +5,10 @@
   // Overall rank, mission time, per-district times, kills, accuracy, damage, platoon losses,
   // scrap and items, plus a closing comment from Mio typed out one character at a time.
 
-  const KIND_NAMES = { light: '軽戦車', medium: '中戦車', bunker: 'トーチカ' };
-  const CHARS_PER_SEC = 34;
+  const { ENEMY_INFO } = global.GameData; // js/data/enemies.js
+  const { el } = global.TankUtil;
   const OPEN_DELAY_MS = 700; // pause after Mio's final report before the window starts drawing
-  const BOOT_INTRO_MS = 1900; // frame + contents reveal (styles.css HUD frame) before Mio comments
+  const BOOT_INTRO_MS = 1900; // frame + contents reveal (css/hudframe.css) before Mio comments
 
   const MIO_COMMENTS = {
     S: '見事な指揮でした、隊長。損害を最小限に抑えた、完璧な作戦です。',
@@ -51,9 +51,8 @@
       this.scoreEl = dialog.querySelector('#results-score');
       this.mioText = dialog.querySelector('#results-mio-text');
       this.mioSr = dialog.querySelector('#results-mio-sr');
+      this.mio = new global.Typewriter(this.mioText, this.mioSr); // Mio's closing comment
       this.onRestart = null;
-      this._typer = null;
-      this._sayTimer = null;
       this._openTimer = null;
 
       // The report is the end of the sortie: Esc must not dismiss it into a frozen game.
@@ -84,12 +83,6 @@
       this.rankEl.dataset.rank = r.rank;
       this.scoreEl.textContent = `SCORE ${r.score}`;
 
-      const el = (tag, cls, text) => {
-        const e = document.createElement(tag);
-        if (cls) e.className = cls;
-        if (text !== undefined) e.textContent = text;
-        return e;
-      };
       let cardIndex = 0;
       const card = (title, value, lines = []) => {
         const c = el('article', 'result-card');
@@ -115,7 +108,7 @@
         card('地区確保時刻（ゲーム内）', `${combat.districtsSecured} / ${combat.districts.length} 地区`, districtLines),
         card('制圧した拠点', `${capturedBases} / ${combat.bases.length}`, [`回収アイテム　${stats.itemsCollected} 個`]),
         card('撃破数', `${totalKills} 両`, [
-          `${KIND_NAMES.light} ${stats.killsByKind.light} ／ ${KIND_NAMES.medium} ${stats.killsByKind.medium} ／ ${KIND_NAMES.bunker} ${stats.killsByKind.bunker}`,
+          `${ENEMY_INFO.light.name} ${stats.killsByKind.light} ／ ${ENEMY_INFO.medium.name} ${stats.killsByKind.medium} ／ ${ENEMY_INFO.bunker.name} ${stats.killsByKind.bunker}`,
           `自機 ${stats.killsBy.player} ／ 僚機 ${stats.killsBy.ally}${stats.killsBy.other ? ` ／ その他 ${stats.killsBy.other}` : ''}`
         ]),
         card('命中率', `${accuracyPct}%`, [`命中 ${stats.shotsHit} ／ 発射 ${stats.shotsFired}`]),
@@ -132,7 +125,7 @@
         this._say(MIO_COMMENTS[r.rank], data.audio);
         return;
       }
-      // Hold a moment, then draw the HUD frame first and reveal the contents (see styles.css)
+      // Hold a moment, then draw the HUD frame first and reveal the contents (see css/hudframe.css)
       if (this._openTimer != null) clearTimeout(this._openTimer);
       this._openTimer = setTimeout(() => {
         this._openTimer = null;
@@ -143,41 +136,11 @@
     }
 
     _say(text, audio, delayMs = 0) {
-      this._stopTyping();
-      if (this.mioSr) this.mioSr.textContent = text;
-      this.mioText.textContent = '';
-      if (delayMs > 0) {
-        this._sayTimer = setTimeout(() => {
-          this._sayTimer = null;
-          this._startTyping(text, audio);
-        }, delayMs);
-        return;
-      }
-      this._startTyping(text, audio);
-    }
-
-    _startTyping(text, audio) {
-      if (audio && audio.playRadio) audio.playRadio();
-      this.mioText.classList.add('is-typing');
-      const started = performance.now();
-      // Always typed out one character at a time
-      this._typer = setInterval(() => {
-        const shown = Math.min(text.length, Math.floor(((performance.now() - started) / 1000) * CHARS_PER_SEC));
-        this.mioText.textContent = text.slice(0, shown);
-        if (shown >= text.length) this._stopTyping();
-      }, 30);
+      this.mio.say(text, audio, delayMs);
     }
 
     _stopTyping() {
-      if (this._sayTimer) {
-        clearTimeout(this._sayTimer);
-        this._sayTimer = null;
-      }
-      if (this._typer) {
-        clearInterval(this._typer);
-        this._typer = null;
-      }
-      if (this.mioText) this.mioText.classList.remove('is-typing');
+      this.mio.stop();
     }
   }
 

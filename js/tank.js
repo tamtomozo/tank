@@ -1,11 +1,7 @@
 (function (global) {
   'use strict';
 
-  function wrapAngle(a) {
-    let r = (a + Math.PI) % (Math.PI * 2);
-    if (r < 0) r += Math.PI * 2;
-    return r - Math.PI;
-  }
+  const { wrapAngle } = global.TankUtil;
 
   class Tank2D {
     constructor(world, options = {}) {

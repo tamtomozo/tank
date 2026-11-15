@@ -4,17 +4,48 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PLANET PANZER — 2D惑星戦車バトル</title>
-  <link rel="stylesheet" href="styles.css">
+  <!-- order matters (later files win on equal specificity) -->
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/overlays.css">
+  <link rel="stylesheet" href="css/radio.css">
+  <link rel="stylesheet" href="css/hud.css">
+  <link rel="stylesheet" href="css/dialogs.css">
+  <link rel="stylesheet" href="css/hudframe.css">
+  <link rel="stylesheet" href="css/briefing.css">
+  <link rel="stylesheet" href="css/results.css">
+  <link rel="stylesheet" href="css/garage.css">
+  <!-- shared helpers & data first: every later script reads them at load time -->
+  <script src="js/util.js" defer></script>
+  <script src="js/typewriter.js" defer></script>
+  <script src="js/data/enemies.js" defer></script>
+  <script src="js/data/upgrades.js" defer></script>
   <script src="js/audio.js" defer></script>
-  <script src="js/planet.js" defer></script>
+  <script src="js/planet/planet.js" defer></script>
+  <script src="js/planet/terrain.js" defer></script>
+  <script src="js/planet/ground.js" defer></script>
+  <script src="js/planet/sky.js" defer></script>
+  <script src="js/planet/night.js" defer></script>
+  <script src="js/planet/props.js" defer></script>
   <script src="js/tank.js" defer></script>
-  <script src="js/combat.js" defer></script>
+  <script src="js/combat/combat.js" defer></script>
+  <script src="js/combat/bases.js" defer></script>
+  <script src="js/combat/weapons.js" defer></script>
+  <script src="js/combat/enemyAI.js" defer></script>
+  <script src="js/combat/effects.js" defer></script>
   <script src="js/squad.js" defer></script>
   <script src="js/hudframe.js" defer></script>
   <script src="js/radio.js" defer></script>
   <script src="js/upgrades.js" defer></script>
   <script src="js/briefing.js" defer></script>
   <script src="js/results.js" defer></script>
+  <!-- the running game (js/game/) and its entry point -->
+  <script src="js/game/fortIcon.js" defer></script>
+  <script src="js/game/input.js" defer></script>
+  <script src="js/game/controls.js" defer></script>
+  <script src="js/game/mission.js" defer></script>
+  <script src="js/game/hud.js" defer></script>
+  <script src="js/game/radar.js" defer></script>
+  <script src="js/game/render.js" defer></script>
   <script src="js/main.js" defer></script>
 </head>
 <body>

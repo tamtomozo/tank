@@ -32,15 +32,7 @@
     accentColor: '#38bdf8'
   };
 
-  function wrapAngle(a) {
-    let r = (a + Math.PI) % (Math.PI * 2);
-    if (r < 0) r += Math.PI * 2;
-    return r - Math.PI;
-  }
-
-  function clamp(v, lo, hi) {
-    return Math.max(lo, Math.min(hi, v));
-  }
+  const { wrapAngle, clamp } = global.TankUtil;
 
   class SquadManager {
     constructor(world, combat) {

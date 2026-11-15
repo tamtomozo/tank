@@ -1,0 +1,492 @@
+/* Pre-operation briefing scene — js/briefing.js */
+
+/* ---------------------------------------------------------------- Briefing scene */
+dialog.briefing-dialog {
+  max-inline-size: min(96dvw, 72rem);
+  inline-size: min(96dvw, 72rem);
+  overflow: auto;
+}
+
+.briefing-shell {
+  gap: 0.9rem;
+}
+
+.briefing-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.briefing-title {
+  margin: 0.3rem 0 0;
+  font-size: clamp(1.25rem, 2.4vw, 1.7rem);
+  letter-spacing: 0.05em;
+}
+
+.briefing-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.briefing-step {
+  appearance: none;
+  font: inherit;
+  font-size: 0.82rem;
+  padding-block: 0.35rem;
+  padding-inline: 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgb(148 180 218 / 0.3);
+  background: rgb(255 255 255 / 0.04);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.briefing-step:hover {
+  color: var(--text-main);
+}
+
+.briefing-step.is-active {
+  background: rgb(56 189 248 / 0.2);
+  border-color: rgb(56 189 248 / 0.7);
+  color: #e0f2fe;
+}
+
+.briefing-main {
+  display: grid;
+  grid-template-columns: minmax(16rem, 26rem) 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .briefing-main {
+    grid-template-columns: 1fr;
+  }
+}
+
+.briefing-map-wrap {
+  display: grid;
+  gap: 0.4rem;
+}
+
+#briefing-map {
+  inline-size: 100%;
+  aspect-ratio: 1;
+  display: block;
+  border-radius: 0.5rem;
+}
+
+.briefing-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.8rem;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.briefing-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.briefing-swatch {
+  display: inline-block;
+  inline-size: 0.8rem;
+  block-size: 0.8rem;
+  border-radius: 0.2rem;
+  flex: none;
+}
+
+.briefing-swatch.is-fort { background: #ef4444; }
+.briefing-swatch.is-own { background: #38bdf8; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.briefing-swatch.is-rock { background: #8b7d6b; }
+.briefing-swatch.is-ramp { border: 2px solid #38bdf8; border-radius: 50%; }
+.briefing-swatch.is-gully { background: #2a1d12; block-size: 0.3rem; }
+.briefing-swatch.is-hardpan { background: rgb(214 190 150 / 0.6); border-radius: 50%; }
+.briefing-swatch.is-wrap { border: 2px dashed #fde68a; }
+
+.briefing-panels {
+  min-inline-size: 0;
+}
+
+.briefing-panel h3 {
+  margin: 0 0 0.6rem;
+  font-size: 1.05rem;
+  color: var(--accent-bright);
+  letter-spacing: 0.05em;
+}
+
+/* 戦略状況 = scenario: the general's morale-raising overview (pre-head / catch / deck / lead / signature) */
+.briefing-scenario {
+  display: grid;
+  gap: 0.7rem;
+  padding-block: 1rem;
+  padding-inline: 1.1rem;
+  border-radius: 0.55rem;
+  background:
+    linear-gradient(135deg, rgb(245 158 11 / 0.1), rgb(15 23 42 / 0) 55%),
+    rgb(255 255 255 / 0.03);
+  border: 1px solid rgb(245 158 11 / 0.28);
+  border-inline-start: 4px solid var(--accent-bright);
+}
+
+.scenario-prehead {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #7dd3fc;
+}
+
+.scenario-catch {
+  margin: 0;
+  font-size: clamp(1.35rem, 2.6vw, 1.85rem);
+  font-weight: 900;
+  line-height: 1.35;
+  letter-spacing: 0.03em;
+  color: #fde68a;
+  text-shadow: 0 0 18px rgb(245 158 11 / 0.35);
+}
+
+.scenario-deck {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 600;
+  line-height: 1.7;
+  color: var(--text-main);
+}
+
+.scenario-lead {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.85;
+  color: #cbd5e1;
+}
+
+.scenario-sign {
+  margin: 0.2rem 0 0;
+  justify-self: end;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent-bright);
+  letter-spacing: 0.05em;
+}
+
+/* Power balance of both armies (戦略状況) */
+.briefing-power {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.power-ratio {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: 0.04em;
+}
+
+.power-bar {
+  display: flex;
+  block-size: 1.6rem;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgb(148 180 218 / 0.35);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.power-seg {
+  display: flex;
+  align-items: center;
+  padding-inline: 0.6rem;
+  white-space: nowrap;
+  min-inline-size: 0;
+}
+
+.power-seg.is-ours {
+  background: linear-gradient(90deg, #0369a1, #38bdf8);
+  color: #f0f9ff;
+}
+
+.power-seg.is-enemy {
+  justify-content: flex-end;
+  background: linear-gradient(90deg, #b91c1c, #7f1d1d);
+  color: #fee2e2;
+}
+
+.power-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+@media (max-width: 640px) {
+  .power-cols { grid-template-columns: 1fr; }
+}
+
+.power-side {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.45rem;
+}
+
+.power-side.is-ours {
+  background: rgb(56 189 248 / 0.08);
+  border: 1px solid rgb(56 189 248 / 0.3);
+}
+
+.power-side.is-enemy {
+  background: rgb(239 68 68 / 0.08);
+  border: 1px solid rgb(239 68 68 / 0.3);
+}
+
+.power-side h5 {
+  margin: 0 0 0.15rem;
+  font-size: 0.85rem;
+}
+
+.power-side.is-ours h5 { color: #7dd3fc; }
+.power-side.is-enemy h5 { color: #fca5a5; }
+
+.power-row {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 2.6rem 1fr;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.power-row > span:first-child {
+  color: var(--text-muted);
+}
+
+.power-comment {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.8;
+  color: #e2e8f0;
+}
+
+.briefing-power .scenario-sign {
+  justify-self: end;
+}
+
+/* Sub-sections inside a briefing step (e.g. 戦術情報: start time, then districts & compounds) */
+.briefing-subhead {
+  margin: 0.9rem 0 0.45rem;
+  font-size: 0.86rem;
+  color: #7dd3fc;
+  letter-spacing: 0.05em;
+  padding-block-end: 0.2rem;
+  border-block-end: 1px solid rgb(56 189 248 / 0.25);
+}
+
+.briefing-panel h3 + .briefing-subhead {
+  margin-block-start: 0;
+}
+
+.briefing-kv-list {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.briefing-kv {
+  display: grid;
+  grid-template-columns: 9.5rem 1fr;
+  gap: 0.6rem;
+  padding-block: 0.35rem;
+  padding-inline: 0.6rem;
+  border-radius: 0.4rem;
+  background: rgb(255 255 255 / 0.04);
+  font-size: 0.88rem;
+}
+
+.briefing-kv > span:first-child {
+  color: var(--text-muted);
+}
+
+.briefing-kv .is-strong {
+  color: #fde68a;
+}
+
+.briefing-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+  margin-block: 0.4rem;
+}
+
+.briefing-table th,
+.briefing-table td {
+  text-align: start;
+  padding-block: 0.35rem;
+  padding-inline: 0.5rem;
+  border-block-end: 1px solid rgb(148 180 218 / 0.15);
+}
+
+.briefing-table th {
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.78rem;
+}
+
+.briefing-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.briefing-enemies {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.briefing-enemy {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.7rem;
+  align-items: center;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.45rem;
+  background: rgb(239 68 68 / 0.06);
+  border: 1px solid rgb(239 68 68 / 0.22);
+}
+
+.briefing-enemy-icon {
+  inline-size: 68px;
+  block-size: 68px;
+  border-radius: 0.4rem;
+  background: rgb(58 48 39 / 0.9);
+}
+
+.briefing-enemy-body h4 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.briefing-enemy-stats {
+  margin: 0.15rem 0;
+  font-size: 0.8rem;
+  color: #fca5a5;
+  font-variant-numeric: tabular-nums;
+}
+
+.briefing-enemy-role {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.briefing-terrain {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.briefing-terrain-item {
+  display: grid;
+  grid-template-columns: auto 10rem 1fr;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.4rem;
+  background: rgb(255 255 255 / 0.04);
+  font-size: 0.86rem;
+}
+
+.briefing-terrain-item > span:last-child {
+  color: var(--text-muted);
+}
+
+.briefing-time {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.briefing-time-main {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #fde68a;
+  letter-spacing: 0.06em;
+}
+
+/* 24h day/night band (matches the sky keyframes: night, dawn ~6h, day, dusk ~18h, night) */
+.briefing-daybar {
+  position: relative;
+  block-size: 1.1rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg,
+    #0b1328 0%, #0f1a33 17%, #f08c42 25%, #6aa5d4 32%, #78b4de 50%, #78aed6 68%,
+    #e86a2e 75%, #121c35 82%, #0b1328 100%);
+  border: 1px solid rgb(148 180 218 / 0.35);
+}
+
+.briefing-daybar-marker {
+  position: absolute;
+  inset-block: -0.35rem;
+  inline-size: 3px;
+  transform: translateX(-50%);
+  background: #fde68a;
+  box-shadow: 0 0 8px rgb(253 230 138 / 0.9);
+  border-radius: 2px;
+}
+
+.briefing-daybar-scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.briefing-mio {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.8rem;
+  align-items: start;
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.6rem;
+  background: rgb(9 16 28 / 0.9);
+  border: 1px solid rgb(56 189 248 / 0.45);
+  border-inline-start: 4px solid var(--accent-cyan);
+}
+
+.briefing-mio .radio-avatar {
+  inline-size: 3rem;
+  block-size: 3rem;
+}
+
+.briefing-mio .radio-header {
+  font-size: 0.82rem;
+}
+
+.briefing-mio-body {
+  display: grid;
+  gap: 0.25rem;
+  min-inline-size: 0;
+}
+
+.briefing-mio-text {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  min-block-size: 3.2em;
+}
+
+.briefing-mio-text.is-typing::after {
+  content: '▌';
+  margin-inline-start: 1px;
+  color: var(--accent-cyan);
+  animation: radio-caret 0.6s steps(1) infinite;
+}

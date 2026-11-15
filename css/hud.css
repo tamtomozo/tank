@@ -1,0 +1,352 @@
+/* HUD panels: status (top-left), HP / boost (top-centre), resources & controls (top-right), weapons (bottom) */
+
+/* HUD Panels */
+.hud-panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 0.6rem;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.4);
+  padding-inline: 0.9rem;
+  padding-block: 0.65rem;
+}
+
+.hud-top {
+  position: absolute;
+  inset-block-start: 0.85rem;
+  inset-inline: 0.85rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  pointer-events: none;
+}
+
+.hud-top > * {
+  pointer-events: auto;
+}
+
+.hud-mission {
+  min-inline-size: 12.5rem;
+  /* long district / location texts wrap instead of widening the panel (keeps the top row on one line) */
+  max-inline-size: 21rem;
+}
+
+.hud-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.2rem 0.5rem;
+  margin-block-end: 0.25rem;
+}
+
+.badge-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  padding-inline: 0.4rem;
+  padding-block: 0.1rem;
+  border-radius: 0.25rem;
+  background: rgb(56 189 248 / 0.18);
+  color: var(--accent-cyan);
+  border: 1px solid rgb(56 189 248 / 0.35);
+}
+
+.hud-sub-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.1rem 0.5rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.hud-sub-row strong {
+  color: var(--text-main);
+}
+
+.divider {
+  opacity: 0.4;
+}
+
+.hud-vital {
+  flex: 1 1 18rem;
+  max-inline-size: 26rem;
+  margin-inline-start: auto; /* sits midway between the mission panel and the top-right column */
+  display: grid;
+  gap: 0.45rem;
+}
+
+.stat-meter {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.meter-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.meter-label strong {
+  color: var(--text-main);
+}
+
+.meter-track {
+  inline-size: 100%;
+  block-size: 0.55rem;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.1);
+  overflow: clip;
+}
+
+.meter-fill {
+  inline-size: 100%;
+  block-size: 100%;
+  transform-origin: left center;
+  transition: transform 80ms linear;
+}
+
+.hp-fill {
+  transform: scaleX(var(--hp-ratio, 1));
+  background: linear-gradient(90deg, hsl(var(--hp-hue, 130) 78% 42%), hsl(var(--hp-hue, 130) 85% 55%));
+}
+
+.boost-fill {
+  transform: scaleX(var(--boost-ratio, 1));
+  background: linear-gradient(90deg, #0284c7, #38bdf8);
+}
+
+.reload-fill {
+  transform: scaleX(var(--reload-ratio, 1));
+  background: linear-gradient(90deg, #d97706, #fbbf24);
+}
+
+.sub-fill {
+  transform: scaleX(var(--sub-ratio, 0));
+  background: linear-gradient(90deg, #059669, #34d399);
+}
+
+/* Top-right column: resources/actions panel with the controls guide underneath */
+.hud-top-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.55rem;
+  margin-inline-start: auto; /* stays on the right even if the top row wraps */
+  pointer-events: none;
+}
+
+.hud-top-right > * {
+  pointer-events: auto;
+}
+
+.hud-resources {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.scrap-display {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.scrap-icon {
+  font-size: 1.45rem;
+  color: var(--accent-bright);
+  line-height: 1;
+}
+
+.scrap-label {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.scrap-value {
+  font-size: 1.15rem;
+  color: var(--accent-bright);
+}
+
+.hud-actions {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.btn-hud {
+  appearance: none;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  background: rgb(255 255 255 / 0.08);
+  color: var(--text-main);
+  padding-inline: 0.7rem;
+  padding-block: 0.42rem;
+  border-radius: 0.4rem;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: background-color 120ms ease, border-color 120ms ease, transform 80ms ease;
+}
+
+.btn-hud:hover {
+  background: rgb(255 255 255 / 0.16);
+}
+
+.btn-hud:active {
+  transform: translateY(1px);
+}
+
+.btn-hud.is-active {
+  background: rgb(56 189 248 / 0.22);
+  border-color: rgb(56 189 248 / 0.65);
+  color: #e0f2fe;
+}
+
+.btn-hud.btn-accent {
+  background: rgb(245 158 11 / 0.2);
+  border-color: rgb(245 158 11 / 0.65);
+  color: #fde68a;
+}
+
+.btn-hud.btn-accent:hover {
+  background: rgb(245 158 11 / 0.34);
+}
+
+.btn-hud.has-afford {
+  box-shadow: 0 0 12px rgb(245 158 11 / 0.55);
+  border-color: var(--accent-bright);
+}
+
+/* Garage is only usable inside a captured compound (and not in combat) */
+.btn-hud.is-locked {
+  opacity: 0.5;
+  box-shadow: none;
+  filter: grayscale(0.6);
+}
+
+/* Boss Banner */
+.boss-banner {
+  position: absolute;
+  inset-block-start: 5.5rem;
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+  inline-size: min(92vw, 28rem);
+  background: rgb(28 11 14 / 0.86);
+  border: 1px solid rgb(239 68 68 / 0.65);
+  border-radius: 0.5rem;
+  padding-inline: 0.9rem;
+  padding-block: 0.5rem;
+  pointer-events: none;
+  text-align: center;
+}
+
+.boss-title {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #fca5a5;
+  margin-block-end: 0.35rem;
+}
+
+.boss-track {
+  block-size: 0.65rem;
+}
+
+.boss-fill {
+  transform: scaleX(var(--boss-hp-ratio, 1));
+  background: linear-gradient(90deg, #b91c1c, #f97316);
+}
+
+/* Wave Banner */
+/* Bottom HUD */
+.hud-bottom {
+  position: absolute;
+  inset-block-end: 0.85rem;
+  inset-inline: 0.85rem;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  pointer-events: none;
+}
+
+.hud-bottom > * {
+  pointer-events: auto;
+}
+
+.hud-weapons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  min-inline-size: min(92vw, 24rem);
+}
+
+.weapon-slot {
+  flex: 1 1 10.5rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.weapon-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.weapon-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.weapon-key {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.weapon-status {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--accent-bright);
+}
+
+.hud-controls-hint {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 0.35rem 1rem;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.hud-radar {
+  display: grid;
+  justify-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem;
+}
+
+#radar-canvas {
+  display: block;
+  border-radius: 0.45rem;
+  border: 1px solid rgb(56 189 248 / 0.4);
+  background: linear-gradient(180deg, rgb(12 31 54 / 0.92), rgb(6 14 27 / 0.96));
+}
+
+.radar-caption {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.1em;
+  color: var(--accent-cyan);
+}
+
+@media (max-width: 960px) {
+  .hud-controls-hint {
+    display: none;
+  }
+}

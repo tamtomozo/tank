@@ -1,11 +1,11 @@
 (function (global) {
   'use strict';
 
-  // HUD window frame (styles.css `.hud-frame`): shared open/close sequences for the briefing,
+  // HUD window frame (css/hudframe.css `.hud-frame`): shared open/close sequences for the briefing,
   // the after-action report and Mio's radio panel.
   //   open : corner brackets blink in → edges draw → panel fills → contents wipe in
   //   close: contents wipe out → panel empties → edges retract → corner brackets blink out
-  const CLOSE_MS = 700; // matches the `.is-closing` timings in styles.css at --bt: 1
+  const CLOSE_MS = 700; // matches the `.is-closing` timings in css/hudframe.css at --bt: 1
 
   const restartClass = (el, add, remove) => {
     el.classList.remove(add, ...remove);

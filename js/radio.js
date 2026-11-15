@@ -6,18 +6,16 @@
   // Driven by the game loop (update(dt) only runs while the game runs), so messages never play out
   // unseen behind a modal menu; they simply resume when the menu closes.
 
-  const CHARS_PER_SEC = 34;
+  const CHARS_PER_SEC = global.Typewriter.CHARS_PER_SEC; // Mio's typing speed (typewriter.js)
   const BASE_HOLD = 2.6; // seconds a finished message stays up (+ a little per character)
   const HOLD_PER_CHAR = 0.035;
   const HOLD_WHEN_QUEUED = 1.3; // shorter hold when more reports are waiting
-  // Panel appearing from hidden: its HUD frame draws first (styles.css, --bt 0.5); typing starts after
+  // Panel appearing from hidden: its HUD frame draws first (css/hudframe.css, --bt 0.5); typing starts after
   const BOOT_TIME = 0.7;
   // Closing sequence length at the panel's --bt 0.5 (HudFrame.CLOSE_MS is for --bt 1)
   const CLOSE_TIME = 0.35;
 
-  function pick(list) {
-    return list[Math.floor(Math.random() * list.length)];
-  }
+  const { pick } = global.TankUtil;
 
   class RadioComms {
     constructor(panelEl, audio) {

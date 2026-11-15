@@ -1,0 +1,68 @@
+/* Base: colour/font tokens, reset, page & game canvas, shared bits (kbd, tabular numbers) */
+
+:root {
+  color-scheme: dark;
+  --bg-space: #070b14;
+  --panel-bg: rgb(13 20 33 / 0.78);
+  --panel-border: rgb(148 180 218 / 0.22);
+  --text-main: #edf3fb;
+  --text-muted: #98abc4;
+  --accent: #f59e0b;
+  --accent-bright: #fbbf24;
+  --accent-cyan: #38bdf8;
+  --danger: #ef4444;
+  --success: #22c55e;
+  --font-ui: "Segoe UI", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", system-ui, sans-serif;
+  --font-mono: "Cascadia Mono", "Consolas", ui-monospace, monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  inline-size: 100%;
+  block-size: 100dvb;
+  background-color: var(--bg-space);
+  color: var(--text-main);
+  font-family: var(--font-ui);
+  overflow: hidden;
+  user-select: none;
+}
+
+.game-viewport {
+  position: relative;
+  inline-size: 100%;
+  block-size: 100dvb;
+}
+
+#game-canvas {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.tabular-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+kbd {
+  display: inline-block;
+  padding-inline: 0.35rem;
+  padding-block: 0.08rem;
+  border-radius: 0.25rem;
+  border: 1px solid rgb(255 255 255 / 0.22);
+  background: rgb(255 255 255 / 0.08);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  line-height: 1.25;
+  color: var(--accent-bright);
+}

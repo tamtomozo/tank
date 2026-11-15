@@ -1,0 +1,266 @@
+/* HUD window frame: boot-up / closing sequences for the briefing, report and radio — js/hudframe.js */
+
+/* ---- HUD window frame + boot-up sequence (briefing, after-action report, Mio's radio) -------
+   Markup: a `.has-hud-frame` window holding a `.hud-frame` overlay; contents to reveal get
+   `.hud-boot` with `--boot-i` (0, 1, 2… = reveal order). Add `.is-booting` to play the sequence:
+   0.00s corner brackets blink in → 0.15s edges draw around the window → 0.55s the panel fills
+   with a scan sweep → 0.80s~ the contents wipe in one after another.
+   `--bt` scales every timing (1 = dialogs; the in-game radio uses a quicker 0.5). */
+.has-hud-frame {
+  --bt: 1;
+}
+
+dialog.has-hud-frame[open] {
+  grid-template-rows: minmax(0, 1fr); /* the shell scrolls, so the frame always hugs the window */
+}
+
+.hud-frame {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.bf-edge {
+  position: absolute;
+  background: var(--accent-cyan);
+  box-shadow: 0 0 6px rgb(56 189 248 / 0.9), 0 0 16px rgb(56 189 248 / 0.5);
+  opacity: 0.3;
+}
+
+.bf-top,
+.bf-bottom {
+  inset-inline: 0;
+  block-size: 2px;
+}
+
+.bf-left,
+.bf-right {
+  inset-block: 0;
+  inline-size: 2px;
+}
+
+.bf-top { inset-block-start: 0; transform-origin: left center; }
+.bf-bottom { inset-block-end: 0; transform-origin: right center; }
+.bf-right { inset-inline-end: 0; transform-origin: center top; }
+.bf-left { inset-inline-start: 0; transform-origin: center bottom; }
+
+.bf-corner {
+  position: absolute;
+  inline-size: 1.1rem;
+  block-size: 1.1rem;
+  border: 2px solid var(--accent-cyan);
+  filter: drop-shadow(0 0 4px rgb(56 189 248 / 0.8));
+  opacity: 0.85;
+}
+
+.bf-tl { inset-block-start: 0.45rem; inset-inline-start: 0.45rem; border-inline-end: 0; border-block-end: 0; }
+.bf-tr { inset-block-start: 0.45rem; inset-inline-end: 0.45rem; border-inline-start: 0; border-block-end: 0; }
+.bf-br { inset-block-end: 0.45rem; inset-inline-end: 0.45rem; border-inline-start: 0; border-block-start: 0; }
+.bf-bl { inset-block-end: 0.45rem; inset-inline-start: 0.45rem; border-inline-end: 0; border-block-start: 0; }
+
+.bf-scan {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 0;
+  block-size: 35%;
+  background: linear-gradient(to bottom,
+    rgb(56 189 248 / 0) 0%,
+    rgb(56 189 248 / 0.1) 80%,
+    rgb(125 211 252 / 0.55) 99%,
+    rgb(56 189 248 / 0) 100%);
+  opacity: 0;
+}
+
+.has-hud-frame.is-booting {
+  animation: bf-panel-fill calc(0.45s * var(--bt)) ease-out calc(0.55s * var(--bt)) both;
+}
+
+dialog.has-hud-frame.is-booting::backdrop {
+  animation: bf-fade-in 0.3s ease-out both;
+}
+
+.is-booting .bf-corner {
+  --cd: 0s;
+  animation:
+    bf-corner-in calc(0.32s * var(--bt)) steps(1, end) calc(var(--cd) * var(--bt)) both,
+    bf-corner-settle calc(0.25s * var(--bt)) ease-out calc((var(--cd) + 0.32s) * var(--bt)) both;
+}
+
+.is-booting .bf-tr { --cd: 0.04s; }
+.is-booting .bf-br { --cd: 0.08s; }
+.is-booting .bf-bl { --cd: 0.12s; }
+
+.is-booting .bf-top,
+.is-booting .bf-bottom {
+  animation:
+    bf-draw-x calc(0.4s * var(--bt)) cubic-bezier(0.7, 0, 0.2, 1) calc(0.15s * var(--bt)) both,
+    bf-edge-settle calc(0.6s * var(--bt)) ease-out calc(1s * var(--bt)) both;
+}
+
+.is-booting .bf-left,
+.is-booting .bf-right {
+  animation:
+    bf-draw-y calc(0.32s * var(--bt)) cubic-bezier(0.7, 0, 0.2, 1) calc(0.3s * var(--bt)) both,
+    bf-edge-settle calc(0.6s * var(--bt)) ease-out calc(1s * var(--bt)) both;
+}
+
+.is-booting .bf-scan {
+  animation: bf-scan calc(0.6s * var(--bt)) cubic-bezier(0.4, 0, 0.6, 1) calc(0.55s * var(--bt)) both;
+}
+
+.is-booting .hud-boot {
+  animation: bf-content-in calc(0.5s * var(--bt)) cubic-bezier(0.2, 0.7, 0.2, 1)
+    calc((0.8s + var(--boot-i, 0) * 0.11s) * var(--bt)) both;
+}
+
+@keyframes bf-fade-in {
+  from { opacity: 0; }
+}
+
+@keyframes bf-panel-fill {
+  from {
+    background-color: rgb(11 18 30 / 0);
+    border-color: rgb(148 180 218 / 0);
+    box-shadow: none;
+  }
+}
+
+@keyframes bf-corner-in {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  40% { opacity: 0.15; }
+  60% { opacity: 1; }
+  80% { opacity: 0.3; }
+  100% { opacity: 1; }
+}
+
+@keyframes bf-corner-settle {
+  to { opacity: 0.85; }
+}
+
+@keyframes bf-draw-x {
+  from { transform: scaleX(0); opacity: 1; }
+  to { transform: scaleX(1); opacity: 1; }
+}
+
+@keyframes bf-draw-y {
+  from { transform: scaleY(0); opacity: 1; }
+  to { transform: scaleY(1); opacity: 1; }
+}
+
+@keyframes bf-edge-settle {
+  from { opacity: 1; }
+  to { opacity: 0.3; }
+}
+
+@keyframes bf-scan {
+  0% { opacity: 1; transform: translateY(-100%); }
+  85% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(290%); }
+}
+
+@keyframes bf-content-in {
+  0% {
+    opacity: 0;
+    transform: translateY(0.4rem);
+    clip-path: inset(-1rem 100% -1rem -1rem);
+  }
+  45% { opacity: 1; }
+  60% { opacity: 0.45; }
+  75% { opacity: 1; }
+  100% {
+    opacity: 1;
+    transform: none;
+    clip-path: inset(-1rem -1rem -1rem -1rem);
+  }
+}
+
+/* Closing sequence (`.is-closing`, the boot-up in reverse; 0.7s at --bt 1 = HudFrame.CLOSE_MS):
+   0.00s contents flicker and wipe out → 0.15s scan sweeps up → 0.20s panel empties →
+   0.30s edges retract → 0.50s corner brackets blink out → 0.70s hidden. */
+.has-hud-frame.is-closing {
+  animation:
+    bf-panel-unfill calc(0.22s * var(--bt)) ease-in calc(0.2s * var(--bt)) forwards,
+    bf-hide 1ms linear calc(0.69s * var(--bt)) forwards;
+}
+
+dialog.has-hud-frame.is-closing::backdrop {
+  animation: bf-fade-out calc(0.7s * var(--bt)) ease-in forwards;
+}
+
+.is-closing .hud-boot {
+  animation: bf-content-out calc(0.24s * var(--bt)) ease-in calc(var(--boot-i, 0) * 0.025s * var(--bt)) forwards;
+}
+
+.is-closing .result-card {
+  animation: bf-content-out 0.24s ease-in calc(var(--i, 0) * 15ms) forwards;
+}
+
+.is-closing .bf-scan {
+  animation: bf-scan-up calc(0.3s * var(--bt)) cubic-bezier(0.4, 0, 0.6, 1) calc(0.15s * var(--bt)) both;
+}
+
+.is-closing .bf-top,
+.is-closing .bf-bottom {
+  animation: bf-undraw-x calc(0.25s * var(--bt)) cubic-bezier(0.7, 0, 0.2, 1) calc(0.3s * var(--bt)) both;
+}
+
+.is-closing .bf-left,
+.is-closing .bf-right {
+  animation: bf-undraw-y calc(0.2s * var(--bt)) cubic-bezier(0.7, 0, 0.2, 1) calc(0.3s * var(--bt)) both;
+}
+
+.is-closing .bf-corner {
+  animation: bf-corner-out calc(0.2s * var(--bt)) steps(1, end) calc(0.5s * var(--bt)) both;
+}
+
+@keyframes bf-fade-out {
+  to { opacity: 0; }
+}
+
+@keyframes bf-hide {
+  to { opacity: 0; }
+}
+
+@keyframes bf-panel-unfill {
+  to {
+    background-color: rgb(11 18 30 / 0);
+    border-color: rgb(148 180 218 / 0);
+    box-shadow: none;
+  }
+}
+
+@keyframes bf-content-out {
+  0% { opacity: 1; clip-path: inset(-1rem -1rem -1rem -1rem); }
+  25% { opacity: 0.35; }
+  40% { opacity: 1; }
+  100% { opacity: 0; clip-path: inset(-1rem -1rem -1rem 100%); }
+}
+
+@keyframes bf-scan-up {
+  /* flipped so the bright leading line is on top while sweeping upward */
+  0% { opacity: 0; transform: translateY(290%) scaleY(-1); }
+  15% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-100%) scaleY(-1); }
+}
+
+@keyframes bf-undraw-x {
+  from { transform: scaleX(1); opacity: 1; }
+  to { transform: scaleX(0); opacity: 1; }
+}
+
+@keyframes bf-undraw-y {
+  from { transform: scaleY(1); opacity: 1; }
+  to { transform: scaleY(0); opacity: 1; }
+}
+
+@keyframes bf-corner-out {
+  0% { opacity: 1; }
+  25% { opacity: 0.15; }
+  50% { opacity: 1; }
+  75% { opacity: 0.1; }
+  100% { opacity: 0; }
+}

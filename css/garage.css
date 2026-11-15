@@ -1,0 +1,238 @@
+/* Garage / upgrade dialog — js/upgrades.js */
+
+/* Garage Dialog */
+.dialog-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-block-end: 0.75rem;
+  border-block-end: 1px solid rgb(255 255 255 / 0.12);
+}
+
+.dialog-header h2 {
+  margin: 0.25rem 0 0;
+  font-size: 1.35rem;
+}
+
+/* Garage window: fixed width so changing values never resize it; the header (scrap on hand)
+   stays put while only the body below it scrolls. Opens/closes a bit quicker than the briefing. */
+dialog.garage-dialog {
+  --bt: 0.6;
+  inline-size: min(94dvw, 56rem);
+  overflow: hidden;
+}
+
+.garage-shell {
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  scrollbar-gutter: auto;
+}
+
+.garage-body {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+  min-block-size: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+  padding-inline-end: 0.25rem;
+}
+
+.garage-scrap-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-inline: 0.9rem;
+  padding-block: 0.45rem;
+  border-radius: 999px;
+  background: rgb(245 158 11 / 0.14);
+  border: 1px solid rgb(245 158 11 / 0.45);
+  font-size: 0.9rem;
+}
+
+.garage-scrap-pill strong {
+  font-size: 1.15rem;
+  color: var(--accent-bright);
+  min-inline-size: 4ch; /* digits dropping on a purchase must not shift the header */
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.btn-close-dialog {
+  appearance: none;
+  border: 1px solid rgb(255 255 255 / 0.24);
+  background: rgb(255 255 255 / 0.08);
+  color: var(--text-main);
+  padding-inline: 0.85rem;
+  padding-block: 0.5rem;
+  border-radius: 0.45rem;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-close-dialog:hover {
+  background: rgb(255 255 255 / 0.16);
+}
+
+.garage-stats-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  gap: 0.55rem;
+}
+
+.spec-item {
+  background: rgb(255 255 255 / 0.04);
+  border: 1px solid rgb(255 255 255 / 0.1);
+  border-radius: 0.45rem;
+  padding-inline: 0.7rem;
+  padding-block: 0.45rem;
+  display: grid;
+  gap: 0.1rem;
+}
+
+.spec-item span {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.spec-item strong {
+  font-size: 0.96rem;
+  color: var(--accent-cyan);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.upgrade-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15.5rem, 1fr));
+  gap: 0.75rem;
+}
+
+/* Section headings inside the garage grid: player tank vs platoon (wingmen) */
+.upgrade-section-title {
+  grid-column: 1 / -1;
+  margin: 0;
+  margin-block-start: 0.35rem;
+  padding-block-end: 0.3rem;
+  border-block-end: 1px solid rgb(245 158 11 / 0.35);
+  color: var(--accent-bright);
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+}
+
+.upgrade-section-title.is-squad {
+  border-block-end-color: rgb(56 189 248 / 0.4);
+  color: #7dd3fc;
+}
+
+.upgrade-card.is-squad {
+  border-color: rgb(56 189 248 / 0.28);
+  background: rgb(56 189 248 / 0.05);
+}
+
+.upgrade-section-title.is-supply {
+  border-block-end-color: rgb(34 197 94 / 0.45);
+  color: #86efac;
+}
+
+.upgrade-card.is-supply {
+  border-color: rgb(34 197 94 / 0.35);
+  background: rgb(34 197 94 / 0.07);
+}
+
+.spec-item.is-squad strong {
+  color: #7dd3fc;
+}
+
+.upgrade-card {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 0.55rem;
+  background: rgb(255 255 255 / 0.04);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 0.55rem;
+  padding: 0.85rem;
+}
+
+.upgrade-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.upgrade-card h3 {
+  margin: 0;
+  font-size: 0.98rem;
+  color: var(--text-main);
+}
+
+.upgrade-lv {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  padding-inline: 0.45rem;
+  padding-block: 0.12rem;
+  border-radius: 0.25rem;
+  background: rgb(56 189 248 / 0.15);
+  color: var(--accent-cyan);
+  white-space: nowrap;
+  /* fixed width: "Lv.1 / 5" → "MAX (Lv.5)" must not squeeze the title into a new line */
+  min-inline-size: 7.2em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.upgrade-desc {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.upgrade-pips {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.upgrade-pip {
+  flex: 1;
+  block-size: 0.3rem;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.14);
+}
+
+.upgrade-pip.is-filled {
+  background: var(--accent-bright);
+}
+
+.btn-upgrade {
+  appearance: none;
+  inline-size: 100%;
+  border: 1px solid rgb(245 158 11 / 0.55);
+  background: rgb(245 158 11 / 0.18);
+  color: #fef08a;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding-block: 0.5rem;
+  border-radius: 0.4rem;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.btn-upgrade:hover:not(:disabled) {
+  background: rgb(245 158 11 / 0.34);
+}
+
+.btn-upgrade:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  border-color: rgb(255 255 255 / 0.15);
+  background: rgb(255 255 255 / 0.05);
+  color: var(--text-muted);
+}

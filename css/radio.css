@@ -1,0 +1,175 @@
+/* HQ operator radio panel (Mio's in-game reports) — js/radio.js */
+
+/* HQ operator radio panel: all reports, bottom centre just above the weapon panel (1.5x size).
+   Width leaves room for the radar on the right so the two never overlap. */
+.radio-panel {
+  position: absolute;
+  inset-block-end: 7.2rem;
+  inset-inline-start: 50%;
+  z-index: 6;
+  inline-size: min(51rem, max(20rem, calc(100vw - 22rem)));
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1.05rem;
+  align-items: start;
+  padding-block: 0.9rem;
+  padding-inline: 1.05rem;
+  background: rgb(11 18 30 / 0.88);
+  border: 1px solid rgb(148 180 218 / 0.35);
+  border-radius: 0.85rem;
+  box-shadow: 0 10px 28px rgb(0 0 0 / 0.45);
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 0.8rem);
+  transition: opacity 0.28s ease, transform 0.28s ease;
+}
+
+.radio-panel.has-hud-frame {
+  --bt: 0.5; /* quicker boot-up than the dialogs: it pops up mid-battle */
+}
+
+.radio-panel.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* Appearing from hidden: no slide, the HUD frame draws itself instead */
+.radio-panel.is-visible.is-booting {
+  transition: none;
+}
+
+/* Shown while a district-secured report has the controls locked */
+.radio-lock {
+  display: none;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding-inline: 0.45rem;
+  border-radius: 0.3rem;
+  color: #fde68a;
+  background: rgb(245 158 11 / 0.18);
+  border: 1px solid rgb(245 158 11 / 0.55);
+  animation: radio-caret 1.2s steps(1) infinite;
+}
+
+.radio-panel.is-locked .radio-lock {
+  display: inline-block;
+  margin-inline-start: auto;
+}
+
+.radio-panel.is-locked .radio-signal {
+  margin-inline-start: 0;
+}
+
+.radio-avatar {
+  inline-size: 3.9rem;
+  block-size: 3.9rem;
+  border-radius: 50%;
+  overflow: hidden;
+  display: grid;
+  place-items: end center;
+  color: #7dd3fc;
+  background: radial-gradient(circle at 50% 35%, rgb(56 189 248 / 0.35), rgb(15 23 42 / 0.9));
+  border: 1px solid rgb(56 189 248 / 0.55);
+}
+
+.radio-avatar svg {
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.radio-body {
+  display: grid;
+  gap: 0.38rem;
+  min-inline-size: 0;
+}
+
+.radio-header {
+  display: flex;
+  align-items: center;
+  gap: 0.68rem;
+  font-size: 1.08rem;
+  color: var(--text-muted);
+}
+
+.radio-callsign {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #0b111c;
+  background: var(--accent-cyan);
+  border-radius: 0.3rem;
+  padding-inline: 0.45rem;
+}
+
+.radio-name {
+  color: #bae6fd;
+  font-weight: 600;
+}
+
+.radio-signal {
+  margin-inline-start: auto;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  block-size: 1.05rem;
+}
+
+.radio-signal i {
+  display: block;
+  inline-size: 4.5px;
+  background: var(--accent-cyan);
+  border-radius: 1.5px;
+  animation: radio-signal 0.9s ease-in-out infinite;
+}
+
+.radio-signal i:nth-child(1) { block-size: 40%; }
+.radio-signal i:nth-child(2) { block-size: 70%; animation-delay: 0.15s; }
+.radio-signal i:nth-child(3) { block-size: 100%; animation-delay: 0.3s; }
+
+@keyframes radio-signal {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.radio-text {
+  margin: 0;
+  font-size: 1.5rem;
+  line-height: 1.55;
+  color: var(--text-main);
+  min-block-size: 1.6em;
+}
+
+/* Typing caret while a message is being transmitted */
+.radio-panel.is-typing .radio-text::after {
+  content: '▌';
+  margin-inline-start: 1px;
+  color: var(--accent-cyan);
+  animation: radio-caret 0.6s steps(1) infinite;
+}
+
+@keyframes radio-caret {
+  50% { opacity: 0; }
+}
+
+/* Short viewports: shrink the radio panel a little so it stays clear of the tank at screen centre */
+@media (max-height: 560px) {
+  .radio-panel {
+    inline-size: min(40rem, max(18rem, calc(100vw - 22rem)));
+    gap: 0.75rem;
+    padding-block: 0.6rem;
+    padding-inline: 0.75rem;
+    inset-block-end: 6.6rem;
+  }
+  .radio-avatar { inline-size: 2.8rem; block-size: 2.8rem; }
+  .radio-header { font-size: 0.85rem; }
+  .radio-text { font-size: 1.1rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .radio-panel { transition: none; transform: translate(-50%, 0); }
+  .radio-signal i,
+  .radio-panel.is-typing .radio-text::after { animation: none; }
+}

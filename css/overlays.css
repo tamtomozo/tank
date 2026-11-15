@@ -1,0 +1,76 @@
+/* In-game overlays on the canvas: damage vignette, off-screen enemy / compound markers, screen-reader-only text */
+
+/* Damage vignette */
+.damage-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--damage-alpha, 0);
+  background: radial-gradient(circle at center, transparent 52%, rgb(220 38 38 / 0.68) 100%);
+  transition: opacity 140ms ease-out;
+}
+
+/* Off-screen enemy indicators */
+.target-indicators {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: clip;
+}
+
+.target-arrow {
+  position: absolute;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  transform: translate(-50%, -50%) rotate(var(--arrow-deg, 0deg));
+  display: grid;
+  place-items: center;
+  color: #f87171;
+  filter: drop-shadow(0 0 6px rgb(239 68 68 / 0.75));
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+/* Off-screen fort marker toward an enemy compound (upright SVG icon) */
+.target-arrow.is-base {
+  inline-size: 1.9rem;
+  block-size: 1.8rem;
+  color: #ef4444;
+  filter: drop-shadow(0 0 3px rgb(0 0 0 / 0.8)) drop-shadow(0 0 7px rgb(239 68 68 / 0.7));
+}
+
+.target-arrow.is-base svg {
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: visible;
+}
+
+.target-arrow.is-base.is-alerted {
+  color: #f97316;
+  animation: fort-alert-pulse 0.7s ease-in-out infinite alternate;
+}
+
+@keyframes fort-alert-pulse {
+  from { transform: translate(-50%, -50%) scale(1); }
+  to { transform: translate(-50%, -50%) scale(1.15); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .target-arrow.is-base.is-alerted { animation: none; }
+}
+
+.target-arrow.is-boss {
+  color: #fbbf24;
+  font-size: 1.35rem;
+  filter: drop-shadow(0 0 10px rgb(245 158 11 / 0.9));
+}
+
+/* Visually hidden but available to screen readers */
+.sr-only {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
