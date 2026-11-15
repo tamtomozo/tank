@@ -221,6 +221,9 @@
       this._initBackdrop();
       this._initTerrainAndProps();
       this._initEnemyBases();
+      // Destructible ground props (crates / crystals / fuel barrels) are disabled. They are still
+      // generated above so the shared RNG sequence — and thus the rest of the map layout — is unchanged.
+      this.props = [];
       this._initWastelandDetail();
       this._buildGroundSprites();
       this._buildGroundTexture();

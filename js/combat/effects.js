@@ -26,6 +26,56 @@
       }
     }
 
+    // Sand thrown up behind both caterpillar tracks of a moving tank. Emission is distance-based
+    // (faster / boosting tanks kick up more) and limited to tanks near the player to bound cost.
+    _emitTrackDust(tank, dt, player) {
+      if (!tank || !tank.alive || tank.isBunker || !tank.grounded) return;
+      const motion = Math.abs(tank.speed) + Math.abs(tank.turnRate) * 28;
+      if (motion < 18) return;
+      if (player && tank !== player) {
+        const dx = this.world.deltaX(tank.x, player.x);
+        const dy = this.world.deltaY(tank.y, player.y);
+        if (dx * dx + dy * dy > 1500 * 1500) return;
+      }
+
+      tank.dustAccum += motion * dt;
+      const spacing = tank.boosting ? 9 : 16;
+      if (tank.dustAccum < spacing) return;
+      tank.dustAccum = Math.min(tank.dustAccum - spacing, spacing);
+
+      const s = tank.scale || 1;
+      const cos = Math.cos(tank.hullAngle);
+      const sin = Math.sin(tank.hullAngle);
+      // Rear end of the tracks relative to the direction of travel (front end when reversing)
+      const fwd = tank._velX * cos + tank._velY * sin;
+      const back = (fwd >= 0 ? -1 : 1) * 22 * s;
+      const side = 16 * s;
+      const sideX = -sin * side;
+      const sideY = cos * side;
+      const strength = Math.min(1.6, Math.abs(tank.speed) / 160) + (tank.boosting ? 0.4 : 0);
+
+      for (const k of [-1, 1]) {
+        const x = tank.x + cos * back + sideX * k;
+        const y = tank.y + sin * back + sideY * k;
+        const spread = 18 + strength * 14;
+        this.particles.push({
+          dust: true,
+          x: this.world.wrapX(x + (Math.random() - 0.5) * 6 * s),
+          y: this.world.wrapY(y + (Math.random() - 0.5) * 6 * s),
+          z: 1 + Math.random() * 3,
+          // Trails behind the tank, drifting outward a little
+          vx: -tank._velX * 0.12 + sideX / side * k * 10 + (Math.random() - 0.5) * spread,
+          vy: -tank._velY * 0.12 + sideY / side * k * 10 + (Math.random() - 0.5) * spread,
+          vz: 10 + Math.random() * 14 + strength * 6,
+          life: 0.7 + Math.random() * 0.5,
+          maxLife: 1.2,
+          size: (4 + Math.random() * 3) * s,
+          grow: 1.6 + strength * 0.8,
+          color: Math.random() < 0.5 ? '#c9b38c' : '#b59d78'
+        });
+      }
+    }
+
     spawnPickup(x, y, kind, value) {
       this.pickups.push({
         kind,
@@ -46,7 +96,15 @@
         pt.x = world.wrapX(pt.x + pt.vx * dt);
         pt.y = world.wrapY(pt.y + pt.vy * dt);
         pt.z = Math.max(0, pt.z + pt.vz * dt);
-        pt.vz -= 120 * dt;
+        if (pt.dust) {
+          // Light sand hangs in the air: strong drag, slow rise, no gravity
+          const drag = Math.exp(-2.6 * dt);
+          pt.vx *= drag;
+          pt.vy *= drag;
+          pt.vz *= drag;
+        } else {
+          pt.vz -= 120 * dt;
+        }
         return true;
       });
 
@@ -221,6 +279,15 @@
         if (!p || off(p, 20)) continue;
         const t = Math.max(0, pt.life / pt.maxLife);
         ctx.fillStyle = pt.color;
+        if (pt.dust) {
+          // Billowing puff: grows as it ages and fades out (quick fade-in so it doesn't pop)
+          const age = 1 - t;
+          ctx.globalAlpha = Math.min(1, age * 8) * t * 0.42;
+          ctx.beginPath();
+          ctx.arc(p.sx, p.sy, pt.size * (1 + age * pt.grow) * p.scale, 0, Math.PI * 2);
+          ctx.fill();
+          continue;
+        }
         ctx.globalAlpha = Math.min(0.88, t * 1.15);
         ctx.beginPath();
         ctx.arc(p.sx, p.sy, pt.size * t * p.scale, 0, Math.PI * 2);

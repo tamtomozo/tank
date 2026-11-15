@@ -122,6 +122,9 @@
 
       this._updateEnemies(dt, player);
       this._updateProjectiles(dt, player);
+      this._emitTrackDust(player, dt, player);
+      for (const a of this.allies) this._emitTrackDust(a, dt, player);
+      for (const e of this.enemies) this._emitTrackDust(e, dt, player);
       this._updateParticles(dt);
       this._updatePickups(dt, player);
 

@@ -35,7 +35,11 @@
       this.rightTrackPhase = 0;
       this.treadMarkAccum = 0;
       this.dustAccum = 0;
+      this.vibPhase = Math.random() * 100; // engine vibration clock (random start so tanks don't shake in sync)
       this.recoil = 0;
+      // Turret sliding back on the hull when the main gun fires (damped spring; + = backwards)
+      this.turretKick = 0;
+      this.turretKickV = 0;
       this.muzzleFlashTimer = 0;
       this.antennaLag = 0;
 
@@ -259,9 +263,35 @@
     triggerFireEffects() {
       this.recoil = 9.5;
       this.muzzleFlashTimer = 0.085;
+      // Kick the turret backwards off its seat on the hull; bigger guns kick harder
+      this.turretKickV += Tank2D.TURRET_KICK_IMPULSE + (this.cannonLevel - 1) * 25;
+    }
+
+    // Damped spring pulling the turret back onto the hull after a shot (slight overshoot, then settles).
+    // Sub-stepped so it stays stable on long frames.
+    _stepTurretKick(dt) {
+      if (this.turretKick === 0 && this.turretKickV === 0) return;
+      const k = Tank2D.TURRET_KICK_STIFFNESS;
+      const c = Tank2D.TURRET_KICK_DAMPING;
+      const steps = Math.max(1, Math.ceil(dt * 120));
+      const h = dt / steps;
+      for (let i = 0; i < steps; i++) {
+        this.turretKickV += (-k * this.turretKick - c * this.turretKickV) * h;
+        this.turretKick += this.turretKickV * h;
+      }
+      // Don't let it slide forward past its seat by more than a hair
+      if (this.turretKick < -2) {
+        this.turretKick = -2;
+        this.turretKickV = Math.max(0, this.turretKickV);
+      }
+      if (Math.abs(this.turretKick) < 0.02 && Math.abs(this.turretKickV) < 0.5) {
+        this.turretKick = 0;
+        this.turretKickV = 0;
+      }
     }
 
     _tickTimers(dt) {
+      this.vibPhase += dt;
       if (this.reloadTimer > 0) this.reloadTimer = Math.max(0, this.reloadTimer - dt);
       if (this.subCooldown > 0) this.subCooldown = Math.max(0, this.subCooldown - dt);
       if (this.subOverheated) {
@@ -274,6 +304,7 @@
         this.subHeat = Math.max(0, this.subHeat - dt * coolRate);
       }
       if (this.recoil > 0) this.recoil = Math.max(0, this.recoil - dt * 42);
+      this._stepTurretKick(dt);
       if (this.muzzleFlashTimer > 0) this.muzzleFlashTimer = Math.max(0, this.muzzleFlashTimer - dt);
     }
 
@@ -427,14 +458,7 @@
           this.world.addTreadMark(this.x - rx, this.y - ry, this.hullAngle);
           this.world.addTreadMark(this.x + rx, this.y + ry, this.hullAngle);
         }
-
-        if (this.isPlayer && dustCb) {
-          this.dustAccum += Math.abs(this.speed) * dt;
-          if (this.dustAccum > (this.boosting ? 18 : 42)) {
-            this.dustAccum = 0;
-            dustCb(this.x - cos * 22, this.y - sin * 22, this.boosting ? 2 : 1);
-          }
-        }
+        // Sand kicked up by the tracks is emitted by CombatManager._emitTrackDust (all tanks)
       }
     }
 
@@ -491,14 +515,21 @@
       ctx.translate(bodyProj.sx, bodyProj.sy);
       ctx.scale(s, s);
 
+      const vib = this._engineVibration();
       if (this.isBunker) {
         this._drawBunkerBase(ctx);
       } else {
-        this._drawHullAndTracks(ctx, nightFactor);
+        this._drawHullAndTracks(ctx, nightFactor, vib);
       }
 
-      // 3. Rotating 2D Turret
+      // 3. Rotating 2D Turret (rides on the vibrating hull, slides back along the barrel on firing)
+      ctx.save();
+      ctx.translate(
+        vib.x - Math.cos(this.turretAngle) * this.turretKick,
+        vib.y - Math.sin(this.turretAngle) * this.turretKick
+      );
       this._drawTurret(ctx);
+      ctx.restore();
 
       ctx.restore();
 
@@ -546,7 +577,24 @@
       ctx.stroke();
     }
 
-    _drawHullAndTracks(ctx, nightFactor = 0) {
+    // Small screen-space offset (unscaled tank units) for the idling / running engine shake.
+    // Layered sines at mismatched frequencies give an irregular buzz. Only while moving (driving or
+    // turning in place); fades in over the first few units of speed so starting/stopping isn't a pop.
+    _engineVibration() {
+      if (this.isBunker) return { x: 0, y: 0 };
+      const motion = Math.abs(this.speed) + Math.abs(this.turnRate) * 28;
+      if (motion < 2) return { x: 0, y: 0 };
+      let amp = Math.min(1, motion / 40) *
+        (0.35 + Math.min(1, Math.abs(this.speed) / 200) * 0.55 + (this.boosting ? 0.5 : 0));
+      if (!this.grounded) amp *= 0.3;
+      const t = this.vibPhase;
+      return {
+        x: (Math.sin(t * 71) * 0.6 + Math.sin(t * 113 + 1.3) * 0.4) * amp,
+        y: (Math.sin(t * 83 + 0.7) * 0.6 + Math.sin(t * 127 + 2.1) * 0.4) * amp
+      };
+    }
+
+    _drawHullAndTracks(ctx, nightFactor = 0, vib = null) {
       ctx.save();
       ctx.rotate(this.hullAngle);
 
@@ -580,6 +628,13 @@
 
       drawTrack(-1, this.leftTrackPhase);
       drawTrack(1, this.rightTrackPhase);
+
+      // Everything above the tracks shakes with the engine (offset rotated into hull-local axes)
+      if (vib) {
+        const c = Math.cos(this.hullAngle);
+        const sn = Math.sin(this.hullAngle);
+        ctx.translate(vib.x * c + vib.y * sn, -vib.x * sn + vib.y * c);
+      }
 
       // Turbo boost flame jets
       if (this.boosting) {
@@ -755,6 +810,10 @@
   }
 
   Tank2D.ALERT_MARK_DURATION = 1.8; // seconds the "!" spotted mark stays up
+  // Turret recoil slide: ~6 units back at peak, ~5 Hz spring with light damping (one small overshoot)
+  Tank2D.TURRET_KICK_IMPULSE = 300; // units/s backwards when the main gun fires
+  Tank2D.TURRET_KICK_STIFFNESS = 900; // spring constant (ω ≈ 30 rad/s)
+  Tank2D.TURRET_KICK_DAMPING = 24; // damping (ζ ≈ 0.4)
   Tank2D.KNOCKBACK_DECAY = 7; // 1/s: how fast a knockback shove dies out
   Tank2D.KNOCKBACK_MAX = 420; // px/s cap so stacked blasts can't fling a tank across the map
   global.Tank2D = Tank2D;
