@@ -424,8 +424,8 @@
         }
       }
 
-      // Solid obstacle collision (wrapped delta)
-      for (const obs of this.world.obstacles) {
+      // Solid obstacle collision (wrapped delta): boulders and the HQ's tent / crates
+      for (const obs of this.world.colliders) {
         const dx = this.world.deltaX(obs.x, this.x);
         const dy = this.world.deltaY(obs.y, this.y);
         const minDist = this.radius + obs.radius;

@@ -174,11 +174,10 @@
         }
       }
 
-      // Area cleared shortly after the last district is secured
-      if (!this.missionComplete && this.districts.length > 0 && player.alive &&
-          this.districts.every((d) => d.secured)) {
-        this.missionTimer += dt;
-        if (this.missionTimer > 2.2) this.missionComplete = true;
+      // The area is secured the instant its last district is: the mission clock stops right here
+      if (!this.missionComplete && this.districts.length > 0 && this.districts.every((d) => d.secured)) {
+        this.missionComplete = true;
+        this.stats.endClock = this._clockStamp();
       }
     }
   }

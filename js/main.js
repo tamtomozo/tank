@@ -5,8 +5,9 @@
   // The pieces of the running game live in js/game/ and share the `game` object built here:
   //   input.js    keyboard / mouse / HUD buttons        controls.js  driving, aiming, firing
   //   mission.js  sortie start, radio reports, depots,   hud.js       HUD panels
-  //               after-action report / game over        radar.js     radar + off-screen markers
+  //               return to HQ, report / game over       radar.js     radar + off-screen markers
   //   render.js   draws the frame                        fortIcon.js  compound icon (also briefing)
+  //                                                      hqIcon.js    operations HQ icon
 
   function bootstrap() {
     const canvas = document.getElementById('game-canvas');
@@ -51,8 +52,8 @@
     // Placeholder tank until mission.start() builds the one for the sortie
     const player = new global.Tank2D(world, {
       isPlayer: true,
-      x: world.width * 0.5,
-      y: world.height * 0.5,
+      x: world.hq.x,
+      y: world.hq.y,
       hullAngle: -Math.PI * 0.5
     });
     player.applyPlayerUpgrades(upgrades.levels);
@@ -77,6 +78,7 @@
       activeTarget: null, // enemy / prop the turret is locked onto (null = aiming straight ahead)
       started: false,
       overShown: false, // after-action report or game-over window already shown for this sortie
+      returnedToHq: false, // area secured AND the player has driven back to the operations HQ
       input: null,
       controls: null,
       mission: null,
@@ -116,6 +118,7 @@
         combat.update(dt, player, !timeFrozen);
         mission.handleCombatEvents();
         mission.checkSupplyDepots();
+        mission.checkReturnToHq();
         radio.update(dt); // advances only while the game runs, so reports resume after menus close
 
         audio.updateEngine(

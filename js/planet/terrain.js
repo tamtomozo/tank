@@ -7,7 +7,7 @@
 
   const { AREA_SCALE, BASE_WORLD, WORLD_H, WORLD_W, scaled } = global.HorizonWorld.shared;
 
-  const SPAWN_X = WORLD_W * 0.5; // player spawn point (map centre)
+  const SPAWN_X = WORLD_W * 0.5; // player spawn point (map centre) = the operations HQ (hq.js)
   const SPAWN_Y = WORLD_H * 0.5;
 
   const BASES_PER_DISTRICT = 2;

@@ -13,6 +13,12 @@
   const HIT_KNOCKBACK_PER_DAMAGE = 3.2; // …plus this much per point of damage taken
 
   class CombatWeapons {
+    // A shot by the player for the accuracy statistic (final once the area is secured, so firing
+    // on the drive back to HQ doesn't lower the accuracy)
+    _countShot() {
+      if (!this.missionComplete) this.stats.shotsFired += 1;
+    }
+
     fireMainCannon(tank, targetX, targetY) {
       if (tank.reloadTimer > 0 || !tank.alive) return false;
       tank.reloadTimer = tank.reloadTime;
@@ -34,7 +40,7 @@
       const launch = CombatManager.computeShellLaunch(muzzle.z, rawDist, tank.shellSpeed, gScale);
 
       const friendly = tank.isPlayer || tank.isAlly;
-      if (tank.isPlayer) this.stats.shotsFired += 1;
+      if (tank.isPlayer) this._countShot();
       this.projectiles.push({
         kind: 'cannon',
         fromPlayer: friendly, // "player side": player and wingmen
@@ -88,7 +94,7 @@
         const jitter = (Math.random() - 0.5) * 0.08;
         const ang = player.turretAngle + jitter;
         const speed = 780;
-        this.stats.shotsFired += 1;
+        this._countShot();
         this.projectiles.push({
           kind: 'autocannon',
           fromPlayer: true,
@@ -114,7 +120,7 @@
         for (let i = 0; i < count; i++) {
           const spread = (i - (count - 1) * 0.5) * 0.22;
           const ang = player.turretAngle + spread;
-          this.stats.shotsFired += 1;
+          this._countShot();
           this.projectiles.push({
             kind: 'missile',
             fromPlayer: true,

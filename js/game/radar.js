@@ -2,9 +2,10 @@
   'use strict';
 
   // Local radar (bottom-right canvas) and the off-screen direction markers along the screen edge
-  // (sortied enemies, enemy compounds).
+  // (sortied enemies, enemy compounds, the operations HQ while the platoon is called home).
 
-  const { FortIcon } = global;
+  const { FortIcon, HqIcon } = global;
+  const MARKER_SVG = { fort: FortIcon.SVG, hq: HqIcon.SVG }; // upright icon markers by key
 
   function create(game) {
     const { world, combat } = game;
@@ -49,16 +50,16 @@
       };
 
       // Off-screen directional marker toward world point (x, y), using the wrapped delta from the camera
-      // glyph: text for rotating arrows; fort markers use the SVG icon and stay upright
+      // glyph: text for rotating arrows; icon markers ('fort' / 'hq') use an SVG icon and stay upright
       // (their position along the screen edge already shows the direction)
-      const placeArrow = (x, y, cls, glyph, isFort = false) => {
+      const placeArrow = (x, y, cls, glyph, icon = null) => {
         const proj = world.project(x, y, 0, drawCamX, drawCamY, viewW, viewH, true);
         const offScreen = !proj || proj.th > world.horizonTheta || proj.sx < 24 || proj.sx > viewW - 24 || proj.sy < 24 || proj.sy > viewH - 24;
         if (!offScreen) return;
         const ang = Math.atan2(world.deltaY(drawCamY, y), world.deltaX(drawCamX, x));
         const px = 50 + Math.cos(ang) * 44;
         const py = 50 + Math.sin(ang) * 42;
-        const deg = isFort ? 0 : ang * (180 / Math.PI) + 90;
+        const deg = icon ? 0 : ang * (180 / Math.PI) + 90;
         let arrow = arrowPool[arrowsUsed];
         if (!arrow) {
           arrow = document.createElement('div');
@@ -67,10 +68,10 @@
         }
         arrowsUsed++;
         if (arrow.className !== cls) arrow.className = cls;
-        const content = isFort ? 'fort' : glyph;
+        const content = icon || glyph;
         if (arrow.dataset.content !== content) {
           arrow.dataset.content = content;
-          if (isFort) arrow.innerHTML = FortIcon.SVG;
+          if (icon) arrow.innerHTML = MARKER_SVG[icon];
           else arrow.textContent = glyph;
         }
         arrow.style.display = '';
@@ -140,8 +141,25 @@
         );
         radarCtx.restore();
         if (!b.cleared) {
-          placeArrow(b.x, b.y, 'target-arrow is-base' + (b.alerted ? ' is-alerted' : ''), '', true);
+          placeArrow(b.x, b.y, 'target-arrow is-base' + (b.alerted ? ' is-alerted' : ''), '', 'fort');
         }
+      }
+
+      // Operations HQ: blue shield, pinned to the border when out of range like the compounds.
+      // Once the area is secured it is the way home: larger, plus an off-screen marker toward it.
+      {
+        const hq = world.hq;
+        const returning = combat.missionComplete && !game.returnedToHq;
+        const pos = toRadar(hq.x, hq.y);
+        const at = pos.inRange ? pos : toRadarEdge(pos.dx, pos.dy);
+        const iconScale = (pos.inRange ? 0.36 : 0.26) * (returning ? 1.3 : 1);
+        radarCtx.save();
+        radarCtx.globalAlpha = pos.inRange || returning ? 1 : 0.7;
+        radarCtx.translate(at.rx, at.ry);
+        radarCtx.scale(iconScale, iconScale);
+        HqIcon.draw(radarCtx, HqIcon.COLOR, 'rgba(255, 255, 255, 0.9)', 2.2);
+        radarCtx.restore();
+        if (returning) placeArrow(hq.x, hq.y, 'target-arrow is-base is-hq', '', 'hq');
       }
 
       // Wingmen within range as green dots

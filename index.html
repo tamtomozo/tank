@@ -26,6 +26,7 @@
   <script src="js/planet/sky.js" defer></script>
   <script src="js/planet/night.js" defer></script>
   <script src="js/planet/props.js" defer></script>
+  <script src="js/planet/hq.js" defer></script>
   <script src="js/tank.js" defer></script>
   <script src="js/combat/combat.js" defer></script>
   <script src="js/combat/bases.js" defer></script>
@@ -40,6 +41,7 @@
   <script src="js/results.js" defer></script>
   <!-- the running game (js/game/) and its entry point -->
   <script src="js/game/fortIcon.js" defer></script>
+  <script src="js/game/hqIcon.js" defer></script>
   <script src="js/game/input.js" defer></script>
   <script src="js/game/controls.js" defer></script>
   <script src="js/game/mission.js" defer></script>
@@ -273,8 +275,8 @@
     <div class="dialog-shell briefing-shell">
       <header class="briefing-header hud-boot" style="--boot-i: 0">
         <div>
-          <div class="dialog-badge">OPERATION BRIEFING</div>
-          <h2 id="briefing-title" class="briefing-title">作戦ブリーフィング — エリア1</h2>
+          <div class="dialog-badge">OPERATIONS HQ — BRIEFING</div>
+          <h2 id="briefing-title" class="briefing-title">作戦本部 ブリーフィング — エリア1</h2>
         </div>
         <nav class="briefing-steps" aria-label="ブリーフィング項目">
           <button type="button" class="briefing-step" aria-selected="true">① 司令書</button>
@@ -290,6 +292,7 @@
           <canvas id="briefing-map" aria-label="作戦区域マップ（地区・拠点・地形）"></canvas>
           <div class="briefing-legend" aria-hidden="true">
             <span><i class="briefing-swatch is-fort"></i>敵拠点</span>
+            <span><i class="briefing-swatch is-hq"></i>作戦本部</span>
             <span><i class="briefing-swatch is-own"></i>自軍小隊</span>
             <span><i class="briefing-swatch is-rock"></i>岩</span>
             <span><i class="briefing-swatch is-ramp"></i>ジャンプ台</span>
@@ -313,6 +316,7 @@
             <h4 class="briefing-subhead">地区と拠点の配置</h4>
             <table id="briefing-districts" class="briefing-table"></table>
             <p class="briefing-note">地区内の拠点をすべて制圧すると、その地区を確保。確保した地区の拠点では補給と部隊強化ができる。</p>
+            <p class="briefing-note">作戦本部（マップ中央）から出撃。全地区を制圧した瞬間に作戦時間が確定し、作戦本部の円内まで自走で帰還すると作戦終了。</p>
           </section>
           <section class="briefing-panel" hidden>
             <h3>小隊状況</h3>

@@ -294,7 +294,7 @@
       const w = this.world;
       let ax = 0;
       let ay = 0;
-      for (const obs of w.obstacles) {
+      for (const obs of w.colliders) {
         const ox = w.deltaX(obs.x, a.x);
         const oy = w.deltaY(obs.y, a.y);
         const od = Math.hypot(ox, oy);

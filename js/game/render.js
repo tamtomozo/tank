@@ -2,9 +2,9 @@
   'use strict';
 
   // Draws one frame of the battlefield: ground & sky, depth-sorted props / rocks / tanks / flags,
-  // effects, night darkness, then the UI layer (compound icons, "!" marks, aim reticle, radar).
+  // effects, night darkness, then the UI layer (compound / HQ icons, "!" marks, aim reticle, radar).
 
-  const { FortIcon } = global;
+  const { FortIcon, HqIcon } = global;
 
   function create(game) {
     const { world, combat, ctx } = game;
@@ -73,18 +73,15 @@
       }
     }
 
-    // Fort icon hovering above a compound centre, tethered to the ground by a dashed line.
-    // Red while the garrison waits; pulses red/orange once the compound is on alert.
-    function drawBaseFortIcon(base, p, timeSec) {
+    // Icon hovering above a ground point (projection p), tethered to it by a dashed line, with a
+    // name to its right. o: { icon (FortIcon / HqIcon), fill, label, lift (world units above the
+    // ground), phase (bob offset), pulse (0..1 size throb) }
+    function drawFloatingIcon(p, timeSec, o) {
       const s = Math.max(1.1, Math.min(1.55, p.scale * 1.5));
-      const bob = Math.sin(timeSec * 2.2 + base.id * 1.3) * 2.5;
-      const iconY = p.sy - (84 * p.scale + 26) + bob;
+      const bob = Math.sin(timeSec * 2.2 + o.phase) * 2.5;
+      const iconY = p.sy - (o.lift * p.scale + 26) + bob;
       if (p.sx < -40 || p.sx > viewW + 40 || iconY < -40 || p.sy > viewH + 60) return;
-
-      const pulse = base.alerted ? 0.5 + 0.5 * Math.sin(timeSec * 9) : 0;
-      const fill = base.alerted
-        ? `rgb(${Math.round(239 + (249 - 239) * pulse)}, ${Math.round(68 + (115 - 68) * pulse)}, ${Math.round(68 - (68 - 22) * pulse)})`
-        : '#ef4444';
+      const { pulse, fill } = o;
 
       ctx.save();
       // Tether from the icon down to the compound's ground point
@@ -105,17 +102,60 @@
 
       ctx.translate(p.sx, iconY);
       ctx.scale(s * (1 + pulse * 0.08), s * (1 + pulse * 0.08));
-      FortIcon.draw(ctx, fill);
+      o.icon.draw(ctx, fill);
 
-      // Compound name to the right of the icon
+      // Name to the right of the icon
       ctx.font = '800 11px system-ui, "Segoe UI", sans-serif';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
       ctx.lineWidth = 3;
       ctx.strokeStyle = 'rgba(15, 23, 42, 0.85)';
-      ctx.strokeText(base.name, 17, 2);
+      ctx.strokeText(o.label, 17, 2);
       ctx.fillStyle = '#ffffff';
-      ctx.fillText(base.name, 17, 2);
+      ctx.fillText(o.label, 17, 2);
+      ctx.restore();
+    }
+
+    // Fort icon above a compound centre.
+    // Red while the garrison waits; pulses red/orange once the compound is on alert.
+    function drawBaseFortIcon(base, p, timeSec) {
+      const pulse = base.alerted ? 0.5 + 0.5 * Math.sin(timeSec * 9) : 0;
+      const fill = base.alerted
+        ? `rgb(${Math.round(239 + (249 - 239) * pulse)}, ${Math.round(68 + (115 - 68) * pulse)}, ${Math.round(68 - (68 - 22) * pulse)})`
+        : '#ef4444';
+      drawFloatingIcon(p, timeSec, { icon: FortIcon, fill, label: base.name, lift: 84, phase: base.id * 1.3, pulse });
+    }
+
+    // Area secured and the player not yet back: the HQ is the place to go
+    const isReturning = () => combat.missionComplete && !game.returnedToHq;
+
+    // HQ icon above the command tent of the operations HQ; throbs while the platoon is called home
+    function drawHqMarker(timeSec, drawCamX, drawCamY) {
+      const m = world.hq.marker;
+      const p = world.project(m.x, m.y, 0, drawCamX, drawCamY, viewW, viewH);
+      if (!p) return;
+      const pulse = isReturning() ? 0.5 + 0.5 * Math.sin(timeSec * 6) : 0;
+      drawFloatingIcon(p, timeSec, { icon: HqIcon, fill: HqIcon.COLOR, label: world.hq.name, lift: m.lift, phase: 0.7, pulse });
+    }
+
+    // Return circle on the HQ pad (over the painted one), lit while the platoon is called home
+    function drawHqReturnZone(timeSec, drawCamX, drawCamY, offView) {
+      const hq = world.hq;
+      const p = world.project(hq.x, hq.y, 0, drawCamX, drawCamY, viewW, viewH);
+      if (!p || offView(p, hq.returnRadius * p.scale + 20)) return;
+      const pulse = 0.5 + 0.5 * Math.sin(timeSec * 3.2);
+      ctx.save();
+      ctx.translate(p.sx, p.sy);
+      ctx.scale(p.scale, p.scale * p.tiltCos);
+      ctx.fillStyle = `rgba(56, 189, 248, ${0.10 + 0.08 * pulse})`;
+      ctx.strokeStyle = `rgba(125, 211, 252, ${0.6 + 0.35 * pulse})`;
+      ctx.lineWidth = 3;
+      ctx.setLineDash([10, 7]);
+      ctx.lineDashOffset = -timeSec * 14;
+      ctx.beginPath();
+      ctx.arc(0, 0, hq.returnRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
       ctx.restore();
     }
 
@@ -164,6 +204,15 @@
         const p = world.project(a.x, a.y, 0, drawCamX, drawCamY, viewW, viewH);
         if (!p || offView(p, 120)) continue;
         renderQueue.push({ dy: p.dy, draw: () => a.draw(ctx, drawCamX, drawCamY, viewW, viewH, timeInfo.nightFactor) });
+      }
+
+      // Operations HQ: tent, crates, flag and radio mast (its pad is part of the ground texture);
+      // the return circle is drawn now so it lies under everything in the depth-sorted queue
+      if (isReturning()) drawHqReturnZone(timeSec, drawCamX, drawCamY, offView);
+      for (const part of world.hq.parts) {
+        const p = world.project(part.x, part.y, 0, drawCamX, drawCamY, viewW, viewH);
+        if (!p || offView(p, 150 * p.scale + 20)) continue;
+        renderQueue.push({ dy: p.dy, draw: () => world.drawHqPart(ctx, part, p, timeSec, drawCamX, drawCamY, viewW, viewH) });
       }
 
       // White flags over captured enemy compounds
@@ -225,6 +274,7 @@
         if (!p) continue;
         drawBaseFortIcon(b, p, timeSec);
       }
+      drawHqMarker(timeSec, drawCamX, drawCamY);
 
       // "!" spotted marks are UI: drawn above the night darkness so they stay readable
       for (const e of combat.enemies) {

@@ -184,13 +184,14 @@
           return `作戦名は「${OPERATION_NAME}」、目標はエリア1の${this.combat.districts.length}地区の制圧です。`
             + `戦術行動の開始はDAY ${t.day}の${t.clockText}、${t.phaseName}です。`
             + `作戦区域はエリア1、3つの地区に分かれています。${target ? `${target.name}の拠点${names}を制圧してください。` : ''}`
-            + '後続の地区は、前の地区を確保すると解放されます。';
+            + '後続の地区は、前の地区を確保すると解放されます。'
+            + '全地区を制圧した時点で作戦時間が確定します。その後は、この作戦本部まで帰還してください。';
         }
         case 'enemies':
           return '敵は軽戦車、中戦車、トーチカで構成されています。拠点で待機していますが、接近するか攻撃すると出撃してきます。';
         case 'terrain':
           return '大型の岩は砲弾を防ぐ遮蔽物になります。ジャンプ台はブーストで飛び越えられます。マップは上下左右がつながっています。'
-            + '準備ができたら出撃してください。';
+            + '準備ができたら、作戦本部から出撃してください。';
         default:
           return '';
       }
@@ -487,7 +488,27 @@
         g.fillText(label, px + 10, py + 4);
       }
 
-      // Own platoon (spawn point / current position)
+      // Operations HQ: where the sortie starts and where the platoon returns once the area is secured
+      const hq = world.hq;
+      const hx = hq.x * k;
+      const hy = hq.y * k;
+      const hs = 13; // half-size of the HQ frame on the map
+      g.fillStyle = 'rgba(56, 189, 248, 0.16)';
+      g.strokeStyle = '#7dd3fc';
+      g.lineWidth = 1.5;
+      g.beginPath();
+      g.roundRect(hx - hs, hy - hs, hs * 2, hs * 2, 3);
+      g.fill();
+      g.stroke();
+      g.font = '700 12px system-ui, "Segoe UI", sans-serif';
+      g.textAlign = 'center';
+      g.lineWidth = 3;
+      g.strokeStyle = 'rgba(15, 23, 42, 0.9)';
+      g.strokeText(hq.name, hx, hy - hs - 5);
+      g.fillStyle = '#e0f2fe';
+      g.fillText(hq.name, hx, hy - hs - 5);
+
+      // Own platoon (on the HQ pad at the start of a sortie)
       const player = this.getPlayer();
       const sx = player.x * k;
       const sy = player.y * k;
@@ -505,9 +526,9 @@
       g.textAlign = 'center';
       g.lineWidth = 3;
       g.strokeStyle = 'rgba(15, 23, 42, 0.9)';
-      g.strokeText('自軍小隊', sx, sy + 20);
+      g.strokeText('自軍小隊', sx, sy + 27);
       g.fillStyle = '#bae6fd';
-      g.fillText('自軍小隊', sx, sy + 20);
+      g.fillText('自軍小隊', sx, sy + 27);
 
       // District labels last, outlined, so terrain never covers them
       g.textAlign = 'center';

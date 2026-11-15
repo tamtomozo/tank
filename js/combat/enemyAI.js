@@ -49,7 +49,7 @@
           }
 
           // Steer around nearby boulders instead of grinding against them
-          for (const obs of this.world.obstacles) {
+          for (const obs of this.world.colliders) {
             const ox = this.world.deltaX(obs.x, e.x);
             const oy = this.world.deltaY(obs.y, e.y);
             const od = Math.hypot(ox, oy);

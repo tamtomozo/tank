@@ -339,6 +339,8 @@
 
       this._groundCtx = g;
       this.groundTex = canvas;
+      // Operations HQ pad (always there, unlike the compounds below)
+      if (this.hq) this._stampGround(this.hq.x, this.hq.y, this.hq.radius + 40, (gg) => this._drawHqPad(gg));
       // Re-stamp compounds that were already revealed (if the texture is ever rebuilt mid-game)
       for (const id of this.revealedBases) {
         const b = this.enemyBases.find((s) => s.id === id);

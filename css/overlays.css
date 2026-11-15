@@ -55,8 +55,18 @@
   to { transform: translate(-50%, -50%) scale(1.15); }
 }
 
+/* Off-screen marker toward the operations HQ (shown once the area is secured: the way home) */
+.target-arrow.is-base.is-hq {
+  inline-size: 2.1rem;
+  block-size: 2.1rem;
+  color: #38bdf8;
+  filter: drop-shadow(0 0 3px rgb(0 0 0 / 0.8)) drop-shadow(0 0 8px rgb(56 189 248 / 0.85));
+  animation: fort-alert-pulse 0.9s ease-in-out infinite alternate;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .target-arrow.is-base.is-alerted { animation: none; }
+  .target-arrow.is-base.is-alerted,
+  .target-arrow.is-base.is-hq { animation: none; }
 }
 
 .target-arrow.is-boss {

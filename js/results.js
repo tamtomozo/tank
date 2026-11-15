@@ -1,7 +1,9 @@
 (function (global) {
   'use strict';
 
-  // After-action report shown once the whole area has been secured (and Mio's final report ended).
+  // After-action report shown once the whole area has been secured and the platoon is back at the
+  // operations HQ (and Mio's final report ended). Mission time runs until the moment the area was
+  // secured; the drive back isn't counted.
   // Overall rank, mission time, per-district times, kills, accuracy, damage, platoon losses,
   // scrap and items, plus a closing comment from Mio typed out one character at a time.
 
@@ -97,13 +99,14 @@
       const capturedBases = combat.bases.filter((b) => b.cleared).length;
       // In-game clock time at which each district was secured
       const districtLines = combat.districts.map((d) => `${d.name}　${stampText(stats.districtClock[d.id])}`);
-      const endStamp = { day: t.day, clock: t.clockText };
+      const endStamp = stats.endClock || { day: t.day, clock: t.clockText }; // moment the area was secured
       const accuracyPct = Math.round(r.accuracy * 100);
       const aliveAllies = combat.allies.filter((a) => a.alive).length;
 
       this.body.replaceChildren(
         card('作戦時間（ゲーム内）', formatGameDuration(stats.elapsed, world.dayDuration), [
-          `開始 ${stampText(stats.startClock)} → 終了 ${stampText(endStamp)}`
+          `開始 ${stampText(stats.startClock)} → 制圧完了 ${stampText(endStamp)}`,
+          `作戦本部へ帰還 ${stampText(stats.returnClock)}（作戦時間に含まず）`
         ]),
         card('地区確保時刻（ゲーム内）', `${combat.districtsSecured} / ${combat.districts.length} 地区`, districtLines),
         card('制圧した拠点', `${capturedBases} / ${combat.bases.length}`, [`回収アイテム　${stats.itemsCollected} 個`]),

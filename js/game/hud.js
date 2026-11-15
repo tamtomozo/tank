@@ -60,11 +60,19 @@
       const districtTotal = combat.districts.length;
       // Between "district secured" and Mio finishing her report, the next district is still locked
       const awaitingDistrict = !curDistrict ? combat.districts.find((d) => !d.unlocked) : null;
-      setText(hudEl.objective, curDistrict
+      // Area secured: the objective becomes the drive back to the operations HQ
+      let returnText = '';
+      if (combat.missionComplete) {
+        const hqDist = Math.hypot(world.deltaX(player.x, world.hq.x), world.deltaY(player.y, world.hq.y));
+        returnText = game.returnedToHq
+          ? 'エリア1 制圧完了 — 作戦本部に帰還'
+          : `エリア1 制圧完了 — 作戦本部へ帰還せよ（距離 ${Math.round(hqDist / 10) * 10}）`;
+      }
+      setText(hudEl.objective, returnText || (curDistrict
         ? `${curDistrict.name} 拠点 残り ${combat.districtRemaining(curDistrict.id)}/${curDistrict.baseIds.length}（確保 ${securedCount}/${districtTotal}地区）`
         : awaitingDistrict
           ? `${awaitingDistrict.name} 解放待ち（確保 ${securedCount}/${districtTotal}地区）`
-          : districtTotal ? `エリア1 制圧（${securedCount}/${districtTotal}地区）` : '—');
+          : districtTotal ? `エリア1 制圧（${securedCount}/${districtTotal}地区）` : '—'));
       setText(hudEl.clock, `DAY ${timeInfo.day} ${timeInfo.clockText} ${timeInfo.phaseIcon}${timeInfo.phaseName}`);
       setText(hudEl.enemies, String(combat.enemies.length));
       setText(hudEl.kills, String(combat.kills));

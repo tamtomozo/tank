@@ -1,8 +1,9 @@
 (function (global) {
   'use strict';
 
-  // Mission flow: (re)starting a sortie, Mio's radio reports on combat events, supply depots in
-  // secured districts (garage + resupply) and the end of the sortie (after-action report / game over).
+  // Mission flow: (re)starting a sortie at the operations HQ, Mio's radio reports on combat events,
+  // supply depots in secured districts (garage + resupply), the drive back to the HQ once the area
+  // is secured and the end of the sortie (after-action report / game over).
 
   // Supply-depot trigger zone around a captured compound's white flag (the compound centre)
   const SUPPLY_ZONE = {
@@ -14,14 +15,14 @@
     const { world, combat, upgrades, squad, radio, results, briefing, audio } = game;
     const { start: startDialog, garage: garageDialog, gameover: gameoverDialog } = game.dialogs;
 
-    // New sortie: fresh tank, upgrades, world, platoon and clock, then the briefing
+    // New sortie: fresh tank on the HQ pad, upgrades, world, platoon and clock, then the briefing
     function start() {
       audio.init();
       upgrades.reset();
       const player = new global.Tank2D(world, {
         isPlayer: true,
-        x: world.width * 0.5,
-        y: world.height * 0.5,
+        x: world.hq.x,
+        y: world.hq.y,
         hullAngle: -Math.PI * 0.5
       });
       game.player = player;
@@ -38,6 +39,7 @@
       game.cam.starOffsetX = 0;
       game.started = true;
       game.overShown = false;
+      game.returnedToHq = false;
       game.input.release();
       // Briefing first (the game stays paused while it is open); the tactical phase and Mio's
       // mission-start report begin once it is closed with 作戦開始.
@@ -134,11 +136,28 @@
       }
     }
 
+    // ---- Return to the operations HQ ------------------------------------------------------------
+    // Securing the last district doesn't end the sortie: Mio orders the platoon home and the
+    // player drives back. Entering the painted circle on the HQ pad reports in (controls lock
+    // while Mio confirms), and the after-action report follows (checkEnd).
+    function checkReturnToHq() {
+      const player = game.player;
+      if (!combat.missionComplete || game.returnedToHq || !player.alive) return;
+      if (radio.controlsLocked) return; // Mio is still reporting the secured area
+      const hq = world.hq;
+      const d = Math.hypot(world.deltaX(player.x, hq.x), world.deltaY(player.y, hq.y));
+      if (d > hq.returnRadius) return;
+      game.returnedToHq = true;
+      const t = world.getTimeInfo();
+      combat.stats.returnClock = { day: t.day, clock: t.clockText };
+      radio.say(global.RadioComms.script.hqReturned(), { lockControls: true });
+    }
+
     // End of the sortie, checked every frame
     function checkEnd() {
       const player = game.player;
-      // Area secured: the after-action report, once Mio has finished her final transmission
-      if (game.started && !game.overShown && player.alive && combat.missionComplete && radio.isIdle) {
+      // Back at the HQ with the area secured: the after-action report, once Mio has finished
+      if (game.started && !game.overShown && player.alive && game.returnedToHq && radio.isIdle) {
         game.overShown = true;
         game.input.release();
         results.open({ stats: combat.stats, combat, squad, player, world, audio }, () => start());
@@ -162,7 +181,7 @@
       }
     }
 
-    return { start, handleCombatEvents, checkSupplyDepots, checkEnd };
+    return { start, handleCombatEvents, checkSupplyDepots, checkReturnToHq, checkEnd };
   }
 
   global.GameMission = { create, SUPPLY_ZONE };

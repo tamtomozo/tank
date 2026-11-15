@@ -6,7 +6,7 @@
   // decals; the rest of the class is mixed in from the other files in js/planet/:
   //   terrain.js  world generation          ground.js  ground texture build + draw
   //   sky.js      sky / backdrop / haze      night.js   darkness + headlight cone
-  //   props.js    flags, crates, rocks, jump pads
+  //   props.js    flags, crates, rocks, jump pads    hq.js      operations HQ (作戦本部)
 
   // World size: 4800 x 4800 (4x the original 2400 x 2400 area). Content counts below are scaled by
   // AREA_SCALE so the density of rocks, terrain detail, crates and jump pads stays the same.
@@ -221,6 +221,9 @@
       this._initBackdrop();
       this._initTerrainAndProps();
       this._initEnemyBases();
+      this._initHeadquarters();
+      // Everything a tank can't drive through: boulders + the solid parts of the HQ
+      this.colliders = [...this.obstacles, ...this.hq.colliders];
       // Destructible ground props (crates / crystals / fuel barrels) are disabled. They are still
       // generated above so the shared RNG sequence — and thus the rest of the map layout — is unchanged.
       this.props = [];

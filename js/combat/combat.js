@@ -26,7 +26,7 @@
     // Battle statistics collected during a sortie (shown on the after-action report)
     static freshStats() {
       return {
-        elapsed: 0, // seconds of tactical play (paused time excluded)
+        elapsed: 0, // mission time: seconds of tactical play until the area is secured (pauses excluded)
         killsByKind: { light: 0, medium: 0, bunker: 0 },
         killsBy: { player: 0, ally: 0, other: 0 },
         shotsFired: 0, // player's shells / rounds / missiles
@@ -37,7 +37,9 @@
         itemsCollected: 0,
         districtTimes: {}, // district id -> elapsed seconds when secured
         startClock: null, // in-game time when the tactical phase began { day, clock }
-        districtClock: {} // district id -> in-game time when secured { day, clock }
+        districtClock: {}, // district id -> in-game time when secured { day, clock }
+        endClock: null, // in-game time when the whole area was secured (mission time stops here)
+        returnClock: null // in-game time when the platoon was back at the operations HQ
       };
     }
 
@@ -76,8 +78,9 @@
       this.districts = []; // runtime state of each district (unlocked / secured)
       this.events = []; // UI events (base alerted / cleared), drained by main.js
       this.stats = CombatManager.freshStats(); // battle statistics for the after-action report
-      this.missionTimer = 0;
-      this.missionComplete = false; // set once every enemy compound is cleared
+      // Set the moment the last district is secured: mission time and battle statistics are final
+      // from then on (the sortie itself ends back at the operations HQ, see js/game/mission.js)
+      this.missionComplete = false;
       this.magnetRadius = 110;
       this.repairBonus = 1.0;
       this._playerRef = null;
@@ -97,7 +100,6 @@
       this.kills = 0;
       this.events = [];
       this.stats = CombatManager.freshStats();
-      this.missionTimer = 0;
       this.missionComplete = false;
       if (this.world.hideAllBases) this.world.hideAllBases();
       this.shakeIntensity = 0;
@@ -114,11 +116,12 @@
       return ev;
     }
 
-    // countTime: false while the clock is frozen (Mio's district report) -> mission time stands still
+    // countTime: false while the clock is frozen (Mio's district report) -> mission time stands still.
+    // Mission time also stops for good once the area is secured (the drive back to HQ isn't counted).
     update(dt, player, countTime = true) {
       this._playerRef = player;
       if (!this.stats.startClock) this.stats.startClock = this._clockStamp();
-      if (countTime) this.stats.elapsed += dt;
+      if (countTime && !this.missionComplete) this.stats.elapsed += dt;
       this.shakeIntensity = Math.max(0, this.shakeIntensity - dt * 2.0);
       this.damageFlash = Math.max(0, this.damageFlash - dt * 2.8);
 
