@@ -155,8 +155,7 @@
         maxLife: 0.26
       });
 
-      this.spawnDustOrSmoke(wx, wy, 4, isDirect ? 12 : 8, '#f97316');
-      this.spawnDustOrSmoke(wx, wy, 6, 6, '#4b5563');
+      this.spawnImpactBlast(wx, wy, radius, isDirect);
 
       if (player) {
         const dx = this.world.deltaX(wx, player.x);

@@ -6,6 +6,12 @@
 
   const { compactInPlace } = global.CombatManager.shared;
 
+  const MAX_PARTICLES = 2400; // impact effects stop adding particles beyond this
+  const MAX_FIRES = 40;
+  const SAND_COLORS = ['#c9b38c', '#b59d78', '#a88f6a', '#d4c29c'];
+  // Flame colour by remaining life (hot white-yellow -> orange -> dull red)
+  const flameColor = (t) => (t > 0.75 ? '#fff4c2' : t > 0.5 ? '#fcd34d' : t > 0.28 ? '#f97316' : '#b91c1c');
+
   class CombatEffects {
     spawnDustOrSmoke(x, y, z, count = 4, color = '#9ca3af') {
       for (let i = 0; i < count; i++) {
@@ -24,6 +30,125 @@
           color
         });
       }
+    }
+
+    // Shell impact: a fireball, a ring of sand billowing out along the ground, dark smoke rising,
+    // a few clods of dirt, and a small patch left burning on the spot for a moment.
+    spawnImpactBlast(x, y, radius, isDirect = false) {
+      // Chain reactions can fire many blasts at once: keep the particle count bounded
+      if (this.particles.length > MAX_PARTICLES) return;
+      const wx = this.world.wrapX(x);
+      const wy = this.world.wrapY(y);
+      const k = Math.min(1.8, Math.max(0.7, radius / 60)); // blast size factor
+      const rand = (a, b) => a + Math.random() * (b - a);
+      const at = (dist, ang) => [this.world.wrapX(wx + Math.cos(ang) * dist), this.world.wrapY(wy + Math.sin(ang) * dist)];
+
+      // Fireball
+      const flames = Math.round((isDirect ? 14 : 11) * k);
+      for (let i = 0; i < flames; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const spd = rand(15, 70) * k;
+        const [px, py] = at(rand(0, 8) * k, ang);
+        const life = rand(0.3, 0.65);
+        this.particles.push({
+          fire: true, x: px, y: py, z: rand(2, 10),
+          vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, vz: rand(30, 90) * k,
+          drag: 3.2, buoy: 60,
+          life, maxLife: life,
+          size: rand(7, 13) * k
+        });
+      }
+
+      // Sand cloud spreading out low over the ground
+      const dust = Math.round(14 * k);
+      for (let i = 0; i < dust; i++) {
+        const ang = (i / dust) * Math.PI * 2 + rand(-0.3, 0.3);
+        const spd = rand(70, 170) * k;
+        const [px, py] = at(rand(4, 12) * k, ang);
+        const life = rand(1.1, 2.0);
+        this.particles.push({
+          dust: true, x: px, y: py, z: rand(1, 6),
+          vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, vz: rand(8, 30),
+          drag: 3.0,
+          life, maxLife: life,
+          size: rand(8, 13) * k,
+          grow: rand(1.8, 2.8),
+          alpha: 0.5,
+          color: SAND_COLORS[(Math.random() * SAND_COLORS.length) | 0]
+        });
+      }
+
+      // Dark smoke column above the blast
+      const smoke = Math.round(6 * k);
+      for (let i = 0; i < smoke; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const spd = rand(5, 30);
+        const life = rand(1.3, 2.3);
+        this.particles.push({
+          dust: true, x: wx, y: wy, z: rand(8, 22) * k,
+          vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, vz: rand(25, 55),
+          drag: 1.6, buoy: 14,
+          life, maxLife: life,
+          size: rand(7, 11) * k,
+          grow: rand(2.0, 3.0),
+          alpha: 0.55,
+          color: Math.random() < 0.5 ? '#3f3a36' : '#57504a'
+        });
+      }
+
+      // Clods of dirt thrown up (fall back under gravity)
+      this.spawnDustOrSmoke(wx, wy, 4, Math.round(5 * k), '#6b5a42');
+
+      // Patch left burning for a moment
+      if (this.fires.length >= MAX_FIRES) this.fires.shift();
+      const burn = rand(1.2, 2.2) * (isDirect ? 0.8 : 1) * Math.min(1.4, k);
+      this.fires.push({ x: wx, y: wy, k, life: burn, maxLife: burn, flameAcc: 0, smokeAcc: 0 });
+    }
+
+    _updateFires(dt) {
+      const rand = (a, b) => a + Math.random() * (b - a);
+      compactInPlace(this.fires, (f) => {
+        f.life -= dt;
+        if (f.life <= 0) return false;
+        if (this.particles.length > MAX_PARTICLES) return true;
+        const heat = f.life / f.maxLife; // dies down over time
+        f.flameAcc += dt * (8 + 22 * heat) * f.k;
+        f.smokeAcc += dt * 5 * f.k;
+        while (f.flameAcc >= 1) {
+          f.flameAcc -= 1;
+          const ang = Math.random() * Math.PI * 2;
+          const r = rand(0, 14) * f.k;
+          const life = rand(0.25, 0.5);
+          this.particles.push({
+            fire: true,
+            x: this.world.wrapX(f.x + Math.cos(ang) * r),
+            y: this.world.wrapY(f.y + Math.sin(ang) * r),
+            z: rand(0, 3),
+            vx: rand(-10, 10), vy: rand(-10, 10), vz: rand(25, 55),
+            drag: 2.0, buoy: 70,
+            life, maxLife: life,
+            size: rand(4, 8) * f.k * (0.6 + 0.4 * heat)
+          });
+        }
+        while (f.smokeAcc >= 1) {
+          f.smokeAcc -= 1;
+          const life = rand(1.0, 1.8);
+          this.particles.push({
+            dust: true,
+            x: this.world.wrapX(f.x + rand(-6, 6) * f.k),
+            y: this.world.wrapY(f.y + rand(-6, 6) * f.k),
+            z: rand(10, 18),
+            vx: rand(-8, 8), vy: rand(-8, 8), vz: rand(20, 40),
+            drag: 1.2, buoy: 12,
+            life, maxLife: life,
+            size: rand(5, 8) * f.k,
+            grow: 2.4,
+            alpha: 0.4,
+            color: Math.random() < 0.5 ? '#44403c' : '#5b5550'
+          });
+        }
+        return true;
+      });
     }
 
     // Sand thrown up behind both caterpillar tracks of a moving tank. Emission is distance-based
@@ -96,17 +221,20 @@
         pt.x = world.wrapX(pt.x + pt.vx * dt);
         pt.y = world.wrapY(pt.y + pt.vy * dt);
         pt.z = Math.max(0, pt.z + pt.vz * dt);
-        if (pt.dust) {
-          // Light sand hangs in the air: strong drag, slow rise, no gravity
-          const drag = Math.exp(-2.6 * dt);
+        if (pt.dust || pt.fire) {
+          // Light sand / smoke / flame hangs in the air: strong drag, no gravity (hot gas rises)
+          const drag = Math.exp(-(pt.drag || 2.6) * dt);
           pt.vx *= drag;
           pt.vy *= drag;
           pt.vz *= drag;
+          if (pt.buoy) pt.vz += pt.buoy * dt;
         } else {
           pt.vz -= 120 * dt;
         }
         return true;
       });
+
+      this._updateFires(dt);
 
       compactInPlace(this.shockwaves, (sw) => {
         sw.life -= dt;
@@ -273,16 +401,18 @@
         ctx.fill();
       }
 
-      // Particles
+      // Particles (flames are drawn afterwards in a second, additive pass)
+      let hasFire = false;
       for (const pt of this.particles) {
+        if (pt.fire) { hasFire = true; continue; }
         const p = this.world.project(pt.x, pt.y, pt.z, camX, camY, viewW, viewH);
-        if (!p || off(p, 20)) continue;
+        if (!p || off(p, pt.dust ? 80 : 20)) continue;
         const t = Math.max(0, pt.life / pt.maxLife);
         ctx.fillStyle = pt.color;
         if (pt.dust) {
           // Billowing puff: grows as it ages and fades out (quick fade-in so it doesn't pop)
           const age = 1 - t;
-          ctx.globalAlpha = Math.min(1, age * 8) * t * 0.42;
+          ctx.globalAlpha = Math.min(1, age * 8) * t * (pt.alpha || 0.42);
           ctx.beginPath();
           ctx.arc(p.sx, p.sy, pt.size * (1 + age * pt.grow) * p.scale, 0, Math.PI * 2);
           ctx.fill();
@@ -292,6 +422,24 @@
         ctx.beginPath();
         ctx.arc(p.sx, p.sy, pt.size * t * p.scale, 0, Math.PI * 2);
         ctx.fill();
+      }
+
+      if (hasFire) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        for (const pt of this.particles) {
+          if (!pt.fire) continue;
+          const p = this.world.project(pt.x, pt.y, pt.z, camX, camY, viewW, viewH);
+          if (!p || off(p, 40)) continue;
+          const t = Math.max(0, pt.life / pt.maxLife);
+          const flicker = 0.85 + Math.random() * 0.3;
+          ctx.fillStyle = flameColor(t);
+          ctx.globalAlpha = Math.min(1, (1 - t) * 10) * (0.35 + t * 0.55);
+          ctx.beginPath();
+          ctx.arc(p.sx, p.sy, pt.size * (0.45 + t * 0.7) * flicker * p.scale, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
       }
       ctx.globalAlpha = 1;
     }

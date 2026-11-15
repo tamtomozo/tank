@@ -63,6 +63,7 @@
       this.enemies = [];
       this.projectiles = [];
       this.particles = [];
+      this.fires = []; // short-lived burning patches left where shells explode
       this.shockwaves = [];
       this.pickups = [];
       this.allies = []; // friendly wingman tanks (managed by SquadManager)
@@ -87,6 +88,7 @@
       this.enemies = [];
       this.projectiles = [];
       this.particles = [];
+      this.fires = []; // short-lived burning patches left where shells explode
       this.shockwaves = [];
       this.pickups = [];
       this.allies = []; // friendly wingman tanks (managed by SquadManager)
