@@ -4,6 +4,12 @@
   // Mission flow: (re)starting a sortie, Mio's radio reports on combat events, supply depots in
   // secured districts (garage + resupply) and the end of the sortie (after-action report / game over).
 
+  // Supply-depot trigger zone around a captured compound's white flag (the compound centre)
+  const SUPPLY_ZONE = {
+    SUPPLY_PROMPT_RADIUS: 60, // tank centre within this distance of the flag opens the menu
+    SUPPLY_REARM_RADIUS: 110 // leave beyond this to be offered the menu again
+  };
+
   function create(game) {
     const { world, combat, upgrades, squad, radio, results, briefing, audio } = game;
     const { start: startDialog, garage: garageDialog, gameover: gameoverDialog } = game.dialogs;
@@ -57,11 +63,11 @@
     });
 
     // ---- Supply depots: compounds in a SECURED district ---------------------------------------
-    // Supply and upgrades are only available once a whole district is secured. Driving into one of
-    // its compounds opens the garage (upgrades + free resupply), once per visit (leave to re-arm).
+    // Supply and upgrades are only available once a whole district is secured. Driving onto the
+    // white flag of one of its compounds opens the garage (upgrades + free resupply), once per visit
+    // (drive off the flag zone to re-arm). The zone is drawn as a ring around the flag (render.js).
     // Compounds in a district still being fought over offer nothing; there is no automatic resupply.
-    const SUPPLY_PROMPT_RADIUS = 170;
-    const SUPPLY_REARM_RADIUS = 280;
+    const { SUPPLY_PROMPT_RADIUS, SUPPLY_REARM_RADIUS } = SUPPLY_ZONE;
 
     function checkSupplyDepots() {
       const player = game.player;
@@ -159,5 +165,5 @@
     return { start, handleCombatEvents, checkSupplyDepots, checkEnd };
   }
 
-  global.GameMission = { create };
+  global.GameMission = { create, SUPPLY_ZONE };
 })(window);
