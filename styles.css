@@ -1,0 +1,1911 @@
+:root {
+  color-scheme: dark;
+  --bg-space: #070b14;
+  --panel-bg: rgb(13 20 33 / 0.78);
+  --panel-border: rgb(148 180 218 / 0.22);
+  --text-main: #edf3fb;
+  --text-muted: #98abc4;
+  --accent: #f59e0b;
+  --accent-bright: #fbbf24;
+  --accent-cyan: #38bdf8;
+  --danger: #ef4444;
+  --success: #22c55e;
+  --font-ui: "Segoe UI", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", system-ui, sans-serif;
+  --font-mono: "Cascadia Mono", "Consolas", ui-monospace, monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  inline-size: 100%;
+  block-size: 100dvb;
+  background-color: var(--bg-space);
+  color: var(--text-main);
+  font-family: var(--font-ui);
+  overflow: hidden;
+  user-select: none;
+}
+
+.game-viewport {
+  position: relative;
+  inline-size: 100%;
+  block-size: 100dvb;
+}
+
+#game-canvas {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.tabular-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+kbd {
+  display: inline-block;
+  padding-inline: 0.35rem;
+  padding-block: 0.08rem;
+  border-radius: 0.25rem;
+  border: 1px solid rgb(255 255 255 / 0.22);
+  background: rgb(255 255 255 / 0.08);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  line-height: 1.25;
+  color: var(--accent-bright);
+}
+
+/* Damage vignette */
+.damage-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--damage-alpha, 0);
+  background: radial-gradient(circle at center, transparent 52%, rgb(220 38 38 / 0.68) 100%);
+  transition: opacity 140ms ease-out;
+}
+
+/* Off-screen enemy indicators */
+.target-indicators {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: clip;
+}
+
+.target-arrow {
+  position: absolute;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  transform: translate(-50%, -50%) rotate(var(--arrow-deg, 0deg));
+  display: grid;
+  place-items: center;
+  color: #f87171;
+  filter: drop-shadow(0 0 6px rgb(239 68 68 / 0.75));
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+/* Off-screen fort marker toward an enemy compound (upright SVG icon) */
+.target-arrow.is-base {
+  inline-size: 1.9rem;
+  block-size: 1.8rem;
+  color: #ef4444;
+  filter: drop-shadow(0 0 3px rgb(0 0 0 / 0.8)) drop-shadow(0 0 7px rgb(239 68 68 / 0.7));
+}
+
+.target-arrow.is-base svg {
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: visible;
+}
+
+.target-arrow.is-base.is-alerted {
+  color: #f97316;
+  animation: fort-alert-pulse 0.7s ease-in-out infinite alternate;
+}
+
+@keyframes fort-alert-pulse {
+  from { transform: translate(-50%, -50%) scale(1); }
+  to { transform: translate(-50%, -50%) scale(1.15); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .target-arrow.is-base.is-alerted { animation: none; }
+}
+
+.target-arrow.is-boss {
+  color: #fbbf24;
+  font-size: 1.35rem;
+  filter: drop-shadow(0 0 10px rgb(245 158 11 / 0.9));
+}
+
+/* Visually hidden but available to screen readers */
+.sr-only {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* HQ operator radio panel: all reports, bottom centre just above the weapon panel (1.5x size).
+   Width leaves room for the radar on the right so the two never overlap. */
+.radio-panel {
+  position: absolute;
+  inset-block-end: 7.2rem;
+  inset-inline-start: 50%;
+  z-index: 6;
+  inline-size: min(51rem, max(20rem, calc(100vw - 22rem)));
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1.05rem;
+  align-items: start;
+  padding-block: 0.9rem;
+  padding-inline: 1.05rem;
+  background: rgb(11 18 30 / 0.88);
+  border: 1px solid rgb(148 180 218 / 0.35);
+  border-radius: 0.85rem;
+  box-shadow: 0 10px 28px rgb(0 0 0 / 0.45);
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 0.8rem);
+  transition: opacity 0.28s ease, transform 0.28s ease;
+}
+
+.radio-panel.has-hud-frame {
+  --bt: 0.5; /* quicker boot-up than the dialogs: it pops up mid-battle */
+}
+
+.radio-panel.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* Appearing from hidden: no slide, the HUD frame draws itself instead */
+.radio-panel.is-visible.is-booting {
+  transition: none;
+}
+
+/* Shown while a district-secured report has the controls locked */
+.radio-lock {
+  display: none;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding-inline: 0.45rem;
+  border-radius: 0.3rem;
+  color: #fde68a;
+  background: rgb(245 158 11 / 0.18);
+  border: 1px solid rgb(245 158 11 / 0.55);
+  animation: radio-caret 1.2s steps(1) infinite;
+}
+
+.radio-panel.is-locked .radio-lock {
+  display: inline-block;
+  margin-inline-start: auto;
+}
+
+.radio-panel.is-locked .radio-signal {
+  margin-inline-start: 0;
+}
+
+.radio-avatar {
+  inline-size: 3.9rem;
+  block-size: 3.9rem;
+  border-radius: 50%;
+  overflow: hidden;
+  display: grid;
+  place-items: end center;
+  color: #7dd3fc;
+  background: radial-gradient(circle at 50% 35%, rgb(56 189 248 / 0.35), rgb(15 23 42 / 0.9));
+  border: 1px solid rgb(56 189 248 / 0.55);
+}
+
+.radio-avatar svg {
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.radio-body {
+  display: grid;
+  gap: 0.38rem;
+  min-inline-size: 0;
+}
+
+.radio-header {
+  display: flex;
+  align-items: center;
+  gap: 0.68rem;
+  font-size: 1.08rem;
+  color: var(--text-muted);
+}
+
+.radio-callsign {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #0b111c;
+  background: var(--accent-cyan);
+  border-radius: 0.3rem;
+  padding-inline: 0.45rem;
+}
+
+.radio-name {
+  color: #bae6fd;
+  font-weight: 600;
+}
+
+.radio-signal {
+  margin-inline-start: auto;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  block-size: 1.05rem;
+}
+
+.radio-signal i {
+  display: block;
+  inline-size: 4.5px;
+  background: var(--accent-cyan);
+  border-radius: 1.5px;
+  animation: radio-signal 0.9s ease-in-out infinite;
+}
+
+.radio-signal i:nth-child(1) { block-size: 40%; }
+.radio-signal i:nth-child(2) { block-size: 70%; animation-delay: 0.15s; }
+.radio-signal i:nth-child(3) { block-size: 100%; animation-delay: 0.3s; }
+
+@keyframes radio-signal {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.radio-text {
+  margin: 0;
+  font-size: 1.5rem;
+  line-height: 1.55;
+  color: var(--text-main);
+  min-block-size: 1.6em;
+}
+
+/* Typing caret while a message is being transmitted */
+.radio-panel.is-typing .radio-text::after {
+  content: '▌';
+  margin-inline-start: 1px;
+  color: var(--accent-cyan);
+  animation: radio-caret 0.6s steps(1) infinite;
+}
+
+@keyframes radio-caret {
+  50% { opacity: 0; }
+}
+
+/* Short viewports: shrink the radio panel a little so it stays clear of the tank at screen centre */
+@media (max-height: 560px) {
+  .radio-panel {
+    inline-size: min(40rem, max(18rem, calc(100vw - 22rem)));
+    gap: 0.75rem;
+    padding-block: 0.6rem;
+    padding-inline: 0.75rem;
+    inset-block-end: 6.6rem;
+  }
+  .radio-avatar { inline-size: 2.8rem; block-size: 2.8rem; }
+  .radio-header { font-size: 0.85rem; }
+  .radio-text { font-size: 1.1rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .radio-panel { transition: none; transform: translate(-50%, 0); }
+  .radio-signal i,
+  .radio-panel.is-typing .radio-text::after { animation: none; }
+}
+
+/* HUD Panels */
+.hud-panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 0.6rem;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.4);
+  padding-inline: 0.9rem;
+  padding-block: 0.65rem;
+}
+
+.hud-top {
+  position: absolute;
+  inset-block-start: 0.85rem;
+  inset-inline: 0.85rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  pointer-events: none;
+}
+
+.hud-top > * {
+  pointer-events: auto;
+}
+
+.hud-mission {
+  min-inline-size: 12.5rem;
+  /* long district / location texts wrap instead of widening the panel (keeps the top row on one line) */
+  max-inline-size: 21rem;
+}
+
+.hud-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.2rem 0.5rem;
+  margin-block-end: 0.25rem;
+}
+
+.badge-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  padding-inline: 0.4rem;
+  padding-block: 0.1rem;
+  border-radius: 0.25rem;
+  background: rgb(56 189 248 / 0.18);
+  color: var(--accent-cyan);
+  border: 1px solid rgb(56 189 248 / 0.35);
+}
+
+.hud-sub-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.1rem 0.5rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.hud-sub-row strong {
+  color: var(--text-main);
+}
+
+.divider {
+  opacity: 0.4;
+}
+
+.hud-vital {
+  flex: 1 1 18rem;
+  max-inline-size: 26rem;
+  margin-inline-start: auto; /* sits midway between the mission panel and the top-right column */
+  display: grid;
+  gap: 0.45rem;
+}
+
+.stat-meter {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.meter-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.meter-label strong {
+  color: var(--text-main);
+}
+
+.meter-track {
+  inline-size: 100%;
+  block-size: 0.55rem;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.1);
+  overflow: clip;
+}
+
+.meter-fill {
+  inline-size: 100%;
+  block-size: 100%;
+  transform-origin: left center;
+  transition: transform 80ms linear;
+}
+
+.hp-fill {
+  transform: scaleX(var(--hp-ratio, 1));
+  background: linear-gradient(90deg, hsl(var(--hp-hue, 130) 78% 42%), hsl(var(--hp-hue, 130) 85% 55%));
+}
+
+.boost-fill {
+  transform: scaleX(var(--boost-ratio, 1));
+  background: linear-gradient(90deg, #0284c7, #38bdf8);
+}
+
+.reload-fill {
+  transform: scaleX(var(--reload-ratio, 1));
+  background: linear-gradient(90deg, #d97706, #fbbf24);
+}
+
+.sub-fill {
+  transform: scaleX(var(--sub-ratio, 0));
+  background: linear-gradient(90deg, #059669, #34d399);
+}
+
+/* Top-right column: resources/actions panel with the controls guide underneath */
+.hud-top-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.55rem;
+  margin-inline-start: auto; /* stays on the right even if the top row wraps */
+  pointer-events: none;
+}
+
+.hud-top-right > * {
+  pointer-events: auto;
+}
+
+.hud-resources {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.scrap-display {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.scrap-icon {
+  font-size: 1.45rem;
+  color: var(--accent-bright);
+  line-height: 1;
+}
+
+.scrap-label {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.scrap-value {
+  font-size: 1.15rem;
+  color: var(--accent-bright);
+}
+
+.hud-actions {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.btn-hud {
+  appearance: none;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  background: rgb(255 255 255 / 0.08);
+  color: var(--text-main);
+  padding-inline: 0.7rem;
+  padding-block: 0.42rem;
+  border-radius: 0.4rem;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: background-color 120ms ease, border-color 120ms ease, transform 80ms ease;
+}
+
+.btn-hud:hover {
+  background: rgb(255 255 255 / 0.16);
+}
+
+.btn-hud:active {
+  transform: translateY(1px);
+}
+
+.btn-hud.is-active {
+  background: rgb(56 189 248 / 0.22);
+  border-color: rgb(56 189 248 / 0.65);
+  color: #e0f2fe;
+}
+
+.btn-hud.btn-accent {
+  background: rgb(245 158 11 / 0.2);
+  border-color: rgb(245 158 11 / 0.65);
+  color: #fde68a;
+}
+
+.btn-hud.btn-accent:hover {
+  background: rgb(245 158 11 / 0.34);
+}
+
+.btn-hud.has-afford {
+  box-shadow: 0 0 12px rgb(245 158 11 / 0.55);
+  border-color: var(--accent-bright);
+}
+
+/* Garage is only usable inside a captured compound (and not in combat) */
+.btn-hud.is-locked {
+  opacity: 0.5;
+  box-shadow: none;
+  filter: grayscale(0.6);
+}
+
+/* Boss Banner */
+.boss-banner {
+  position: absolute;
+  inset-block-start: 5.5rem;
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+  inline-size: min(92vw, 28rem);
+  background: rgb(28 11 14 / 0.86);
+  border: 1px solid rgb(239 68 68 / 0.65);
+  border-radius: 0.5rem;
+  padding-inline: 0.9rem;
+  padding-block: 0.5rem;
+  pointer-events: none;
+  text-align: center;
+}
+
+.boss-title {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #fca5a5;
+  margin-block-end: 0.35rem;
+}
+
+.boss-track {
+  block-size: 0.65rem;
+}
+
+.boss-fill {
+  transform: scaleX(var(--boss-hp-ratio, 1));
+  background: linear-gradient(90deg, #b91c1c, #f97316);
+}
+
+/* Wave Banner */
+/* Bottom HUD */
+.hud-bottom {
+  position: absolute;
+  inset-block-end: 0.85rem;
+  inset-inline: 0.85rem;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  pointer-events: none;
+}
+
+.hud-bottom > * {
+  pointer-events: auto;
+}
+
+.hud-weapons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  min-inline-size: min(92vw, 24rem);
+}
+
+.weapon-slot {
+  flex: 1 1 10.5rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.weapon-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.weapon-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.weapon-key {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.weapon-status {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--accent-bright);
+}
+
+.hud-controls-hint {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 0.35rem 1rem;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.hud-radar {
+  display: grid;
+  justify-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem;
+}
+
+#radar-canvas {
+  display: block;
+  border-radius: 0.45rem;
+  border: 1px solid rgb(56 189 248 / 0.4);
+  background: linear-gradient(180deg, rgb(12 31 54 / 0.92), rgb(6 14 27 / 0.96));
+}
+
+.radar-caption {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.1em;
+  color: var(--accent-cyan);
+}
+
+@media (max-width: 960px) {
+  .hud-controls-hint {
+    display: none;
+  }
+}
+
+/* Native Modal Dialogs */
+dialog.game-dialog {
+  margin: auto;
+  padding: 0;
+  border: 1px solid rgb(148 180 218 / 0.35);
+  border-radius: 0.85rem;
+  background: rgb(11 18 30 / 0.96);
+  color: var(--text-main);
+  max-inline-size: min(94dvw, 56rem);
+  max-block-size: 90dvb;
+  box-shadow: 0 24px 64px rgb(0 0 0 / 0.75);
+}
+
+dialog.game-dialog[open] {
+  display: grid;
+}
+
+dialog.game-dialog:modal {
+  overscroll-behavior: contain;
+}
+
+dialog.game-dialog::backdrop {
+  background: rgb(3 7 15 / 0.72);
+  backdrop-filter: blur(5px);
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+.dialog-shell {
+  display: grid;
+  gap: 1rem;
+  padding: 1.4rem;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+
+.dialog-badge {
+  display: inline-block;
+  justify-self: start;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  padding-inline: 0.5rem;
+  padding-block: 0.18rem;
+  border-radius: 0.25rem;
+  background: rgb(245 158 11 / 0.16);
+  border: 1px solid rgb(245 158 11 / 0.45);
+  color: var(--accent-bright);
+}
+
+.dialog-badge.danger {
+  background: rgb(239 68 68 / 0.18);
+  border-color: rgb(239 68 68 / 0.55);
+  color: #fca5a5;
+}
+
+.dialog-badge.success {
+  background: rgb(34 197 94 / 0.16);
+  border-color: rgb(34 197 94 / 0.5);
+  color: #86efac;
+}
+
+.dialog-main-title {
+  margin: 0;
+  font-size: clamp(1.5rem, 3.2vw, 2.2rem);
+  letter-spacing: 0.06em;
+}
+
+.dialog-lead {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+.briefing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.85rem;
+}
+
+.briefing-card {
+  background: rgb(255 255 255 / 0.04);
+  border: 1px solid rgb(255 255 255 / 0.1);
+  border-radius: 0.55rem;
+  padding: 0.9rem;
+}
+
+.briefing-card h2 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  color: var(--accent-cyan);
+}
+
+.briefing-card ul {
+  margin: 0;
+  padding-inline-start: 1.1rem;
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.dialog-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.btn-primary-lg {
+  appearance: none;
+  border: 1px solid var(--accent-bright);
+  background: linear-gradient(135deg, #d97706, #f59e0b);
+  color: #0b111c;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding-inline: 1.6rem;
+  padding-block: 0.75rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: filter 120ms ease, transform 80ms ease;
+}
+
+.btn-primary-lg:hover {
+  filter: brightness(1.1);
+}
+
+.btn-primary-lg:active {
+  transform: translateY(1px);
+}
+
+/* ---------------------------------------------------------------- Briefing scene */
+dialog.briefing-dialog {
+  max-inline-size: min(96dvw, 72rem);
+  inline-size: min(96dvw, 72rem);
+  overflow: auto;
+}
+
+.briefing-shell {
+  gap: 0.9rem;
+}
+
+/* ---- HUD window frame + boot-up sequence (briefing, after-action report, Mio's radio) -------
+   Markup: a `.has-hud-frame` window holding a `.hud-frame` overlay; contents to reveal get
+   `.hud-boot` with `--boot-i` (0, 1, 2… = reveal order). Add `.is-booting` to play the sequence:
+   0.00s corner brackets blink in → 0.15s edges draw around the window → 0.55s the panel fills
+   with a scan sweep → 0.80s~ the contents wipe in one after another.
+   `--bt` scales every timing (1 = dialogs; the in-game radio uses a quicker 0.5). */
+.has-hud-frame {
+  --bt: 1;
+}
+
+dialog.has-hud-frame[open] {
+  grid-template-rows: minmax(0, 1fr); /* the shell scrolls, so the frame always hugs the window */
+}
+
+.hud-frame {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.bf-edge {
+  position: absolute;
+  background: var(--accent-cyan);
+  box-shadow: 0 0 6px rgb(56 189 248 / 0.9), 0 0 16px rgb(56 189 248 / 0.5);
+  opacity: 0.3;
+}
+
+.bf-top,
+.bf-bottom {
+  inset-inline: 0;
+  block-size: 2px;
+}
+
+.bf-left,
+.bf-right {
+  inset-block: 0;
+  inline-size: 2px;
+}
+
+.bf-top { inset-block-start: 0; transform-origin: left center; }
+.bf-bottom { inset-block-end: 0; transform-origin: right center; }
+.bf-right { inset-inline-end: 0; transform-origin: center top; }
+.bf-left { inset-inline-start: 0; transform-origin: center bottom; }
+
+.bf-corner {
+  position: absolute;
+  inline-size: 1.1rem;
+  block-size: 1.1rem;
+  border: 2px solid var(--accent-cyan);
+  filter: drop-shadow(0 0 4px rgb(56 189 248 / 0.8));
+  opacity: 0.85;
+}
+
+.bf-tl { inset-block-start: 0.45rem; inset-inline-start: 0.45rem; border-inline-end: 0; border-block-end: 0; }
+.bf-tr { inset-block-start: 0.45rem; inset-inline-end: 0.45rem; border-inline-start: 0; border-block-end: 0; }
+.bf-br { inset-block-end: 0.45rem; inset-inline-end: 0.45rem; border-inline-start: 0; border-block-start: 0; }
+.bf-bl { inset-block-end: 0.45rem; inset-inline-start: 0.45rem; border-inline-end: 0; border-block-start: 0; }
+
+.bf-scan {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 0;
+  block-size: 35%;
+  background: linear-gradient(to bottom,
+    rgb(56 189 248 / 0) 0%,
+    rgb(56 189 248 / 0.1) 80%,
+    rgb(125 211 252 / 0.55) 99%,
+    rgb(56 189 248 / 0) 100%);
+  opacity: 0;
+}
+
+.has-hud-frame.is-booting {
+  animation: bf-panel-fill calc(0.45s * var(--bt)) ease-out calc(0.55s * var(--bt)) both;
+}
+
+dialog.has-hud-frame.is-booting::backdrop {
+  animation: bf-fade-in 0.3s ease-out both;
+}
+
+.is-booting .bf-corner {
+  --cd: 0s;
+  animation:
+    bf-corner-in calc(0.32s * var(--bt)) steps(1, end) calc(var(--cd) * var(--bt)) both,
+    bf-corner-settle calc(0.25s * var(--bt)) ease-out calc((var(--cd) + 0.32s) * var(--bt)) both;
+}
+
+.is-booting .bf-tr { --cd: 0.04s; }
+.is-booting .bf-br { --cd: 0.08s; }
+.is-booting .bf-bl { --cd: 0.12s; }
+
+.is-booting .bf-top,
+.is-booting .bf-bottom {
+  animation:
+    bf-draw-x calc(0.4s * var(--bt)) cubic-bezier(0.7, 0, 0.2, 1) calc(0.15s * var(--bt)) both,
+    bf-edge-settle calc(0.6s * var(--bt)) ease-out calc(1s * var(--bt)) both;
+}
+
+.is-booting .bf-left,
+.is-booting .bf-right {
+  animation:
+    bf-draw-y calc(0.32s * var(--bt)) cubic-bezier(0.7, 0, 0.2, 1) calc(0.3s * var(--bt)) both,
+    bf-edge-settle calc(0.6s * var(--bt)) ease-out calc(1s * var(--bt)) both;
+}
+
+.is-booting .bf-scan {
+  animation: bf-scan calc(0.6s * var(--bt)) cubic-bezier(0.4, 0, 0.6, 1) calc(0.55s * var(--bt)) both;
+}
+
+.is-booting .hud-boot {
+  animation: bf-content-in calc(0.5s * var(--bt)) cubic-bezier(0.2, 0.7, 0.2, 1)
+    calc((0.8s + var(--boot-i, 0) * 0.11s) * var(--bt)) both;
+}
+
+@keyframes bf-fade-in {
+  from { opacity: 0; }
+}
+
+@keyframes bf-panel-fill {
+  from {
+    background-color: rgb(11 18 30 / 0);
+    border-color: rgb(148 180 218 / 0);
+    box-shadow: none;
+  }
+}
+
+@keyframes bf-corner-in {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  40% { opacity: 0.15; }
+  60% { opacity: 1; }
+  80% { opacity: 0.3; }
+  100% { opacity: 1; }
+}
+
+@keyframes bf-corner-settle {
+  to { opacity: 0.85; }
+}
+
+@keyframes bf-draw-x {
+  from { transform: scaleX(0); opacity: 1; }
+  to { transform: scaleX(1); opacity: 1; }
+}
+
+@keyframes bf-draw-y {
+  from { transform: scaleY(0); opacity: 1; }
+  to { transform: scaleY(1); opacity: 1; }
+}
+
+@keyframes bf-edge-settle {
+  from { opacity: 1; }
+  to { opacity: 0.3; }
+}
+
+@keyframes bf-scan {
+  0% { opacity: 1; transform: translateY(-100%); }
+  85% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(290%); }
+}
+
+@keyframes bf-content-in {
+  0% {
+    opacity: 0;
+    transform: translateY(0.4rem);
+    clip-path: inset(-1rem 100% -1rem -1rem);
+  }
+  45% { opacity: 1; }
+  60% { opacity: 0.45; }
+  75% { opacity: 1; }
+  100% {
+    opacity: 1;
+    transform: none;
+    clip-path: inset(-1rem -1rem -1rem -1rem);
+  }
+}
+
+/* Closing sequence (`.is-closing`, the boot-up in reverse; 0.7s at --bt 1 = HudFrame.CLOSE_MS):
+   0.00s contents flicker and wipe out → 0.15s scan sweeps up → 0.20s panel empties →
+   0.30s edges retract → 0.50s corner brackets blink out → 0.70s hidden. */
+.has-hud-frame.is-closing {
+  animation:
+    bf-panel-unfill calc(0.22s * var(--bt)) ease-in calc(0.2s * var(--bt)) forwards,
+    bf-hide 1ms linear calc(0.69s * var(--bt)) forwards;
+}
+
+dialog.has-hud-frame.is-closing::backdrop {
+  animation: bf-fade-out calc(0.7s * var(--bt)) ease-in forwards;
+}
+
+.is-closing .hud-boot {
+  animation: bf-content-out calc(0.24s * var(--bt)) ease-in calc(var(--boot-i, 0) * 0.025s * var(--bt)) forwards;
+}
+
+.is-closing .result-card {
+  animation: bf-content-out 0.24s ease-in calc(var(--i, 0) * 15ms) forwards;
+}
+
+.is-closing .bf-scan {
+  animation: bf-scan-up calc(0.3s * var(--bt)) cubic-bezier(0.4, 0, 0.6, 1) calc(0.15s * var(--bt)) both;
+}
+
+.is-closing .bf-top,
+.is-closing .bf-bottom {
+  animation: bf-undraw-x calc(0.25s * var(--bt)) cubic-bezier(0.7, 0, 0.2, 1) calc(0.3s * var(--bt)) both;
+}
+
+.is-closing .bf-left,
+.is-closing .bf-right {
+  animation: bf-undraw-y calc(0.2s * var(--bt)) cubic-bezier(0.7, 0, 0.2, 1) calc(0.3s * var(--bt)) both;
+}
+
+.is-closing .bf-corner {
+  animation: bf-corner-out calc(0.2s * var(--bt)) steps(1, end) calc(0.5s * var(--bt)) both;
+}
+
+@keyframes bf-fade-out {
+  to { opacity: 0; }
+}
+
+@keyframes bf-hide {
+  to { opacity: 0; }
+}
+
+@keyframes bf-panel-unfill {
+  to {
+    background-color: rgb(11 18 30 / 0);
+    border-color: rgb(148 180 218 / 0);
+    box-shadow: none;
+  }
+}
+
+@keyframes bf-content-out {
+  0% { opacity: 1; clip-path: inset(-1rem -1rem -1rem -1rem); }
+  25% { opacity: 0.35; }
+  40% { opacity: 1; }
+  100% { opacity: 0; clip-path: inset(-1rem -1rem -1rem 100%); }
+}
+
+@keyframes bf-scan-up {
+  /* flipped so the bright leading line is on top while sweeping upward */
+  0% { opacity: 0; transform: translateY(290%) scaleY(-1); }
+  15% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-100%) scaleY(-1); }
+}
+
+@keyframes bf-undraw-x {
+  from { transform: scaleX(1); opacity: 1; }
+  to { transform: scaleX(0); opacity: 1; }
+}
+
+@keyframes bf-undraw-y {
+  from { transform: scaleY(1); opacity: 1; }
+  to { transform: scaleY(0); opacity: 1; }
+}
+
+@keyframes bf-corner-out {
+  0% { opacity: 1; }
+  25% { opacity: 0.15; }
+  50% { opacity: 1; }
+  75% { opacity: 0.1; }
+  100% { opacity: 0; }
+}
+
+.briefing-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.briefing-title {
+  margin: 0.3rem 0 0;
+  font-size: clamp(1.25rem, 2.4vw, 1.7rem);
+  letter-spacing: 0.05em;
+}
+
+.briefing-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.briefing-step {
+  appearance: none;
+  font: inherit;
+  font-size: 0.82rem;
+  padding-block: 0.35rem;
+  padding-inline: 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgb(148 180 218 / 0.3);
+  background: rgb(255 255 255 / 0.04);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.briefing-step:hover {
+  color: var(--text-main);
+}
+
+.briefing-step.is-active {
+  background: rgb(56 189 248 / 0.2);
+  border-color: rgb(56 189 248 / 0.7);
+  color: #e0f2fe;
+}
+
+.briefing-main {
+  display: grid;
+  grid-template-columns: minmax(16rem, 26rem) 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .briefing-main {
+    grid-template-columns: 1fr;
+  }
+}
+
+.briefing-map-wrap {
+  display: grid;
+  gap: 0.4rem;
+}
+
+#briefing-map {
+  inline-size: 100%;
+  aspect-ratio: 1;
+  display: block;
+  border-radius: 0.5rem;
+}
+
+.briefing-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.8rem;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.briefing-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.briefing-swatch {
+  display: inline-block;
+  inline-size: 0.8rem;
+  block-size: 0.8rem;
+  border-radius: 0.2rem;
+  flex: none;
+}
+
+.briefing-swatch.is-fort { background: #ef4444; }
+.briefing-swatch.is-own { background: #38bdf8; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.briefing-swatch.is-rock { background: #8b7d6b; }
+.briefing-swatch.is-ramp { border: 2px solid #38bdf8; border-radius: 50%; }
+.briefing-swatch.is-gully { background: #2a1d12; block-size: 0.3rem; }
+.briefing-swatch.is-hardpan { background: rgb(214 190 150 / 0.6); border-radius: 50%; }
+.briefing-swatch.is-wrap { border: 2px dashed #fde68a; }
+
+.briefing-panels {
+  min-inline-size: 0;
+}
+
+.briefing-panel h3 {
+  margin: 0 0 0.6rem;
+  font-size: 1.05rem;
+  color: var(--accent-bright);
+  letter-spacing: 0.05em;
+}
+
+/* 戦略状況 = scenario: the general's morale-raising overview (pre-head / catch / deck / lead / signature) */
+.briefing-scenario {
+  display: grid;
+  gap: 0.7rem;
+  padding-block: 1rem;
+  padding-inline: 1.1rem;
+  border-radius: 0.55rem;
+  background:
+    linear-gradient(135deg, rgb(245 158 11 / 0.1), rgb(15 23 42 / 0) 55%),
+    rgb(255 255 255 / 0.03);
+  border: 1px solid rgb(245 158 11 / 0.28);
+  border-inline-start: 4px solid var(--accent-bright);
+}
+
+.scenario-prehead {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #7dd3fc;
+}
+
+.scenario-catch {
+  margin: 0;
+  font-size: clamp(1.35rem, 2.6vw, 1.85rem);
+  font-weight: 900;
+  line-height: 1.35;
+  letter-spacing: 0.03em;
+  color: #fde68a;
+  text-shadow: 0 0 18px rgb(245 158 11 / 0.35);
+}
+
+.scenario-deck {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 600;
+  line-height: 1.7;
+  color: var(--text-main);
+}
+
+.scenario-lead {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.85;
+  color: #cbd5e1;
+}
+
+.scenario-sign {
+  margin: 0.2rem 0 0;
+  justify-self: end;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent-bright);
+  letter-spacing: 0.05em;
+}
+
+/* Power balance of both armies (戦略状況) */
+.briefing-power {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.power-ratio {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: 0.04em;
+}
+
+.power-bar {
+  display: flex;
+  block-size: 1.6rem;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgb(148 180 218 / 0.35);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.power-seg {
+  display: flex;
+  align-items: center;
+  padding-inline: 0.6rem;
+  white-space: nowrap;
+  min-inline-size: 0;
+}
+
+.power-seg.is-ours {
+  background: linear-gradient(90deg, #0369a1, #38bdf8);
+  color: #f0f9ff;
+}
+
+.power-seg.is-enemy {
+  justify-content: flex-end;
+  background: linear-gradient(90deg, #b91c1c, #7f1d1d);
+  color: #fee2e2;
+}
+
+.power-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+@media (max-width: 640px) {
+  .power-cols { grid-template-columns: 1fr; }
+}
+
+.power-side {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.45rem;
+}
+
+.power-side.is-ours {
+  background: rgb(56 189 248 / 0.08);
+  border: 1px solid rgb(56 189 248 / 0.3);
+}
+
+.power-side.is-enemy {
+  background: rgb(239 68 68 / 0.08);
+  border: 1px solid rgb(239 68 68 / 0.3);
+}
+
+.power-side h5 {
+  margin: 0 0 0.15rem;
+  font-size: 0.85rem;
+}
+
+.power-side.is-ours h5 { color: #7dd3fc; }
+.power-side.is-enemy h5 { color: #fca5a5; }
+
+.power-row {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 2.6rem 1fr;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.power-row > span:first-child {
+  color: var(--text-muted);
+}
+
+.power-comment {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.8;
+  color: #e2e8f0;
+}
+
+.briefing-power .scenario-sign {
+  justify-self: end;
+}
+
+/* Sub-sections inside a briefing step (e.g. 戦術情報: start time, then districts & compounds) */
+.briefing-subhead {
+  margin: 0.9rem 0 0.45rem;
+  font-size: 0.86rem;
+  color: #7dd3fc;
+  letter-spacing: 0.05em;
+  padding-block-end: 0.2rem;
+  border-block-end: 1px solid rgb(56 189 248 / 0.25);
+}
+
+.briefing-panel h3 + .briefing-subhead {
+  margin-block-start: 0;
+}
+
+.briefing-kv-list {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.briefing-kv {
+  display: grid;
+  grid-template-columns: 9.5rem 1fr;
+  gap: 0.6rem;
+  padding-block: 0.35rem;
+  padding-inline: 0.6rem;
+  border-radius: 0.4rem;
+  background: rgb(255 255 255 / 0.04);
+  font-size: 0.88rem;
+}
+
+.briefing-kv > span:first-child {
+  color: var(--text-muted);
+}
+
+.briefing-kv .is-strong {
+  color: #fde68a;
+}
+
+.briefing-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+  margin-block: 0.4rem;
+}
+
+.briefing-table th,
+.briefing-table td {
+  text-align: start;
+  padding-block: 0.35rem;
+  padding-inline: 0.5rem;
+  border-block-end: 1px solid rgb(148 180 218 / 0.15);
+}
+
+.briefing-table th {
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.78rem;
+}
+
+.briefing-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.briefing-enemies {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.briefing-enemy {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.7rem;
+  align-items: center;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.45rem;
+  background: rgb(239 68 68 / 0.06);
+  border: 1px solid rgb(239 68 68 / 0.22);
+}
+
+.briefing-enemy-icon {
+  inline-size: 68px;
+  block-size: 68px;
+  border-radius: 0.4rem;
+  background: rgb(58 48 39 / 0.9);
+}
+
+.briefing-enemy-body h4 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.briefing-enemy-stats {
+  margin: 0.15rem 0;
+  font-size: 0.8rem;
+  color: #fca5a5;
+  font-variant-numeric: tabular-nums;
+}
+
+.briefing-enemy-role {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.briefing-terrain {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.briefing-terrain-item {
+  display: grid;
+  grid-template-columns: auto 10rem 1fr;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.4rem;
+  background: rgb(255 255 255 / 0.04);
+  font-size: 0.86rem;
+}
+
+.briefing-terrain-item > span:last-child {
+  color: var(--text-muted);
+}
+
+.briefing-time {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.briefing-time-main {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #fde68a;
+  letter-spacing: 0.06em;
+}
+
+/* 24h day/night band (matches the sky keyframes: night, dawn ~6h, day, dusk ~18h, night) */
+.briefing-daybar {
+  position: relative;
+  block-size: 1.1rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg,
+    #0b1328 0%, #0f1a33 17%, #f08c42 25%, #6aa5d4 32%, #78b4de 50%, #78aed6 68%,
+    #e86a2e 75%, #121c35 82%, #0b1328 100%);
+  border: 1px solid rgb(148 180 218 / 0.35);
+}
+
+.briefing-daybar-marker {
+  position: absolute;
+  inset-block: -0.35rem;
+  inline-size: 3px;
+  transform: translateX(-50%);
+  background: #fde68a;
+  box-shadow: 0 0 8px rgb(253 230 138 / 0.9);
+  border-radius: 2px;
+}
+
+.briefing-daybar-scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.briefing-mio {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.8rem;
+  align-items: start;
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.6rem;
+  background: rgb(9 16 28 / 0.9);
+  border: 1px solid rgb(56 189 248 / 0.45);
+  border-inline-start: 4px solid var(--accent-cyan);
+}
+
+.briefing-mio .radio-avatar {
+  inline-size: 3rem;
+  block-size: 3rem;
+}
+
+.briefing-mio .radio-header {
+  font-size: 0.82rem;
+}
+
+.briefing-mio-body {
+  display: grid;
+  gap: 0.25rem;
+  min-inline-size: 0;
+}
+
+.briefing-mio-text {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  min-block-size: 3.2em;
+}
+
+.briefing-mio-text.is-typing::after {
+  content: '▌';
+  margin-inline-start: 1px;
+  color: var(--accent-cyan);
+  animation: radio-caret 0.6s steps(1) infinite;
+}
+
+/* ---------------------------------------------------------------- After-action report */
+dialog.results-dialog {
+  max-inline-size: min(96dvw, 62rem);
+  inline-size: min(96dvw, 62rem);
+  overflow: auto;
+}
+
+.results-shell {
+  gap: 1rem;
+}
+
+.results-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.results-title {
+  margin: 0.3rem 0 0;
+  font-size: clamp(1.3rem, 2.6vw, 1.9rem);
+  letter-spacing: 0.05em;
+}
+
+.results-rank-box {
+  display: grid;
+  justify-items: center;
+  gap: 0.1rem;
+  padding-block: 0.4rem;
+  padding-inline: 1.2rem;
+  border-radius: 0.7rem;
+  background: rgb(255 255 255 / 0.04);
+  border: 1px solid rgb(148 180 218 / 0.25);
+}
+
+.results-rank-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+}
+
+.results-rank {
+  font-size: 3.4rem;
+  line-height: 1;
+  font-weight: 900;
+  font-family: var(--font-mono);
+  color: #fde68a;
+  text-shadow: 0 0 18px rgb(253 230 138 / 0.55);
+}
+
+.results-rank[data-rank="S"] { color: #fde047; text-shadow: 0 0 22px rgb(250 204 21 / 0.75); }
+.results-rank[data-rank="A"] { color: #86efac; text-shadow: 0 0 18px rgb(34 197 94 / 0.6); }
+.results-rank[data-rank="B"] { color: #7dd3fc; text-shadow: 0 0 16px rgb(56 189 248 / 0.55); }
+.results-rank[data-rank="C"] { color: #cbd5e1; text-shadow: none; }
+
+.results-score {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.6rem;
+}
+
+.result-card {
+  display: grid;
+  align-content: start;
+  gap: 0.2rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 0.55rem;
+  background: rgb(255 255 255 / 0.045);
+  border: 1px solid rgb(148 180 218 / 0.18);
+  animation: result-card-in 0.42s ease both;
+  animation-delay: calc(var(--i, 0) * 80ms);
+}
+
+/* During the report's boot-up the cards wait for the frame, then deal in one by one */
+.is-booting .result-card {
+  animation-delay: calc(0.92s + var(--i, 0) * 80ms);
+}
+
+.result-card h3 {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+}
+
+.result-value {
+  margin: 0;
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+}
+
+.result-sub {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes result-card-in {
+  from { opacity: 0; transform: translateY(0.6rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .result-card { animation: none; }
+}
+
+/* Garage Dialog */
+.dialog-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-block-end: 0.75rem;
+  border-block-end: 1px solid rgb(255 255 255 / 0.12);
+}
+
+.dialog-header h2 {
+  margin: 0.25rem 0 0;
+  font-size: 1.35rem;
+}
+
+/* Garage window: fixed width so changing values never resize it; the header (scrap on hand)
+   stays put while only the body below it scrolls. Opens/closes a bit quicker than the briefing. */
+dialog.garage-dialog {
+  --bt: 0.6;
+  inline-size: min(94dvw, 56rem);
+  overflow: hidden;
+}
+
+.garage-shell {
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  scrollbar-gutter: auto;
+}
+
+.garage-body {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+  min-block-size: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+  padding-inline-end: 0.25rem;
+}
+
+.garage-scrap-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-inline: 0.9rem;
+  padding-block: 0.45rem;
+  border-radius: 999px;
+  background: rgb(245 158 11 / 0.14);
+  border: 1px solid rgb(245 158 11 / 0.45);
+  font-size: 0.9rem;
+}
+
+.garage-scrap-pill strong {
+  font-size: 1.15rem;
+  color: var(--accent-bright);
+  min-inline-size: 4ch; /* digits dropping on a purchase must not shift the header */
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.btn-close-dialog {
+  appearance: none;
+  border: 1px solid rgb(255 255 255 / 0.24);
+  background: rgb(255 255 255 / 0.08);
+  color: var(--text-main);
+  padding-inline: 0.85rem;
+  padding-block: 0.5rem;
+  border-radius: 0.45rem;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-close-dialog:hover {
+  background: rgb(255 255 255 / 0.16);
+}
+
+.garage-stats-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  gap: 0.55rem;
+}
+
+.spec-item {
+  background: rgb(255 255 255 / 0.04);
+  border: 1px solid rgb(255 255 255 / 0.1);
+  border-radius: 0.45rem;
+  padding-inline: 0.7rem;
+  padding-block: 0.45rem;
+  display: grid;
+  gap: 0.1rem;
+}
+
+.spec-item span {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.spec-item strong {
+  font-size: 0.96rem;
+  color: var(--accent-cyan);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.upgrade-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15.5rem, 1fr));
+  gap: 0.75rem;
+}
+
+/* Section headings inside the garage grid: player tank vs platoon (wingmen) */
+.upgrade-section-title {
+  grid-column: 1 / -1;
+  margin: 0;
+  margin-block-start: 0.35rem;
+  padding-block-end: 0.3rem;
+  border-block-end: 1px solid rgb(245 158 11 / 0.35);
+  color: var(--accent-bright);
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+}
+
+.upgrade-section-title.is-squad {
+  border-block-end-color: rgb(56 189 248 / 0.4);
+  color: #7dd3fc;
+}
+
+.upgrade-card.is-squad {
+  border-color: rgb(56 189 248 / 0.28);
+  background: rgb(56 189 248 / 0.05);
+}
+
+.upgrade-section-title.is-supply {
+  border-block-end-color: rgb(34 197 94 / 0.45);
+  color: #86efac;
+}
+
+.upgrade-card.is-supply {
+  border-color: rgb(34 197 94 / 0.35);
+  background: rgb(34 197 94 / 0.07);
+}
+
+.spec-item.is-squad strong {
+  color: #7dd3fc;
+}
+
+.upgrade-card {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 0.55rem;
+  background: rgb(255 255 255 / 0.04);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 0.55rem;
+  padding: 0.85rem;
+}
+
+.upgrade-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.upgrade-card h3 {
+  margin: 0;
+  font-size: 0.98rem;
+  color: var(--text-main);
+}
+
+.upgrade-lv {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  padding-inline: 0.45rem;
+  padding-block: 0.12rem;
+  border-radius: 0.25rem;
+  background: rgb(56 189 248 / 0.15);
+  color: var(--accent-cyan);
+  white-space: nowrap;
+  /* fixed width: "Lv.1 / 5" → "MAX (Lv.5)" must not squeeze the title into a new line */
+  min-inline-size: 7.2em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.upgrade-desc {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.upgrade-pips {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.upgrade-pip {
+  flex: 1;
+  block-size: 0.3rem;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.14);
+}
+
+.upgrade-pip.is-filled {
+  background: var(--accent-bright);
+}
+
+.btn-upgrade {
+  appearance: none;
+  inline-size: 100%;
+  border: 1px solid rgb(245 158 11 / 0.55);
+  background: rgb(245 158 11 / 0.18);
+  color: #fef08a;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding-block: 0.5rem;
+  border-radius: 0.4rem;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.btn-upgrade:hover:not(:disabled) {
+  background: rgb(245 158 11 / 0.34);
+}
+
+.btn-upgrade:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  border-color: rgb(255 255 255 / 0.15);
+  background: rgb(255 255 255 / 0.05);
+  color: var(--text-muted);
+}
+
