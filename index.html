@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="css/results.css">
   <link rel="stylesheet" href="css/depot.css">
   <link rel="stylesheet" href="css/tuning.css">
+  <link rel="stylesheet" href="css/hqbackdrop.css">
   <!-- shared helpers & data first: every later script reads them at load time -->
   <script src="js/util.js" defer></script>
   <script src="js/typewriter.js" defer></script>
@@ -43,6 +44,8 @@
   <script src="js/tuning.js" defer></script>
   <script src="js/tuningPanel.js" defer></script>
   <script src="js/depot.js" defer></script>
+  <script src="js/tacticalMap.js" defer></script>
+  <script src="js/hqBackdrop.js" defer></script>
   <script src="js/areaSelect.js" defer></script>
   <script src="js/briefing.js" defer></script>
   <script src="js/results.js" defer></script>
@@ -265,6 +268,17 @@
       </form>
     </div>
   </dialog>
+
+  <!-- Backdrop of the pre-sortie windows (js/hqBackdrop.js): operations room behind the sortie
+       select, full-screen tactical map of the area behind the briefing -->
+  <div id="hq-backdrop" class="hq-backdrop" data-mode="room" aria-hidden="true">
+    <canvas class="hq-bd-layer hq-bd-room"></canvas>
+    <canvas class="hq-bd-layer hq-bd-map"></canvas>
+    <div class="hq-bd-caption">
+      <span id="hq-bd-area" class="hq-bd-caption-area"></span>
+      <span id="hq-bd-op" class="hq-bd-caption-op"></span>
+    </div>
+  </div>
 
   <!-- First-load "click to connect" screen: the browser keeps audio muted until the first click /
        key press, so the sortie select (and its BGM) waits for one (js/areaSelect.js) -->

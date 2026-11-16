@@ -41,6 +41,12 @@
     const squad = new global.SquadManager(world, combat, tuning);
     const radio = new global.RadioComms(document.getElementById('radio-panel'), audio);
     const results = new global.ResultsReport(document.getElementById('results-dialog'));
+    // Operations room / tactical map behind the sortie select and the briefing (js/hqBackdrop.js)
+    const backdrop = new global.HqBackdrop(document.getElementById('hq-backdrop'), {
+      world,
+      combat,
+      getPlayer: () => game.player
+    });
     const areaSelect = new global.AreaSelectScene(document.getElementById('area-dialog'), { audio });
     const briefing = new global.BriefingScene(document.getElementById('briefing-dialog'), {
       world,
@@ -77,6 +83,7 @@
       results,
       areaSelect,
       briefing,
+      backdrop,
       operation: null, // { area, operation } picked on the sortie-select screen (js/data/operations.js)
       player, // replaced on every (re)start
       // Camera locked to player center so the tank sits at exact screen center
@@ -140,7 +147,8 @@
 
       const timeInfo = world.getTimeInfo();
       hud.update(timeInfo);
-      renderer.render(now * 0.001, timeInfo);
+      // The battlefield is hidden while the HQ backdrop fully covers it
+      if (!backdrop.covering) renderer.render(now * 0.001, timeInfo);
     }
 
     mission.start();

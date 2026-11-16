@@ -15,7 +15,7 @@
   const SCENE_SWITCH_DELAY_MS = 250;
 
   function create(game) {
-    const { world, combat, tuning, depot, squad, radio, results, areaSelect, briefing, audio } = game;
+    const { world, combat, tuning, depot, squad, radio, results, areaSelect, briefing, backdrop, audio } = game;
     const { start: startDialog, garage: garageDialog, gameover: gameoverDialog } = game.dialogs;
 
     // Radar-chart tuning (js/tuning.js) → the player's tank and every wingman. refill: fresh tanks
@@ -56,21 +56,28 @@
       game.input.release();
       // Sortie select, then the briefing (the game stays paused while either is open); the tactical
       // phase and Mio's mission-start report begin once the briefing is closed with 作戦開始.
+      // Behind them the battlefield is hidden: the operations room, then the area's tactical map.
+      backdrop.show('room');
       areaSelect.open(openBriefing);
     }
 
     // Briefing for the picked { area, operation }; 作戦選択へ goes back to that area's operation list
     function openBriefing(selection) {
       game.operation = selection;
+      backdrop.show('map', selection);
       briefing.open(selection, {
         delayMs: SCENE_SWITCH_DELAY_MS,
         onStart: () => {
+          backdrop.hide(); // fade out to the battlefield
           radio.say(global.RadioComms.script.missionStart(
             combat.districts.length ? combat.districts[0].name : null,
             combat.districts.length
           ));
         },
-        onBack: () => areaSelect.open(openBriefing, { areaId: selection.area.id, delayMs: SCENE_SWITCH_DELAY_MS })
+        onBack: () => {
+          backdrop.show('room');
+          areaSelect.open(openBriefing, { areaId: selection.area.id, delayMs: SCENE_SWITCH_DELAY_MS });
+        }
       });
     }
 
