@@ -1,0 +1,697 @@
+/* Phones / tablets and small screens. Loaded last, so it overrides the files above.
+   In-game parts key off <html class="is-touch"> (set by js/game/quality.js on touch-first devices);
+   the menu windows follow the screen size (also useful in a small desktop window).
+     1. on-screen stick + buttons (js/game/touchControls.js)
+     2. "turn the phone sideways" screen
+     3. compact in-game HUD for a landscape phone
+     4. menu windows on small screens (briefing, sortie select, report, depot) */
+
+:root {
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+}
+
+/* Texts that differ between mouse / keyboard and touch screens */
+.only-touch { display: none; }
+.is-touch .only-touch { display: inline; }
+.is-touch .only-pointer { display: none; }
+
+.is-touch {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.is-touch body {
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation; /* no double-tap zoom on buttons */
+}
+
+/* Keyboard hints mean nothing without a keyboard */
+.is-touch .btn-hud kbd,
+.is-touch .btn-close-dialog kbd,
+.is-touch .key-hint,
+.is-touch .hud-controls-hint {
+  display: none;
+}
+
+/* ================================================================ 1. on-screen controls */
+.touch-controls {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.touch-controls[hidden] {
+  display: none;
+}
+
+/* Left part of the screen: the stick appears wherever the thumb lands in here */
+.touch-stick-zone {
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-end: 0;
+  inline-size: 45%;
+  block-size: 62%;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.touch-stick {
+  position: absolute;
+  inset-inline-start: calc(1.4rem + var(--safe-l));
+  inset-block-end: calc(1.4rem + var(--safe-b));
+  inline-size: 7rem;
+  block-size: 7rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 2px solid rgb(148 180 218 / 0.4);
+  background: radial-gradient(circle, rgb(56 189 248 / 0.08) 0 45%, rgb(13 20 33 / 0.45) 70%);
+  opacity: 0.5;
+  transition: opacity 0.15s ease;
+}
+
+.touch-stick.is-held {
+  opacity: 0.95;
+  transition: none;
+}
+
+.touch-stick-knob {
+  inline-size: 3.1rem;
+  block-size: 3.1rem;
+  border-radius: 50%;
+  border: 2px solid rgb(186 230 253 / 0.8);
+  background: radial-gradient(circle at 40% 35%, rgb(125 211 252 / 0.75), rgb(14 116 144 / 0.7));
+  box-shadow: 0 0 12px rgb(56 189 248 / 0.45);
+}
+
+.touch-btn {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid var(--tb, #fbbf24);
+  background: rgb(13 20 33 / 0.55);
+  color: var(--tb, #fbbf24);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.8);
+  box-shadow: 0 0 10px rgb(0 0 0 / 0.35), inset 0 0 14px var(--tb-glow, rgb(245 158 11 / 0.25));
+  pointer-events: auto;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  opacity: 0.85;
+  cursor: pointer;
+}
+
+/* Ring: reload (main gun), cooldown / heat (sub weapon), boost energy — vars set by js/game/hud.js */
+.touch-btn::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: conic-gradient(var(--tb, #fbbf24) calc(var(--ring, 1) * 360deg), rgb(255 255 255 / 0.12) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3.5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3.5px));
+  pointer-events: none;
+}
+
+.touch-btn-fire { --ring: var(--reload-ratio, 1); }
+.touch-btn-sub { --ring: var(--sub-ratio, 1); }
+.touch-btn-boost { --ring: var(--boost-ratio, 1); }
+
+/* No sub weapon fitted */
+.touch-btn.is-empty {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+
+.touch-btn.is-held {
+  opacity: 1;
+  background: var(--tb-glow, rgb(245 158 11 / 0.35));
+  transform: scale(0.93);
+}
+
+.touch-btn-fire {
+  --tb: #fbbf24;
+  --tb-glow: rgb(245 158 11 / 0.4);
+  inset-inline-end: calc(1rem + var(--safe-r));
+  inset-block-end: calc(1rem + var(--safe-b));
+  inline-size: 5rem;
+  block-size: 5rem;
+  font-size: 1rem;
+}
+
+.touch-btn-sub {
+  --tb: #34d399;
+  --tb-glow: rgb(16 185 129 / 0.35);
+  inset-inline-end: calc(6.6rem + var(--safe-r));
+  inset-block-end: calc(0.9rem + var(--safe-b));
+  inline-size: 3.6rem;
+  block-size: 3.6rem;
+}
+
+.touch-btn-boost {
+  --tb: #38bdf8;
+  --tb-glow: rgb(56 189 248 / 0.35);
+  inset-inline-end: calc(1.7rem + var(--safe-r));
+  inset-block-end: calc(6.6rem + var(--safe-b));
+  inline-size: 3.6rem;
+  block-size: 3.6rem;
+  font-size: 0.7rem;
+}
+
+/* ================================================================ 2. upright phone during a sortie */
+.rotate-notice {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 0.6rem;
+  padding: 1.5rem;
+  text-align: center;
+  background: rgb(7 11 20 / 0.94);
+}
+
+.rotate-notice[hidden] {
+  display: none;
+}
+
+.rotate-notice-icon {
+  inline-size: 5.5rem;
+  block-size: 5.5rem;
+  color: #7dd3fc;
+  animation: rotate-notice-turn 2.4s ease-in-out infinite;
+}
+
+.rotate-notice-icon svg {
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.rotate-notice-title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--text-main);
+}
+
+.rotate-notice-hint {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+@keyframes rotate-notice-turn {
+  0%, 30% { transform: rotate(0deg); }
+  55%, 85% { transform: rotate(-90deg); }
+  100% { transform: rotate(0deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rotate-notice-icon { animation: none; }
+}
+
+/* ================================================================ 3. in-game HUD on phones
+   Landscape phone (e.g. 844 x 390):
+     top:    status (left) · HP / boost (centre) · scrap + buttons, radar below (right)
+     bottom: stick (left) · Mio's radio (centre) · buttons with reload / boost rings (right) */
+.is-touch .hud-panel {
+  padding-block: 0.35rem;
+  padding-inline: 0.55rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.35);
+}
+
+.is-touch .hud-top {
+  inset-block-start: calc(0.45rem + var(--safe-t));
+  inset-inline: calc(0.5rem + var(--safe-l)) calc(0.5rem + var(--safe-r));
+  flex-wrap: nowrap;
+  gap: 0.45rem;
+}
+
+.is-touch .hud-mission {
+  flex: 0 1 16.5rem;
+  min-inline-size: 0;
+  max-inline-size: 16.5rem;
+}
+
+.is-touch #hud-objective {
+  font-size: 0.7rem;
+}
+
+.is-touch .hud-title-row {
+  gap: 0.1rem 0.4rem;
+  margin-block-end: 0.15rem;
+  font-size: 0.74rem;
+}
+
+.is-touch .hud-title-row .divider {
+  display: none;
+}
+
+.is-touch .badge-tag {
+  font-size: 0.6rem;
+}
+
+.is-touch .hud-sub-row {
+  font-size: 0.68rem;
+}
+
+/* coordinates: the radar already shows where things are */
+.is-touch .hud-mission .hud-sub-row:last-child {
+  display: none;
+}
+
+.is-touch .hud-vital {
+  flex: 1 1 8rem;
+  min-inline-size: 6rem;
+  max-inline-size: 15rem;
+  gap: 0.3rem;
+}
+
+.is-touch .meter-label {
+  font-size: 0.66rem;
+  gap: 0.3rem;
+}
+
+.is-touch .meter-label > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.is-touch .meter-track {
+  block-size: 0.42rem;
+}
+
+.is-touch .hud-top-right {
+  flex: none;
+  gap: 0.35rem;
+}
+
+.is-touch .hud-resources {
+  gap: 0.5rem;
+}
+
+.is-touch .scrap-display {
+  gap: 0.3rem;
+}
+
+.is-touch .scrap-icon {
+  font-size: 1.1rem;
+}
+
+.is-touch .scrap-label {
+  display: none;
+}
+
+.is-touch .scrap-value {
+  font-size: 0.95rem;
+}
+
+.is-touch .hud-actions {
+  gap: 0.3rem;
+}
+
+.is-touch .btn-hud {
+  min-block-size: 2.2rem;
+  padding-inline: 0.55rem;
+  padding-block: 0.25rem;
+  font-size: 0.74rem;
+}
+
+/* The depot menu opens by itself inside a secured compound; the button only says "not here" */
+.is-touch #btn-garage {
+  display: none;
+}
+
+#btn-fullscreen[hidden] {
+  display: none;
+}
+
+#btn-fullscreen {
+  font-size: 1rem;
+}
+
+/* Narrow landscape phones: icon-only buttons */
+@media (max-width: 900px) {
+  .is-touch .hud-actions .btn-label {
+    display: none;
+  }
+  .is-touch .hud-actions .btn-hud {
+    min-inline-size: 2.4rem;
+    justify-content: center;
+  }
+}
+
+/* Radar: moved under the top-right panel by touchControls.js (bottom right = buttons) */
+.is-touch .hud-radar {
+  padding: 0.3rem;
+  gap: 0.15rem;
+}
+
+.is-touch #radar-canvas {
+  inline-size: 5.6rem;
+  block-size: 5.6rem;
+}
+
+.is-touch .radar-caption {
+  font-size: 0.55rem;
+}
+
+/* Bottom: the weapons panel gives way to the rings around the fire / sub-weapon buttons */
+.is-touch .hud-bottom {
+  display: none;
+}
+
+/* Mio's radio: smaller, at the bottom between the stick and the buttons, clear of the tank at
+   screen centre (no portrait: the text gets the whole width) */
+.is-touch .radio-panel {
+  inset-block-end: calc(0.5rem + var(--safe-b));
+  grid-template-columns: minmax(0, 1fr);
+  inline-size: min(34rem, max(16rem, calc(100vw - 22rem - var(--safe-l) - var(--safe-r))));
+  gap: 0.6rem;
+  padding-block: 0.5rem;
+  padding-inline: 0.65rem;
+  border-radius: 0.6rem;
+}
+
+.is-touch .radio-panel > .radio-avatar {
+  display: none;
+}
+
+.is-touch .radio-body {
+  gap: 0.2rem;
+}
+
+.is-touch .radio-header {
+  font-size: 0.72rem;
+  gap: 0.45rem;
+}
+
+.is-touch .radio-signal {
+  block-size: 0.75rem;
+}
+
+.is-touch .radio-lock {
+  font-size: 0.66rem;
+}
+
+.is-touch .radio-text {
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.is-touch .boss-banner {
+  inset-block-start: calc(4.4rem + var(--safe-t));
+  inline-size: min(60vw, 22rem);
+  padding-block: 0.35rem;
+}
+
+.is-touch .boss-title {
+  font-size: 0.68rem;
+  margin-block-end: 0.2rem;
+}
+
+/* Bigger −／＋ in the briefing's tuning (fingers, not a mouse pointer) */
+.is-touch .tuning-step {
+  inline-size: 2.1rem;
+  block-size: 2.1rem;
+}
+
+.is-touch .hq-bd-caption {
+  inset-inline-start: calc(1rem + var(--safe-l));
+  inset-block-end: calc(0.9rem + var(--safe-b));
+}
+
+/* ================================================================ 4. menu windows on small screens */
+@media (max-width: 640px), (max-height: 560px) {
+  dialog.game-dialog {
+    max-inline-size: calc(100dvw - 1rem - var(--safe-l) - var(--safe-r));
+    max-block-size: calc(100dvb - 1rem - var(--safe-t) - var(--safe-b));
+    border-radius: 0.6rem;
+  }
+
+  dialog.area-dialog,
+  dialog.briefing-dialog,
+  dialog.results-dialog {
+    inline-size: calc(100dvw - 1rem - var(--safe-l) - var(--safe-r));
+  }
+
+  dialog.garage-dialog {
+    inline-size: min(calc(100dvw - 1rem - var(--safe-l) - var(--safe-r)), 42rem);
+  }
+
+  .dialog-shell {
+    gap: 0.65rem;
+    padding: 0.85rem;
+  }
+
+  .briefing-shell,
+  .area-shell,
+  .results-shell {
+    gap: 0.65rem;
+  }
+
+  .bf-corner {
+    inline-size: 0.8rem;
+    block-size: 0.8rem;
+  }
+
+  .bf-tl, .bf-tr { inset-block-start: 0.3rem; }
+  .bf-bl, .bf-br { inset-block-end: 0.3rem; }
+  .bf-tl, .bf-bl { inset-inline-start: 0.3rem; }
+  .bf-tr, .bf-br { inset-inline-end: 0.3rem; }
+
+  .dialog-badge {
+    font-size: 0.62rem;
+  }
+
+  .briefing-header,
+  .area-header {
+    gap: 0.45rem;
+  }
+
+  .briefing-title {
+    margin-block-start: 0.15rem;
+    font-size: 1.1rem;
+  }
+
+  .briefing-step,
+  .area-flow-step {
+    font-size: 0.74rem;
+    padding-block: 0.3rem;
+    padding-inline: 0.55rem;
+  }
+
+  .briefing-panel h3 {
+    font-size: 0.98rem;
+    margin-block-end: 0.45rem;
+  }
+
+  .briefing-scenario {
+    gap: 0.5rem;
+    padding-block: 0.7rem;
+    padding-inline: 0.8rem;
+  }
+
+  .scenario-catch {
+    font-size: 1.2rem;
+  }
+
+  .scenario-deck {
+    font-size: 0.92rem;
+  }
+
+  .scenario-lead,
+  .power-comment {
+    font-size: 0.85rem;
+    line-height: 1.7;
+  }
+
+  .briefing-mio {
+    gap: 0.55rem;
+    padding-block: 0.45rem;
+    padding-inline: 0.6rem;
+  }
+
+  .briefing-mio .radio-avatar {
+    inline-size: 2.3rem;
+    block-size: 2.3rem;
+  }
+
+  .briefing-mio .radio-header {
+    font-size: 0.72rem;
+  }
+
+  .briefing-mio-text {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    min-block-size: 3em;
+  }
+
+  .dialog-footer-actions {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .btn-primary-lg {
+    padding-inline: 1.1rem;
+    padding-block: 0.6rem;
+    font-size: 0.92rem;
+  }
+
+  /* Briefing / report buttons stay in reach while the window scrolls */
+  .briefing-shell > .dialog-footer-actions,
+  .results-shell > .dialog-footer-actions {
+    position: sticky;
+    inset-block-end: 0;
+    z-index: 1;
+    margin-inline: -0.85rem;
+    margin-block-end: -0.85rem;
+    padding-inline: 0.85rem;
+    padding-block: 0.55rem;
+    background: rgb(11 18 30 / 0.97);
+    border-block-start: 1px solid rgb(148 180 218 / 0.2);
+  }
+
+  .area-body {
+    min-block-size: 0;
+  }
+
+  .area-card {
+    padding: 0.7rem 0.8rem;
+  }
+
+  .op-card {
+    padding: 0.75rem 0.85rem;
+  }
+
+  .op-card-name {
+    font-size: 1.2rem;
+  }
+
+  .results-rank {
+    font-size: 2.6rem;
+  }
+
+  .result-value {
+    font-size: 1.3rem;
+  }
+
+  .garage-header {
+    gap: 0.5rem;
+    padding-block-end: 0.5rem;
+  }
+
+  .dialog-header h2 {
+    font-size: 1.1rem;
+  }
+
+  .audio-gate-panel {
+    padding-block: 1.1rem;
+    padding-inline: 1.2rem;
+  }
+}
+
+/* Landscape phone: map and contents side by side, the map no taller than the screen allows */
+@media (max-height: 560px) {
+  .briefing-main {
+    grid-template-columns: minmax(0, min(40%, 62dvb)) minmax(0, 1fr);
+    gap: 0.75rem;
+  }
+
+  .briefing-legend {
+    gap: 0.2rem 0.55rem;
+    font-size: 0.66rem;
+  }
+
+  .briefing-header > div,
+  .area-header > div {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.2rem 0.6rem;
+  }
+}
+
+/* Upright phone: everything in one column */
+@media (max-width: 640px) {
+  .area-list,
+  .tuning-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .results-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .briefing-kv {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.1rem;
+  }
+
+  .briefing-terrain-item {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .briefing-terrain-item > span:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .briefing-table {
+    font-size: 0.76rem;
+  }
+
+  .briefing-table th,
+  .briefing-table td {
+    padding-inline: 0.3rem;
+  }
+
+  .briefing-enemy-icon {
+    inline-size: 52px;
+    block-size: 52px;
+  }
+
+  /* content first, the map under it */
+  .briefing-panels {
+    order: -1;
+  }
+
+  /* the four footer buttons on one line */
+  .briefing-shell > .dialog-footer-actions {
+    flex-wrap: nowrap;
+    gap: 0.4rem;
+  }
+
+  .briefing-shell > .dialog-footer-actions .btn-hud {
+    padding-inline: 0.55rem;
+    white-space: nowrap;
+  }
+
+  .briefing-shell > .dialog-footer-actions .btn-primary-lg {
+    padding-inline: 0.85rem;
+    white-space: nowrap;
+  }
+
+  .garage-header form {
+    flex-basis: 100%;
+  }
+
+  .btn-close-dialog {
+    inline-size: 100%;
+  }
+}

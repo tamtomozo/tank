@@ -50,9 +50,11 @@
     function update(dt, locked) {
       const player = game.player;
       const { input } = game;
-      const { keys, mouse } = input;
+      const { keys, mouse, touch } = input;
       const held = (code) => !locked && keys.has(code);
-      const wantBoost = held('ShiftLeft') || held('ShiftRight');
+      // On-screen stick / buttons on phones (js/game/touchControls.js)
+      const stick = !locked && touch.active && (touch.moveX !== 0 || touch.moveY !== 0);
+      const wantBoost = held('ShiftLeft') || held('ShiftRight') || (!locked && touch.boost);
       const dustCb = (x, y, count) => {
         combat.spawnDustOrSmoke(x, y, 2, count, '#a8a29e');
       };
@@ -64,6 +66,10 @@
         if (held('KeyS') || held('ArrowDown')) moveY += 1;
         if (held('KeyA') || held('ArrowLeft')) moveX -= 1;
         if (held('KeyD') || held('ArrowRight')) moveX += 1;
+        if (stick && moveX === 0 && moveY === 0) {
+          moveX = touch.moveX;
+          moveY = touch.moveY;
+        }
         player.stepPhysicsDirectional(moveX, moveY, wantBoost, dt, dustCb);
       } else {
         let throttle = 0;
@@ -73,6 +79,11 @@
         let steer = 0;
         if (held('KeyA') || held('ArrowLeft')) steer -= 1;
         if (held('KeyD') || held('ArrowRight')) steer += 1;
+        // Stick in tank mode: up / down = throttle, left / right = steer
+        if (stick && throttle === 0 && steer === 0) {
+          throttle = -touch.moveY;
+          steer = touch.moveX;
+        }
         player.stepPhysics(throttle, steer, wantBoost, dt, dustCb);
       }
 
@@ -94,11 +105,11 @@
         player.returnTurretStraight(dt);
       }
 
-      if (!locked && (mouse.left || keys.has('Space'))) {
+      if (!locked && (mouse.left || keys.has('Space') || touch.fire)) {
         const fireTarget = game.activeTarget || barrelForwardTarget(340);
         combat.fireMainCannon(player, fireTarget.x, fireTarget.y);
       }
-      if (!locked && (mouse.right || keys.has('KeyF'))) {
+      if (!locked && (mouse.right || keys.has('KeyF') || touch.sub)) {
         combat.fireSubWeapon(player);
       }
     }

@@ -15,15 +15,22 @@
 
     // Cached HUD element refs + dirty-checked writes: only touch the DOM when a value actually changes
     const styleOf = (id) => document.getElementById(id).style;
-    const varStyle = {
-      '--hp-ratio': styleOf('hud-hp-fill'),
-      '--hp-hue': styleOf('hud-hp-fill'),
-      '--boost-ratio': styleOf('hud-boost-fill'),
-      '--reload-ratio': styleOf('hud-reload-fill'),
-      '--sub-ratio': styleOf('hud-sub-fill'),
-      '--boss-hp-ratio': styleOf('boss-hp-fill'),
-      '--damage-alpha': styleOf('damage-vignette')
+    // Phones also show reload / boost as rings around the on-screen buttons (css/touch.css)
+    const touchBtn = (action) => {
+      const el = global.GameQuality.touch ? document.querySelector(`.touch-btn[data-touch="${action}"]`) : null;
+      return el ? [el.style] : [];
     };
+    const varStyle = {
+      '--hp-ratio': [styleOf('hud-hp-fill')],
+      '--hp-hue': [styleOf('hud-hp-fill')],
+      '--boost-ratio': [styleOf('hud-boost-fill'), ...touchBtn('boost')],
+      '--reload-ratio': [styleOf('hud-reload-fill'), ...touchBtn('fire')],
+      '--sub-ratio': [styleOf('hud-sub-fill'), ...touchBtn('sub')],
+      '--boss-hp-ratio': [styleOf('boss-hp-fill')],
+      '--damage-alpha': [styleOf('damage-vignette')]
+    };
+    const subTouchBtn = global.GameQuality.touch ? document.querySelector('.touch-btn[data-touch="sub"]') : null;
+    let subEmpty = null;
     const hudEl = {
       area: document.getElementById('hud-area'),
       objective: document.getElementById('hud-objective'),
@@ -52,7 +59,7 @@
     const setVar = (name, value) => {
       if (lastVar.get(name) !== value) {
         lastVar.set(name, value);
-        varStyle[name].setProperty(name, value);
+        for (const style of varStyle[name]) style.setProperty(name, value);
       }
     };
 
@@ -154,6 +161,10 @@
 
       const subLv = player.subLevel;
       setText(hudEl.subName, tuning.subWeaponName());
+      if (subTouchBtn && subEmpty !== (subLv <= 0)) {
+        subEmpty = subLv <= 0;
+        subTouchBtn.classList.toggle('is-empty', subEmpty);
+      }
       if (subLv <= 0) {
         setText(hudEl.subText, '未装備');
       } else if (subLv <= 2) {

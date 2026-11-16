@@ -22,6 +22,12 @@
   box-sizing: border-box;
 }
 
+html {
+  /* phones turned sideways must not blow the text up (iOS) */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 html,
 body {
   margin: 0;

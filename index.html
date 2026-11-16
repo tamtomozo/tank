@@ -2,7 +2,11 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
+  <meta name="theme-color" content="#070b14">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>PLANET PANZER — 2D惑星戦車バトル</title>
   <!-- order matters (later files win on equal specificity) -->
   <link rel="stylesheet" href="css/base.css">
@@ -17,6 +21,8 @@
   <link rel="stylesheet" href="css/depot.css">
   <link rel="stylesheet" href="css/tuning.css">
   <link rel="stylesheet" href="css/hqbackdrop.css">
+  <!-- phones: on-screen controls + compact HUD / dialogs (last: overrides the rules above) -->
+  <link rel="stylesheet" href="css/touch.css">
   <!-- shared helpers & data first: every later script reads them at load time -->
   <script src="js/util.js" defer></script>
   <script src="js/game/quality.js" defer></script>
@@ -55,6 +61,7 @@
   <script src="js/game/hqIcon.js" defer></script>
   <script src="js/game/input.js" defer></script>
   <script src="js/game/controls.js" defer></script>
+  <script src="js/game/touchControls.js" defer></script>
   <script src="js/game/mission.js" defer></script>
   <script src="js/game/hud.js" defer></script>
   <script src="js/game/radar.js" defer></script>
@@ -105,7 +112,7 @@
         </div>
         <div class="stat-meter">
           <div class="meter-label">
-            <span>キャタピラ・ブースト (SHIFT)</span>
+            <span>キャタピラ・ブースト<span class="key-hint"> (SHIFT)</span></span>
             <strong id="hud-boost-text" class="tabular-num">100%</strong>
           </div>
           <div class="meter-track">
@@ -129,10 +136,13 @@
             補給メニュー <kbd>U</kbd>
           </button>
           <button id="btn-control-mode" type="button" class="btn-hud" aria-pressed="false" title="操縦モード切替 (C)">
-            🎮 戦車操縦 <kbd>C</kbd>
+            🎮<span class="btn-label"> 戦車操縦</span> <kbd>C</kbd>
           </button>
           <button id="btn-mute" type="button" class="btn-hud" aria-pressed="false" title="音声オン/オフ (M)">
-            🔊 音声
+            🔊<span class="btn-label"> 音声</span>
+          </button>
+          <button id="btn-fullscreen" type="button" class="btn-hud" aria-pressed="false" title="全画面表示" aria-label="全画面表示" hidden>
+            ⛶
           </button>
         </div>
       </div>
@@ -222,6 +232,33 @@
         <div class="radar-caption">LOCAL RADAR 1200</div>
       </div>
     </footer>
+
+    <!-- Phones / tablets: on-screen stick + buttons (js/game/touchControls.js, css/touch.css) -->
+    <div id="touch-controls" class="touch-controls" hidden>
+      <div id="touch-stick-zone" class="touch-stick-zone" aria-label="移動スティック">
+        <div id="touch-stick" class="touch-stick" aria-hidden="true">
+          <div id="touch-stick-knob" class="touch-stick-knob"></div>
+        </div>
+      </div>
+      <div class="touch-buttons">
+        <button type="button" class="touch-btn touch-btn-fire" data-touch="fire" aria-label="主砲発射">主砲</button>
+        <button type="button" class="touch-btn touch-btn-sub" data-touch="sub" aria-label="副兵装">副兵装</button>
+        <button type="button" class="touch-btn touch-btn-boost" data-touch="boost" aria-label="ターボ加速・ジャンプ">BOOST</button>
+      </div>
+    </div>
+
+    <!-- Phones held upright during a sortie: the battlefield needs a landscape screen -->
+    <div id="rotate-notice" class="rotate-notice" role="alert" hidden>
+      <div class="rotate-notice-icon" aria-hidden="true">
+        <svg viewBox="0 0 64 64">
+          <rect x="20" y="8" width="24" height="44" rx="4" fill="none" stroke="currentColor" stroke-width="3"/>
+          <path d="M50 40a16 16 0 0 1-12 14" fill="none" stroke="#fbbf24" stroke-width="3" stroke-linecap="round"/>
+          <path d="M36 50l2 4.5 4.5-2" fill="none" stroke="#fbbf24" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <p class="rotate-notice-title">端末を横向きにしてください</p>
+      <p class="rotate-notice-hint">戦闘画面は横向き専用です。横にすると作戦を再開します。</p>
+    </div>
   </main>
 
   <!-- Start Briefing Modal -->
@@ -287,7 +324,10 @@
     <div class="audio-gate-panel">
       <div class="dialog-badge">OPERATIONS HQ — STANDBY</div>
       <p class="audio-gate-title">作戦本部 回線待機中</p>
-      <p class="audio-gate-hint">クリック または いずれかのキーで接続</p>
+      <p class="audio-gate-hint">
+        <span class="only-pointer">クリック または いずれかのキーで接続</span>
+        <span class="only-touch">画面をタップして接続</span>
+      </p>
     </div>
   </div>
 
@@ -416,7 +456,7 @@
           </section>
           <section class="briefing-panel" hidden>
             <h3>車両調整</h3>
-            <p class="briefing-note tuning-lead">チャートの軸をクリック／ドラッグ、または −／＋ で調整。合計ポイントは固定（上げるなら他を下げる）。出撃後は変更不可。</p>
+            <p class="briefing-note tuning-lead">チャートの軸をタップ（クリック）／ドラッグ、または −／＋ で調整。合計ポイントは固定（上げるなら他を下げる）。出撃後は変更不可。</p>
             <div id="briefing-tuning" class="tuning-grid"></div>
           </section>
           <section class="briefing-panel" hidden>

@@ -19,6 +19,9 @@
   // immediately lags is not retried soon.
 
   const TOUCH = typeof global.matchMedia === 'function' && global.matchMedia('(pointer: coarse)').matches;
+  // <html class="is-touch">: phone layout & on-screen controls (css/touch.css, js/game/touchControls.js).
+  // Set here, before the first screen is shown, so even the "tap to connect" screen uses it.
+  document.documentElement.classList.toggle('is-touch', TOUCH);
 
   const MAX_RATIO = 2; // never more than 2 canvas px per CSS px, whatever the display has
   const START_RATIO_TOUCH = 1.5; // phones start here instead of at their (2x-3x) display ratio

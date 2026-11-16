@@ -8,6 +8,7 @@
   //               return to HQ, report / game over       radar.js     radar + off-screen markers
   //   render.js   draws the frame                        fortIcon.js  compound icon (also briefing)
   //   quality.js  render resolution / phone settings     hqIcon.js    operations HQ icon
+  //   touchControls.js  on-screen stick & buttons, "turn the phone sideways" screen (phones)
 
   function bootstrap() {
     const canvas = document.getElementById('game-canvas');
@@ -115,9 +116,11 @@
       mission: null,
       hud: null,
       radar: null,
-      renderer: null
+      renderer: null,
+      touchUi: null
     };
     game.input = global.GameInput.create(game);
+    game.touchUi = global.GameTouchControls.create(game);
     game.mission = global.GameMission.create(game);
     game.hud = global.GameHud.create(game);
     game.radar = global.GameRadar.create(game);
@@ -138,7 +141,9 @@
       lastTime = now;
       frameNo += 1;
 
-      const paused = !game.started || dialogs.start.open || areaSelect.isOpen || briefing.isOpen || dialogs.garage.open || dialogs.gameover.open || results.isOpen;
+      const menuOpen = !game.started || dialogs.start.open || areaSelect.isOpen || briefing.isOpen || dialogs.garage.open || dialogs.gameover.open || results.isOpen;
+      // Phones held upright during a sortie: the game waits behind the "turn sideways" screen
+      const paused = game.touchUi.update(menuOpen) || menuOpen;
       // While Mio reports a secured district (controls locked) the in-game clock and the mission
       // timer stand still; the radio itself and on-screen effects keep running
       const timeFrozen = radio.controlsLocked;

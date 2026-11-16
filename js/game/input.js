@@ -5,6 +5,8 @@
   //   input.keys        held key codes (KeyboardEvent.code)
   //   input.mouse       pointer position on the canvas + held buttons (left = main gun, right = sub weapon)
   //   input.controlMode 'tank' (throttle + steer) | 'direct' (move in pressed direction)
+  //   input.setControlMode(mode)  switch the mode without the radio call (start-up defaults)
+  //   input.touch       on-screen stick / buttons (js/game/touchControls.js fills it on phones)
   //   input.release()   forget every held key / button (menus opening, restarts, window blur)
 
   function create(game) {
@@ -22,6 +24,11 @@
       keys,
       mouse,
       controlMode: 'tank',
+      touch: { active: false, moveX: 0, moveY: 0, fire: false, sub: false, boost: false },
+      setControlMode(mode) {
+        input.controlMode = mode;
+        syncControlModeUI();
+      },
       release() {
         keys.clear();
         mouse.left = false;
@@ -45,14 +52,15 @@
     const hudMoveHint = document.getElementById('hud-move-hint');
     const btnMute = document.getElementById('btn-mute');
 
-    const syncControlModeUI = () => {
+    function syncControlModeUI() {
       const isDirect = input.controlMode === 'direct';
       if (btnControlMode) {
         btnControlMode.setAttribute('aria-pressed', String(isDirect));
         btnControlMode.classList.toggle('is-active', isDirect);
+        // label in a span: phones show only the icon (css/touch.css)
         btnControlMode.innerHTML = isDirect
-          ? '🧭 方向移動 <kbd>C</kbd>'
-          : '🎮 戦車操縦 <kbd>C</kbd>';
+          ? '🧭<span class="btn-label"> 方向移動</span> <kbd>C</kbd>'
+          : '🎮<span class="btn-label"> 戦車操縦</span> <kbd>C</kbd>';
       }
       if (btnStartMode) {
         btnStartMode.setAttribute('aria-pressed', String(isDirect));
@@ -66,7 +74,7 @@
           ? '<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 押した方向へ移動'
           : '<kbd>W</kbd><kbd>S</kbd> 前後進 / <kbd>A</kbd><kbd>D</kbd> 超信地旋回';
       }
-    };
+    }
 
     const toggleControlMode = () => {
       input.controlMode = input.controlMode === 'tank' ? 'direct' : 'tank';
@@ -112,7 +120,7 @@
       const nextMuted = !audio.muted;
       audio.setMuted(nextMuted);
       btnMute.setAttribute('aria-pressed', String(nextMuted));
-      btnMute.textContent = nextMuted ? '🔇 消音' : '🔊 音声';
+      btnMute.innerHTML = nextMuted ? '🔇<span class="btn-label"> 消音</span>' : '🔊<span class="btn-label"> 音声</span>';
       btnMute.blur();
     });
 
@@ -155,6 +163,8 @@
 
     canvas.addEventListener('pointerdown', (e) => {
       audio.init();
+      // Fingers on the battlefield don't fire: phones use the on-screen buttons (touchControls.js)
+      if (e.pointerType === 'touch') return;
       if (e.button === 0) mouse.left = true;
       if (e.button === 2) mouse.right = true;
     });
