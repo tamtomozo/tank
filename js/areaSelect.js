@@ -7,7 +7,8 @@
   // which opens the briefing (js/game/mission.js). Mio guides each phase at the bottom.
   // Esc on the operation list goes back to the area list; on the area list it does nothing.
   // The operations-meeting BGM (js/bgm.js) starts with this window and runs until the briefing
-  // closes with 作戦開始.
+  // closes with 作戦開始. Until the first click / key press the browser keeps audio muted, so the
+  // first opening waits behind the "click to connect" screen (#audio-gate) for that gesture.
 
   const { AREAS } = global.GameData; // js/data/operations.js
   const { el } = global.TankUtil;
@@ -37,6 +38,8 @@
       this.onSelect = null;
       this._openTimer = null;
       this._selection = null;
+      this._gateCleanup = null; // set while the "click to connect" screen waits for the first gesture
+      this.gate = document.getElementById('audio-gate');
 
       this.btnBack.addEventListener('click', () => this.showAreas());
       // Closing sequence + cleanup; Esc is handled below (back to the area list)
@@ -62,7 +65,7 @@
 
     // True while the window is shown OR waiting to appear (the game stays paused either way)
     get isOpen() {
-      return this.dialog.open || this._openTimer != null;
+      return this.dialog.open || this._openTimer != null || this._gateCleanup != null;
     }
 
     // onSelect({ area, operation }) runs once an operation has been picked.
@@ -70,6 +73,16 @@
     open(onSelect, { areaId = null, delayMs = OPEN_DELAY_MS } = {}) {
       this.onSelect = onSelect;
       this._selection = null;
+      // The browser keeps audio muted until the first click / key press (autoplay policy), so the
+      // very first sortie waits on a "click to connect" screen: the BGM then starts with the window.
+      if (this.audio.ctx && !this.audio.unlocked) {
+        this._waitForAudioUnlock(() => this._show(areaId, delayMs));
+        return;
+      }
+      this._show(areaId, delayMs);
+    }
+
+    _show(areaId, delayMs) {
       const area = areaId != null ? AREAS.find((a) => a.id === areaId && a.available) : null;
       if (this._openTimer != null) clearTimeout(this._openTimer);
       this._openTimer = setTimeout(() => {
@@ -146,6 +159,41 @@
         global.HudFrame.closeDialog(this.dialog, 'select');
       });
       return card;
+    }
+
+    // ---------------------------------------------------------------- audio unlock gate
+    // Shows the "click to connect" screen until a user gesture (or the browser itself) lets the
+    // AudioContext run, then calls proceed() once. Escape does not count as a gesture for the
+    // browser's autoplay rules, so it is ignored here.
+    _waitForAudioUnlock(proceed) {
+      if (this._gateCleanup) this._gateCleanup();
+      const ctx = this.audio.ctx;
+      const finish = () => {
+        cleanup();
+        proceed();
+      };
+      const onGesture = (e) => {
+        if (e.type === 'keydown' && (e.key === 'Escape' || e.repeat)) return;
+        this.audio.init(); // resume() inside the gesture: the BGM is audible from here on
+        finish();
+      };
+      const onStateChange = () => {
+        if (this.audio.unlocked) finish();
+      };
+      const cleanup = () => {
+        window.removeEventListener('pointerup', onGesture, true);
+        window.removeEventListener('keydown', onGesture, true);
+        ctx.removeEventListener('statechange', onStateChange);
+        if (this.gate) this.gate.hidden = true;
+        this._gateCleanup = null;
+      };
+      this._gateCleanup = cleanup;
+      // pointerup (not pointerdown): on touch screens only the release counts as a user gesture
+      window.addEventListener('pointerup', onGesture, true);
+      window.addEventListener('keydown', onGesture, true);
+      // Some browsers start the context on their own a moment later (autoplay allowed for the site)
+      ctx.addEventListener('statechange', onStateChange);
+      if (this.gate) this.gate.hidden = false;
     }
 
     // ---------------------------------------------------------------- helpers

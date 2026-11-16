@@ -68,6 +68,12 @@
       if (this._bgmWanted) this.startBriefingBgm();
     }
 
+    // True once the AudioContext is actually producing sound. Browsers keep a context created
+    // before the first click / key press suspended (autoplay policy) until a user gesture resumes it.
+    get unlocked() {
+      return !!this.ctx && this.ctx.state === 'running';
+    }
+
     // Operations-meeting BGM: plays while the sortie-select screen / briefing are open.
     // Both calls are safe to repeat (start while playing / stop while stopped do nothing).
     startBriefingBgm() {

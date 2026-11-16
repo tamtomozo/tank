@@ -266,6 +266,16 @@
     </div>
   </dialog>
 
+  <!-- First-load "click to connect" screen: the browser keeps audio muted until the first click /
+       key press, so the sortie select (and its BGM) waits for one (js/areaSelect.js) -->
+  <div id="audio-gate" class="audio-gate" role="status" hidden>
+    <div class="audio-gate-panel">
+      <div class="dialog-badge">OPERATIONS HQ — STANDBY</div>
+      <p class="audio-gate-title">作戦本部 回線待機中</p>
+      <p class="audio-gate-hint">クリック または いずれかのキーで接続</p>
+    </div>
+  </div>
+
   <!-- Sortie select: area → operation, then the briefing (contents built by js/areaSelect.js) -->
   <dialog id="area-dialog" class="game-dialog area-dialog has-hud-frame" aria-labelledby="area-title">
     <div class="hud-frame" aria-hidden="true">
