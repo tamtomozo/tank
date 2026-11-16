@@ -7,7 +7,7 @@
   //   mission.js  sortie start, radio reports, depots,   hud.js       HUD panels
   //               return to HQ, report / game over       radar.js     radar + off-screen markers
   //   render.js   draws the frame                        fortIcon.js  compound icon (also briefing)
-  //                                                      hqIcon.js    operations HQ icon
+  //   quality.js  render resolution / phone settings     hqIcon.js    operations HQ icon
 
   function bootstrap() {
     const canvas = document.getElementById('game-canvas');
@@ -17,21 +17,37 @@
       gameover: document.getElementById('gameover-dialog')
     };
 
+    // Canvas pixels per CSS pixel follow what the device keeps up with (js/game/quality.js)
+    const quality = global.GameQuality.create();
     const view = {
       w: window.innerWidth,
       h: window.innerHeight,
-      dpr: Math.min(window.devicePixelRatio || 1, 2)
+      dpr: quality.ratio()
     };
 
     function resizeCanvas() {
       view.w = window.innerWidth;
       view.h = window.innerHeight;
-      view.dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = Math.floor(view.w * view.dpr);
-      canvas.height = Math.floor(view.h * view.dpr);
+      view.dpr = quality.ratio();
+      const cw = Math.floor(view.w * view.dpr);
+      const ch = Math.floor(view.h * view.dpr);
+      // (assigning a canvas size reallocates and clears it, even when the size is unchanged)
+      if (canvas.width !== cw || canvas.height !== ch) {
+        canvas.width = cw;
+        canvas.height = ch;
+      }
     }
     resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
+    // A new render resolution is applied just before the next frame is drawn: resizing clears
+    // the canvas, so doing it right away would show one blank frame
+    let resizePending = false;
+    quality.onChange = () => {
+      resizePending = true;
+    };
+    window.addEventListener('resize', () => {
+      quality.refresh();
+      resizeCanvas();
+    });
 
     const audio = new global.TankAudio();
     const world = new global.HorizonWorld();
@@ -70,8 +86,10 @@
     // Shared state of the running game (read and written by the js/game/ modules)
     const game = {
       canvas,
-      ctx: canvas.getContext('2d'),
-      view, // viewport size in CSS px + device pixel ratio
+      // Every frame paints the whole canvas (sky + ground), so it can be opaque: the browser
+      // then doesn't have to blend it with the page behind it
+      ctx: canvas.getContext('2d', { alpha: false }),
+      view, // viewport size in CSS px + canvas pixels per CSS px (render resolution)
       dialogs,
       audio,
       world,
@@ -108,11 +126,17 @@
     const { mission, controls, hud, renderer } = game;
 
     let lastTime = performance.now();
+    let lastRenderAt = null; // time of the previous drawn battlefield frame (null: none in a row yet)
+    let frameNo = 0;
 
     function animate(now) {
       requestAnimationFrame(animate);
+      // Phones with fast displays: skip display frames to hold ~60 fps (js/game/quality.js)
+      if (global.GameQuality.skipFrame(now - lastTime)) return;
+      const workStart = performance.now();
       const dt = Math.min(0.05, (now - lastTime) / 1000);
       lastTime = now;
+      frameNo += 1;
 
       const paused = !game.started || dialogs.start.open || areaSelect.isOpen || briefing.isOpen || dialogs.garage.open || dialogs.gameover.open || results.isOpen;
       // While Mio reports a secured district (controls locked) the in-game clock and the mission
@@ -134,21 +158,35 @@
         mission.checkReturnToHq();
         radio.update(dt); // advances only while the game runs, so reports resume after menus close
 
-        audio.updateEngine(
-          (Math.abs(player.speed) + Math.abs(player.turnRate) * 35) / player.maxSpeed,
-          player.boosting,
-          true
-        );
-      } else {
+        // The engine note glides to its target over ~0.1 s anyway: every 3rd frame is plenty
+        if (frameNo % 3 === 0) {
+          audio.updateEngine(
+            (Math.abs(player.speed) + Math.abs(player.turnRate) * 35) / player.maxSpeed,
+            player.boosting,
+            true
+          );
+        }
+      } else if (frameNo % 3 === 0) {
         audio.updateEngine(0, false, false);
       }
 
       mission.checkEnd();
 
       const timeInfo = world.getTimeInfo();
-      hud.update(timeInfo);
+      hud.frame(timeInfo, now);
       // The battlefield is hidden while the HQ backdrop fully covers it
-      if (!backdrop.covering) renderer.render(now * 0.001, timeInfo);
+      if (!backdrop.covering) {
+        if (resizePending) {
+          resizePending = false;
+          resizeCanvas();
+        }
+        renderer.render(now * 0.001, timeInfo);
+        // Frame time and this frame's own work (update + drawing calls) steer the render resolution
+        if (lastRenderAt != null) quality.sample(now - lastRenderAt, now, performance.now() - workStart);
+        lastRenderAt = now;
+      } else {
+        lastRenderAt = null;
+      }
     }
 
     mission.start();

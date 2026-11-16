@@ -60,24 +60,40 @@
         const px = 50 + Math.cos(ang) * 44;
         const py = 50 + Math.sin(ang) * 42;
         const deg = icon ? 0 : ang * (180 / Math.PI) + 90;
+        // Pool entry: the element plus what was last written to it, so the DOM is only touched
+        // when something changed. The marker is placed with the `translate` property (no layout,
+        // the browser just moves its layer) instead of left / top.
         let arrow = arrowPool[arrowsUsed];
         if (!arrow) {
-          arrow = document.createElement('div');
-          indicatorsEl.appendChild(arrow);
+          arrow = { el: document.createElement('div'), cls: '', content: null, pos: '', deg: '', shown: true };
+          indicatorsEl.appendChild(arrow.el);
           arrowPool.push(arrow);
         }
         arrowsUsed++;
-        if (arrow.className !== cls) arrow.className = cls;
-        const content = icon || glyph;
-        if (arrow.dataset.content !== content) {
-          arrow.dataset.content = content;
-          if (icon) arrow.innerHTML = MARKER_SVG[icon];
-          else arrow.textContent = glyph;
+        if (arrow.cls !== cls) {
+          arrow.cls = cls;
+          arrow.el.className = cls;
         }
-        arrow.style.display = '';
-        arrow.style.left = `${px.toFixed(2)}%`;
-        arrow.style.top = `${py.toFixed(2)}%`;
-        arrow.style.setProperty('--arrow-deg', `${deg.toFixed(1)}deg`);
+        const content = icon || glyph;
+        if (arrow.content !== content) {
+          arrow.content = content;
+          if (icon) arrow.el.innerHTML = MARKER_SVG[icon];
+          else arrow.el.textContent = glyph;
+        }
+        if (!arrow.shown) {
+          arrow.shown = true;
+          arrow.el.style.display = '';
+        }
+        const pos = `${(viewW * px * 0.01).toFixed(1)}px ${(viewH * py * 0.01).toFixed(1)}px`;
+        if (arrow.pos !== pos) {
+          arrow.pos = pos;
+          arrow.el.style.translate = pos;
+        }
+        const degText = `${deg.toFixed(1)}deg`;
+        if (arrow.deg !== degText) {
+          arrow.deg = degText;
+          arrow.el.style.setProperty('--arrow-deg', degText);
+        }
       };
 
       // District bands within range: locked ones darkened, secured ones tinted green, dashed borders
@@ -200,7 +216,11 @@
       radarCtx.restore();
 
       for (let i = arrowsUsed; i < arrowPool.length; i++) {
-        if (arrowPool[i].style.display !== 'none') arrowPool[i].style.display = 'none';
+        const arrow = arrowPool[i];
+        if (arrow.shown) {
+          arrow.shown = false;
+          arrow.el.style.display = 'none';
+        }
       }
     }
 

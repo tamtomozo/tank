@@ -105,8 +105,11 @@
 
       const text = this.current.text;
       if (this.shown < text.length) {
+        const before = Math.floor(this.shown);
         this.shown = Math.min(text.length, this.shown + CHARS_PER_SEC * dt);
-        this.textEl.textContent = text.slice(0, Math.floor(this.shown));
+        // Only touch the text when another character has appeared (not on every frame: each
+        // write makes the browser lay the panel out again)
+        if (Math.floor(this.shown) !== before) this.textEl.textContent = text.slice(0, Math.floor(this.shown));
         if (this.shown < text.length) return;
       }
       if (this.textEl.textContent !== text) this.textEl.textContent = text;

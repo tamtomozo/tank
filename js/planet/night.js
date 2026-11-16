@@ -8,6 +8,8 @@
   const { lerp } = global.TankUtil;
   const { CYL_R, HORIZON_DY, HORIZON_THETA, WORLD_H, WORLD_W, wrapDelta } = global.HorizonWorld.shared;
 
+  const NIGHT_RES = 0.5; // darkness overlay pixels per CSS pixel (see drawNightVisibility)
+
   class WorldNight {
     // At night, darken the distant terrain while keeping the player's surroundings and headlight beam clearly visible
     getNightDarkStrength() {
@@ -109,20 +111,27 @@
       const darkStrength = this.getNightDarkStrength();
       if (darkStrength <= 0.01 || typeof document === 'undefined') return;
 
+      // The overlay is nothing but soft gradients, so it is painted at half the screen size and
+      // stretched over the view: a quarter of the pixels to fill and blend every frame.
+      // Below, cw / ch are the view size in the overlay's own (CSS px) coordinates.
       const cw = Math.max(1, Math.round(viewW));
       const ch = Math.max(1, Math.round(viewH));
+      const pw = Math.max(1, Math.ceil(cw * NIGHT_RES));
+      const ph = Math.max(1, Math.ceil(ch * NIGHT_RES));
       if (!this._nightCanvas) {
         this._nightCanvas = document.createElement('canvas');
         this._nightCtx = this._nightCanvas.getContext('2d');
       }
-      if (this._nightCanvas.width !== cw || this._nightCanvas.height !== ch) {
-        this._nightCanvas.width = cw;
-        this._nightCanvas.height = ch;
+      if (this._nightCanvas.width !== pw || this._nightCanvas.height !== ph) {
+        this._nightCanvas.width = pw;
+        this._nightCanvas.height = ph;
       }
 
       const nCtx = this._nightCtx;
       nCtx.globalCompositeOperation = 'source-over';
-      nCtx.clearRect(0, 0, cw, ch);
+      nCtx.setTransform(1, 0, 0, 1, 0, 0);
+      nCtx.clearRect(0, 0, pw, ph);
+      nCtx.setTransform(NIGHT_RES, 0, 0, NIGHT_RES, 0, 0);
 
       const horizonProj = this._getHorizonProj(viewW, viewH);
       const horizonY = horizonProj ? horizonProj.sy : viewH * 0.21;
@@ -135,7 +144,7 @@
       darkGrad.addColorStop(rampFrac, `rgba(2, 5, 14, ${maxAlpha.toFixed(3)})`);
       darkGrad.addColorStop(1, `rgba(2, 5, 14, ${maxAlpha.toFixed(3)})`);
       nCtx.fillStyle = darkGrad;
-      nCtx.fillRect(0, topY, cw, ch - topY);
+      nCtx.fillRect(0, topY, cw + 2, ch - topY + 2); // + 2: cover the overlay's rounded-up last pixel
 
       if (playerProj) {
         nCtx.globalCompositeOperation = 'destination-out';
@@ -188,7 +197,7 @@
         }
       }
 
-      ctx.drawImage(this._nightCanvas, 0, 0, viewW, viewH);
+      ctx.drawImage(this._nightCanvas, 0, 0, pw / NIGHT_RES, ph / NIGHT_RES);
     }
   }
 

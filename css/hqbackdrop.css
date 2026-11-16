@@ -71,6 +71,15 @@ dialog.briefing-dialog::backdrop {
   backdrop-filter: blur(1.5px);
 }
 
+/* Phones / small windows: no full-screen blur over the animated room / map (see dialogs.css) */
+@media (pointer: coarse), (max-width: 960px), (max-height: 560px) {
+  dialog.area-dialog::backdrop,
+  dialog.briefing-dialog::backdrop {
+    backdrop-filter: none;
+    background: rgb(3 7 15 / 0.42);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hq-backdrop,
   .hq-backdrop.is-visible,

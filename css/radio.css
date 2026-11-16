@@ -25,6 +25,14 @@
   transition: opacity 0.28s ease, transform 0.28s ease;
 }
 
+/* No live blur on phones / small windows (see .hud-panel in hud.css); the panel is opaque enough */
+@media (pointer: coarse), (max-width: 960px), (max-height: 560px) {
+  .radio-panel {
+    backdrop-filter: none;
+    background: rgb(11 18 30 / 0.95);
+  }
+}
+
 .radio-panel.has-hud-frame {
   --bt: 0.5; /* quicker boot-up than the dialogs: it pops up mid-battle */
 }

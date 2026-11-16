@@ -11,6 +11,16 @@
   padding-block: 0.65rem;
 }
 
+/* Phones / tablets / small windows: no live blur behind the panels. The battlefield under them
+   changes every frame, so the blur is recomputed every frame over most of a small screen — one of
+   the most expensive things a phone GPU can be asked to do. A slightly denser panel instead. */
+@media (pointer: coarse), (max-width: 960px), (max-height: 560px) {
+  .hud-panel {
+    backdrop-filter: none;
+    background: rgb(13 20 33 / 0.9);
+  }
+}
+
 .hud-top {
   position: absolute;
   inset-block-start: 0.85rem;

@@ -8,7 +8,8 @@
   const { wrapCoord } = global.HorizonWorld.shared;
 
   class WorldSky {
-    drawBackdropAndGround(ctx, camX, camY, viewW, viewH, timeSec, starOffsetX = 0) {
+    // pixelRatio: canvas pixels per CSS pixel of ctx (its base transform is that uniform scale)
+    drawBackdropAndGround(ctx, camX, camY, viewW, viewH, timeSec, starOffsetX = 0, pixelRatio = 1) {
       const horizonProj = this._getHorizonProj(viewW, viewH);
       const horizonY = horizonProj ? horizonProj.sy : viewH * 0.24;
       const pal = this.getPalette();
@@ -154,33 +155,35 @@
 
       // 4. All static ground decals (patches, mud flats, gullies, gravel, brush)
       //    drawn from the baked world texture, projected row by row
-      this._drawGroundTexture(ctx, camX, camY, viewW, viewH);
+      this._drawGroundTexture(ctx, camX, camY, viewW, viewH, pixelRatio);
 
       // 7. Scorch Decals & Caterpillar Tread Marks
+      // (hundreds of these are on screen: one fill colour with a per-mark alpha and a directly
+      // set transform instead of save / translate / scale / rotate / restore for each)
+      const pr = pixelRatio;
+      ctx.fillStyle = 'rgb(15, 13, 12)';
       for (const sm of this.scorchMarks) {
         const p = this.project(sm.x, sm.y, 0, camX, camY, viewW, viewH);
         if (!p || this._isOffscreen(p, sm.radius * p.scale + 2, viewW, viewH)) continue;
-        ctx.save();
-        ctx.translate(p.sx, p.sy);
-        ctx.scale(p.scale, p.scale * p.tiltCos);
-        ctx.fillStyle = `rgba(15, 13, 12, ${0.55 * sm.life})`;
+        ctx.globalAlpha = 0.55 * sm.life;
         ctx.beginPath();
-        ctx.arc(0, 0, sm.radius, 0, Math.PI * 2);
+        ctx.ellipse(p.sx, p.sy, sm.radius * p.scale, sm.radius * p.scale * p.tiltCos, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.restore();
       }
 
+      ctx.fillStyle = 'rgb(22, 18, 14)';
       for (const tm of this.treadMarks) {
         const p = this.project(tm.x, tm.y, 0, camX, camY, viewW, viewH);
         if (!p || this._isOffscreen(p, 10, viewW, viewH)) continue;
-        ctx.save();
-        ctx.translate(p.sx, p.sy);
-        ctx.scale(p.scale, p.scale * p.tiltCos);
-        ctx.rotate(tm.angle);
-        ctx.fillStyle = `rgba(22, 18, 14, ${0.46 * tm.life})`;
+        // translate(p.sx, p.sy) · scale(p.scale, p.scale * p.tiltCos) · rotate(tm.angle)
+        const kx = p.scale * pr;
+        const ky = p.scale * p.tiltCos * pr;
+        ctx.setTransform(kx * tm.cos, ky * tm.sin, -kx * tm.sin, ky * tm.cos, p.sx * pr, p.sy * pr);
+        ctx.globalAlpha = 0.46 * tm.life;
         ctx.fillRect(-4, -3, 8, 6);
-        ctx.restore();
       }
+      ctx.setTransform(pr, 0, 0, pr, 0, 0);
+      ctx.globalAlpha = 1;
 
       // 8. Boost Jump Ramps
       for (const ramp of this.ramps) {
@@ -241,6 +244,14 @@
         this._sideHazeCanvas = document.createElement('canvas');
         this._sideHazeCtx = this._sideHazeCanvas.getContext('2d');
       }
+      // The mist only changes with the viewport and the haze colour (which moves a step at a time
+      // as the day goes by): repaint it then, otherwise reuse the picture from the last frame
+      const hazeKey = `${cw}x${ch}|${hr},${hg},${hb}|${horizonY.toFixed(1)}`;
+      if (this._sideHazeKey === hazeKey) {
+        ctx.drawImage(this._sideHazeCanvas, 0, 0, viewW, viewH);
+        return;
+      }
+      this._sideHazeKey = hazeKey;
       if (this._sideHazeCanvas.width !== cw || this._sideHazeCanvas.height !== ch) {
         this._sideHazeCanvas.width = cw;
         this._sideHazeCanvas.height = ch;

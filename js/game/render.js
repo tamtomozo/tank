@@ -12,6 +12,7 @@
     let player = null;
     let viewW = 0;
     let viewH = 0;
+    let frameNo = 0;
 
     function drawAimReticleAndArc(drawCamX, drawCamY) {
       const activeTarget = game.activeTarget;
@@ -73,9 +74,63 @@
       }
     }
 
+    // Icon glyphs and name labels are painted once into small sprites and stamped from there.
+    // They bob and throb, i.e. are drawn at a slightly different size every frame, and outlined
+    // text in particular is expensive to rasterise afresh at each size.
+    const SPRITE_RES = 3; // sprite pixels per icon unit (icons show at up to ~1.7x on 2x screens)
+    const ICON_BOX = { x: -20, y: -24, w: 40, h: 44 }; // glyph bounds incl. outline (icon units)
+    const LABEL_FONT = '800 11px system-ui, "Segoe UI", sans-serif';
+    const sprites = new Map();
+
+    function iconSprite(icon, fill) {
+      const key = `${icon === FortIcon ? 'fort' : 'hq'}|${fill}`;
+      let sprite = sprites.get(key);
+      if (!sprite) {
+        sprite = document.createElement('canvas');
+        sprite.width = ICON_BOX.w * SPRITE_RES;
+        sprite.height = ICON_BOX.h * SPRITE_RES;
+        const g = sprite.getContext('2d');
+        g.setTransform(SPRITE_RES, 0, 0, SPRITE_RES, -ICON_BOX.x * SPRITE_RES, -ICON_BOX.y * SPRITE_RES);
+        icon.draw(g, fill);
+        sprites.set(key, sprite);
+      }
+      return sprite;
+    }
+
+    // White name with a dark outline; drawn with its left edge at x = 17, centred on y = 2
+    function labelSprite(text) {
+      const key = `label|${text}`;
+      let entry = sprites.get(key);
+      if (!entry) {
+        const pad = 3;
+        const h = 18;
+        const canvas = document.createElement('canvas');
+        let g = canvas.getContext('2d');
+        g.font = LABEL_FONT;
+        const w = Math.ceil(g.measureText(text).width) + pad * 2;
+        canvas.width = w * SPRITE_RES;
+        canvas.height = h * SPRITE_RES;
+        g = canvas.getContext('2d');
+        g.setTransform(SPRITE_RES, 0, 0, SPRITE_RES, pad * SPRITE_RES, (h / 2) * SPRITE_RES);
+        g.font = LABEL_FONT;
+        g.textAlign = 'left';
+        g.textBaseline = 'middle';
+        g.lineJoin = 'round';
+        g.lineWidth = 3;
+        g.strokeStyle = 'rgba(15, 23, 42, 0.85)';
+        g.strokeText(text, 0, 0);
+        g.fillStyle = '#ffffff';
+        g.fillText(text, 0, 0);
+        entry = { canvas, x: 17 - pad, y: 2 - h / 2, w, h };
+        sprites.set(key, entry);
+      }
+      return entry;
+    }
+
     // Icon hovering above a ground point (projection p), tethered to it by a dashed line, with a
     // name to its right. o: { icon (FortIcon / HqIcon), fill, label, lift (world units above the
-    // ground), phase (bob offset), pulse (0..1 size throb) }
+    // ground), phase (bob offset), pulse (0..1 size throb), fill2 (optional second colour the
+    // icon fades to and from with the pulse) }
     function drawFloatingIcon(p, timeSec, o) {
       const s = Math.max(1.1, Math.min(1.55, p.scale * 1.5));
       const bob = Math.sin(timeSec * 2.2 + o.phase) * 2.5;
@@ -102,17 +157,16 @@
 
       ctx.translate(p.sx, iconY);
       ctx.scale(s * (1 + pulse * 0.08), s * (1 + pulse * 0.08));
-      o.icon.draw(ctx, fill);
+      ctx.drawImage(iconSprite(o.icon, fill), ICON_BOX.x, ICON_BOX.y, ICON_BOX.w, ICON_BOX.h);
+      if (o.fill2 && pulse > 0.01) {
+        ctx.globalAlpha = pulse;
+        ctx.drawImage(iconSprite(o.icon, o.fill2), ICON_BOX.x, ICON_BOX.y, ICON_BOX.w, ICON_BOX.h);
+        ctx.globalAlpha = 1;
+      }
 
       // Name to the right of the icon
-      ctx.font = '800 11px system-ui, "Segoe UI", sans-serif';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = 'rgba(15, 23, 42, 0.85)';
-      ctx.strokeText(o.label, 17, 2);
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText(o.label, 17, 2);
+      const label = labelSprite(o.label);
+      ctx.drawImage(label.canvas, label.x, label.y, label.w, label.h);
       ctx.restore();
     }
 
@@ -120,10 +174,15 @@
     // Red while the garrison waits; pulses red/orange once the compound is on alert.
     function drawBaseFortIcon(base, p, timeSec) {
       const pulse = base.alerted ? 0.5 + 0.5 * Math.sin(timeSec * 9) : 0;
-      const fill = base.alerted
-        ? `rgb(${Math.round(239 + (249 - 239) * pulse)}, ${Math.round(68 + (115 - 68) * pulse)}, ${Math.round(68 - (68 - 22) * pulse)})`
-        : '#ef4444';
-      drawFloatingIcon(p, timeSec, { icon: FortIcon, fill, label: base.name, lift: 84, phase: base.id * 1.3, pulse });
+      drawFloatingIcon(p, timeSec, {
+        icon: FortIcon,
+        fill: '#ef4444',
+        fill2: base.alerted ? '#f97316' : null, // rgb(239, 68, 68) <-> rgb(249, 115, 22)
+        label: base.name,
+        lift: 84,
+        phase: base.id * 1.3,
+        pulse
+      });
     }
 
     // Area secured and the player not yet back: the HQ is the place to go
@@ -164,6 +223,7 @@
       viewW = game.view.w;
       viewH = game.view.h;
       ctx.setTransform(game.view.dpr, 0, 0, game.view.dpr, 0, 0);
+      global.Tank2D.pixelRatio = game.view.dpr;
 
       // Apply subtle camera shake
       const shakeX = combat.shakeIntensity > 0.01 ? (Math.random() - 0.5) * combat.shakeIntensity * 14 : 0;
@@ -171,7 +231,7 @@
       const drawCamX = world.wrapX(game.cam.x + shakeX);
       const drawCamY = world.wrapY(game.cam.y + shakeY);
 
-      world.drawBackdropAndGround(ctx, drawCamX, drawCamY, viewW, viewH, timeSec, game.cam.starOffsetX);
+      world.drawBackdropAndGround(ctx, drawCamX, drawCamY, viewW, viewH, timeSec, game.cam.starOffsetX, game.view.dpr);
 
       // Collect visible 2D entities and sort back-to-front by depth (dy)
       const renderQueue = [];
@@ -285,7 +345,8 @@
         drawAimReticleAndArc(drawCamX, drawCamY);
       }
 
-      game.radar.update(drawCamX, drawCamY);
+      // Radar and off-screen markers move slowly: redrawing them every other frame is enough
+      if ((frameNo++ & 1) === 0) game.radar.update(drawCamX, drawCamY);
     }
 
     return { render };

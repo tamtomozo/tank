@@ -1,15 +1,24 @@
 (function (global) {
   'use strict';
 
-  // Ground texture: pre-rendered hardpan / gravel sprites stamped into one big world texture
+  // Ground texture: pre-rendered hardpan / gravel sprites stamped into a world-space texture
   // (plus compound pads), and drawing it onto the curved ground strip by strip.
   // Part of HorizonWorld (js/planet/planet.js): the methods below are mixed into its prototype.
 
   const { HORIZON_DY, WORLD_H, WORLD_W, screenYForDy, wrapCoord } = global.HorizonWorld.shared;
 
   // World-space ground texture resolution (texture pixels per world unit)
-  const GROUND_TEX_RES = 0.75; // 4800-unit world -> 3600 x 3600 texture
-  const GROUND_ROW_STEP = 2; // screen px per projected ground strip
+  const GROUND_TEX_RES = 0.75; // 4800-unit world -> 3600 x 3600 texture pixels in all
+  // The texture is kept as GROUND_TILES x GROUND_TILES separate canvases (1200 x 1200 px each).
+  // One 3600 x 3600 canvas is above the area browsers keep on the GPU (~8.3 M px in Chromium,
+  // less on phones), and every strip drawn from such a canvas takes a slow path: the per-frame
+  // ground cost was several times higher. Small tiles always stay on the fast path.
+  const GROUND_TILES = 3;
+  const TILE_W = WORLD_W / GROUND_TILES; // world units per tile
+  const TILE_H = WORLD_H / GROUND_TILES;
+  const GROUND_ROW_STEP = 2; // screen px per projected ground strip (near the horizon)
+  const GROUND_ROW_MAX = 8; // tallest strip, where the projection changes slowly (see _getGroundRows)
+  const GROUND_ROW_SHEAR = 0.5; // screen px a strip's edge may be off at the side of the screen
 
   class WorldGround {
     // Pre-render reusable ground textures once (cheap drawImage per frame afterwards)
@@ -169,36 +178,44 @@
     // row with the exact projection keeps all ground layers locked together while scrolling
     // (previously large decals were projected only at their centre and slid against the rest).
     _buildGroundTexture() {
-      this.groundTex = null;
+      this.groundTiles = null;
       if (typeof document === 'undefined') return;
       const R = GROUND_TEX_RES;
       const W = WORLD_W;
       const H = WORLD_H;
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.round(W * R);
-      canvas.height = Math.round(H * R);
-      const g = canvas.getContext('2d');
-      if (!g) return;
-      g.scale(R, R);
-
-      // Draw fn at (x, y) plus wrapped copies wherever its bounding radius crosses a world edge
-      const stamp = (x, y, r, fn) => {
-        for (const ox of [-W, 0, W]) {
-          if (x + ox + r < 0 || x + ox - r > W) continue;
-          for (const oy of [-H, 0, H]) {
-            if (y + oy + r < 0 || y + oy - r > H) continue;
-            g.save();
-            g.translate(x + ox, y + oy);
-            fn();
-            g.restore();
+      // Tile (tx, ty) covers world x in [tx * TILE_W, (tx + 1) * TILE_W) and likewise for y.
+      // Each tile's context works in world coordinates, so decals are drawn as on one big canvas.
+      // (A rebuild — new sortie — reuses the canvases instead of allocating 52 MB again.)
+      const tiles = [];
+      const tw = Math.round(TILE_W * R);
+      const th = Math.round(TILE_H * R);
+      for (let ty = 0; ty < GROUND_TILES; ty++) {
+        for (let tx = 0; tx < GROUND_TILES; tx++) {
+          const old = this._groundTileStore && this._groundTileStore[tiles.length];
+          const canvas = old ? old.canvas : document.createElement('canvas');
+          if (canvas.width !== tw || canvas.height !== th) {
+            canvas.width = tw;
+            canvas.height = th;
           }
+          const g = old ? old.g : canvas.getContext('2d');
+          if (!g) return;
+          g.setTransform(1, 0, 0, 1, 0, 0);
+          g.clearRect(0, 0, tw, th);
+          g.setTransform(R, 0, 0, R, -tx * TILE_W * R, -ty * TILE_H * R);
+          g.setLineDash([]);
+          g.lineCap = 'butt';
+          tiles.push({ canvas, g, x0: tx * TILE_W, y0: ty * TILE_H });
         }
-      };
+      }
+      this._groundTileStore = tiles;
+
+      // Draw fn(g) at (x, y) plus wrapped copies wherever its bounding radius crosses a world edge
+      const stamp = (x, y, r, fn) => this._stampTiles(tiles, x, y, r, fn);
 
       // Terrain colour patches (ragged outline + inner tone)
       for (const patch of this.patches) {
         const shape = patch.shape;
-        stamp(patch.x, patch.y, Math.max(patch.rx, patch.ry) * 1.35, () => {
+        stamp(patch.x, patch.y, Math.max(patch.rx, patch.ry) * 1.35, (g) => {
           g.rotate(patch.rot);
           g.fillStyle = patch.color;
           g.beginPath();
@@ -221,7 +238,7 @@
       for (const hp of this.hardpans) {
         const sprite = this.hardpanSprites[hp.variant];
         if (!sprite) break;
-        stamp(hp.x, hp.y, hp.size * 0.75, () => {
+        stamp(hp.x, hp.y, hp.size * 0.75, (g) => {
           g.scale(hp.flip ? -1 : 1, 1);
           g.rotate(hp.rot);
           g.drawImage(sprite, -hp.size * 0.5, -hp.size * 0.5, hp.size, hp.size);
@@ -234,7 +251,7 @@
         const y0 = gully[0].uy;
         let bound = 0;
         for (const pt of gully) bound = Math.max(bound, Math.hypot(pt.ux - x0, pt.uy - y0) + pt.w);
-        stamp(this.wrapX(x0), this.wrapY(y0), bound, () => {
+        stamp(this.wrapX(x0), this.wrapY(y0), bound, (g) => {
           g.lineCap = 'round';
           for (let i = 1; i < gully.length; i++) {
             const a = gully[i - 1];
@@ -254,7 +271,7 @@
 
       // Windblown dust streaks
       for (const rp of this.ripples) {
-        stamp(rp.x, rp.y, 220, () => {
+        stamp(rp.x, rp.y, 220, (g) => {
           g.strokeStyle = `rgba(206, 186, 152, ${(rp.alpha * 0.8).toFixed(2)})`;
           g.lineWidth = 2.2;
           g.beginPath();
@@ -266,7 +283,7 @@
 
       // Dry earth fissures & pebbles
       for (const ck of this.cracks) {
-        stamp(ck.x, ck.y, 70, () => {
+        stamp(ck.x, ck.y, 70, (g) => {
           if (ck.isPebble) {
             g.fillStyle = 'rgba(64, 46, 32, 0.55)';
             g.beginPath();
@@ -289,14 +306,14 @@
       for (const gv of this.gravel) {
         const sprite = this.gravelSprites[gv.variant];
         if (!sprite) break;
-        stamp(gv.x, gv.y, gv.size * 0.6, () => {
+        stamp(gv.x, gv.y, gv.size * 0.6, (g) => {
           g.drawImage(sprite, -gv.size * 0.5, -gv.size * 0.5, gv.size, gv.size);
         });
       }
 
       // Dead branching brush
       for (const sc of this.scrubs) {
-        stamp(sc.x, sc.y, 24 * sc.scale, () => {
+        stamp(sc.x, sc.y, 24 * sc.scale, (g) => {
           g.scale(sc.scale, sc.scale);
           g.rotate(sc.rot);
           g.fillStyle = 'rgba(34, 24, 16, 0.32)';
@@ -319,26 +336,30 @@
         });
       }
 
-      // District borders: dashed survey line along each band edge (x = 0/4800, 1600, 3200)
-      g.lineCap = 'butt';
+      // District borders: dashed survey line along each band edge (x = 0/4800, 1600, 3200).
+      // Drawn from the top to the bottom of the world in every tile it touches, so the dashes line up.
       for (const d of this.districts) {
         for (const bx of d.x0 === 0 ? [0, W] : [d.x0]) {
-          g.setLineDash([22, 16]);
-          g.strokeStyle = 'rgba(30, 22, 16, 0.32)';
-          g.lineWidth = 7;
-          g.beginPath();
-          g.moveTo(bx, 0);
-          g.lineTo(bx, H);
-          g.stroke();
-          g.strokeStyle = 'rgba(236, 222, 190, 0.42)';
-          g.lineWidth = 3;
-          g.stroke();
+          for (const tile of tiles) {
+            if (bx + 4 < tile.x0 || bx - 4 > tile.x0 + TILE_W) continue;
+            const g = tile.g;
+            g.lineCap = 'butt';
+            g.setLineDash([22, 16]);
+            g.strokeStyle = 'rgba(30, 22, 16, 0.32)';
+            g.lineWidth = 7;
+            g.beginPath();
+            g.moveTo(bx, 0);
+            g.lineTo(bx, H);
+            g.stroke();
+            g.strokeStyle = 'rgba(236, 222, 190, 0.42)';
+            g.lineWidth = 3;
+            g.stroke();
+            g.setLineDash([]);
+          }
         }
       }
-      g.setLineDash([]);
 
-      this._groundCtx = g;
-      this.groundTex = canvas;
+      this.groundTiles = tiles;
       // Operations HQ pad (always there, unlike the compounds below)
       if (this.hq) this._stampGround(this.hq.x, this.hq.y, this.hq.radius + 40, (gg) => this._drawHqPad(gg));
       // Re-stamp compounds that were already revealed (if the texture is ever rebuilt mid-game)
@@ -350,18 +371,29 @@
 
     // Stamp a decal onto the baked ground texture (with wrapped copies across world edges)
     _stampGround(x, y, r, fn) {
-      const g = this._groundCtx;
-      if (!g) return;
+      if (this.groundTiles) this._stampTiles(this.groundTiles, x, y, r, fn);
+    }
+
+    // Run fn(g) with the origin at (x, y) in every tile the decal's bounding radius r touches,
+    // including the wrapped copies across the world edges
+    _stampTiles(tiles, x, y, r, fn) {
       const W = WORLD_W;
       const H = WORLD_H;
       for (const ox of [-W, 0, W]) {
-        if (x + ox + r < 0 || x + ox - r > W) continue;
+        const cx = x + ox;
+        if (cx + r < 0 || cx - r > W) continue;
         for (const oy of [-H, 0, H]) {
-          if (y + oy + r < 0 || y + oy - r > H) continue;
-          g.save();
-          g.translate(x + ox, y + oy);
-          fn(g);
-          g.restore();
+          const cy = y + oy;
+          if (cy + r < 0 || cy - r > H) continue;
+          for (const tile of tiles) {
+            if (cx + r < tile.x0 || cx - r > tile.x0 + TILE_W) continue;
+            if (cy + r < tile.y0 || cy - r > tile.y0 + TILE_H) continue;
+            const g = tile.g;
+            g.save();
+            g.translate(cx, cy);
+            fn(g);
+            g.restore();
+          }
         }
       }
     }
@@ -432,11 +464,16 @@
     }
 
     // Screen-row strips of the visible ground with their world depth span and horizontal scale.
-    // Depends only on the viewport size, so it is cached until a resize.
-    _getGroundRows(viewW, viewH) {
-      if (this._rowsKeyW === viewW && this._rowsKeyH === viewH && this._rows) return this._rows;
+    // Depends only on the viewport size and the canvas pixel ratio, so it is cached until those
+    // change. Strips are a whole number of canvas pixels tall and start on a canvas pixel, so
+    // neighbouring strips never blend along their shared edge (at any render resolution).
+    _getGroundRows(viewW, viewH, pixelRatio = 1) {
+      if (this._rows && this._rowsKeyW === viewW && this._rowsKeyH === viewH && this._rowsKeyR === pixelRatio) {
+        return this._rows;
+      }
       this._rowsKeyW = viewW;
       this._rowsKeyH = viewH;
+      this._rowsKeyR = pixelRatio;
 
       const focal = this.getFocal(viewH);
       const horizonProj = this._getHorizonProj(viewW, viewH);
@@ -455,12 +492,35 @@
         return (lo + hi) * 0.5;
       };
 
+      // A strip is drawn with one horizontal scale (that of its middle), so its top and bottom
+      // edges are slightly off; the error is largest at the left / right screen edge. Toward the
+      // bottom of the screen the scale changes slowly, so strips there can be taller for the same
+      // error: each strip grows from GROUND_ROW_STEP up to GROUND_ROW_MAX while that edge error
+      // stays within GROUND_ROW_SHEAR — roughly a third fewer strips to draw on a landscape
+      // phone, two thirds fewer in portrait.
+      const scaleAt = (dy) => this.projectDelta(0, dy, 0, viewW, viewH, true).scale;
+      const edgeShear = (dyTop, dyBottom) => {
+        const mid = scaleAt((dyTop + dyBottom) * 0.5);
+        return (Math.max(Math.abs(scaleAt(dyTop) - mid), Math.abs(scaleAt(dyBottom) - mid)) / mid) * viewW * 0.5;
+      };
+
       const rows = [];
-      const start = Math.max(0, Math.floor(horizonY));
-      let prevDy = dyAtScreenY(start);
-      for (let sy = start; sy < viewH; sy += GROUND_ROW_STEP) {
-        const h = Math.min(GROUND_ROW_STEP, viewH - sy);
-        const nextDy = dyAtScreenY(sy + h);
+      const minPx = Math.max(1, Math.round(GROUND_ROW_STEP * pixelRatio)); // canvas px per strip
+      const maxPx = Math.max(minPx, Math.round(GROUND_ROW_MAX * pixelRatio));
+      const startPx = Math.max(0, Math.floor(horizonY * pixelRatio));
+      let prevDy = dyAtScreenY(startPx / pixelRatio);
+      let stepPx = minPx;
+      for (let px = startPx; px / pixelRatio < viewH; px += stepPx) {
+        const sy = px / pixelRatio;
+        stepPx = minPx;
+        let nextDy = dyAtScreenY(Math.min(viewH, sy + stepPx / pixelRatio));
+        while (stepPx < maxPx) {
+          const tryDy = dyAtScreenY(Math.min(viewH, sy + (stepPx + 1) / pixelRatio));
+          if (edgeShear(prevDy, tryDy) > GROUND_ROW_SHEAR) break;
+          stepPx += 1;
+          nextDy = tryDy;
+        }
+        const h = Math.min(stepPx / pixelRatio, viewH - sy);
         const midP = this.projectDelta(0, (prevDy + nextDy) * 0.5, 0, viewW, viewH, true);
         if (midP && nextDy > prevDy) {
           rows.push({ sy, h, dyTop: prevDy, dyH: nextDy - prevDy, scale: midP.scale });
@@ -471,46 +531,64 @@
       return rows;
     }
 
-    _drawGroundTexture(ctx, camX, camY, viewW, viewH) {
-      const tex = this.groundTex;
-      if (!tex) return;
-      const rows = this._getGroundRows(viewW, viewH);
-      for (const row of rows) {
-        const wy = wrapCoord(camY + row.dyTop, WORLD_H);
-        const spanW = viewW / row.scale;
-        const wx = camX - spanW * 0.5;
-        if (wy + row.dyH <= WORLD_H) {
-          this._blitGroundSpan(ctx, tex, wx, wy, spanW, row.dyH, row.sy, viewW, row.h);
-        } else {
-          // Strip crosses the north/south world seam: split it in two
-          const h1 = WORLD_H - wy;
-          const d1 = row.h * (h1 / row.dyH);
-          this._blitGroundSpan(ctx, tex, wx, wy, spanW, h1, row.sy, viewW, d1);
-          this._blitGroundSpan(ctx, tex, wx, 0, spanW, row.dyH - h1, row.sy + d1, viewW, row.h - d1);
-        }
-      }
-    }
-
-    // Copy one horizontal world span to a screen strip, wrapping across the east/west seam
-    _blitGroundSpan(ctx, tex, wx, wy, spanW, spanH, destY, destW, destH) {
+    // pixelRatio: canvas pixels per CSS pixel of ctx (seams between tiles are snapped to it)
+    _drawGroundTexture(ctx, camX, camY, viewW, viewH, pixelRatio = 1) {
+      const tiles = this.groundTiles;
+      if (!tiles) return;
       const R = GROUND_TEX_RES;
-      const srcH = Math.min(spanH, WORLD_H - wy);
-      if (srcH <= 1e-4 || destH <= 0) return;
-      const pxPerWorld = destW / spanW;
-      let x = wrapCoord(wx, WORLD_W);
-      let done = 0;
-      let destX = 0;
-      while (done < spanW - 1e-6) {
-        const seg = Math.min(spanW - done, WORLD_W - x);
-        done += seg;
-        // Snap internal seam boundaries to whole pixels so no anti-aliased seam line appears
-        const destEnd = done >= spanW - 1e-6 ? destW : Math.round(done * pxPerWorld);
-        const dw = destEnd - destX;
-        if (dw > 0 && seg > 1e-3) {
-          ctx.drawImage(tex, x * R, wy * R, seg * R, srcH * R, destX, destY, dw, destH);
+      const rows = this._getGroundRows(viewW, viewH, pixelRatio);
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const spanW = viewW / row.scale;
+        const wx = wrapCoord(camX - spanW * 0.5, WORLD_W);
+        const pxPerWorld = viewW / spanW;
+        const txStart = Math.min(GROUND_TILES - 1, Math.floor(wx / TILE_W));
+
+        // Split the strip wherever its depth span crosses a tile edge (the north/south world seam
+        // is one of them), then each piece wherever it crosses a tile edge sideways
+        let wy = wrapCoord(camY + row.dyTop, WORLD_H);
+        let ty = Math.min(GROUND_TILES - 1, Math.floor(wy / TILE_H));
+        let doneH = 0;
+        let destY = row.sy;
+        const destBottom = row.sy + row.h;
+        while (doneH < row.dyH - 1e-6) {
+          const segH = Math.min(row.dyH - doneH, (ty + 1) * TILE_H - wy);
+          doneH += segH;
+          // Inner seams are snapped to whole canvas pixels so no anti-aliased seam line appears
+          const destEndY = doneH >= row.dyH - 1e-6
+            ? destBottom
+            : Math.round((row.sy + row.h * (doneH / row.dyH)) * pixelRatio) / pixelRatio;
+          const destH = destEndY - destY;
+          if (destH > 0 && segH > 1e-4) {
+            const srcY = (wy - ty * TILE_H) * R;
+            const srcH = segH * R;
+            let x = wx;
+            let tx = txStart;
+            let doneW = 0;
+            let destX = 0;
+            while (doneW < spanW - 1e-6) {
+              const seg = Math.min(spanW - doneW, (tx + 1) * TILE_W - x);
+              doneW += seg;
+              const destEndX = doneW >= spanW - 1e-6
+                ? viewW
+                : Math.round(doneW * pxPerWorld * pixelRatio) / pixelRatio;
+              const dw = destEndX - destX;
+              if (dw > 0 && seg > 1e-3) {
+                ctx.drawImage(
+                  tiles[ty * GROUND_TILES + tx].canvas,
+                  (x - tx * TILE_W) * R, srcY, seg * R, srcH,
+                  destX, destY, dw, destH
+                );
+              }
+              destX = destEndX;
+              tx = (tx + 1) % GROUND_TILES; // next tile east (wraps across the east/west seam)
+              x = tx * TILE_W;
+            }
+          }
+          destY = destEndY;
+          ty = (ty + 1) % GROUND_TILES; // next tile south (wraps across the north/south seam)
+          wy = ty * TILE_H;
         }
-        destX = destEnd;
-        x = 0;
       }
     }
   }

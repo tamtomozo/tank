@@ -163,10 +163,6 @@
     }
 
     drawObstacle(ctx, obs, p, camX, camY, viewW, viewH) {
-      // Project every rock vertex with the real projection (exact on the curved ground)
-      const projV = (v, offX = 0, offY = 0) =>
-        this.projectDelta(p.dx + v[0] + offX, p.dy + v[1] + offY, v[2], viewW, viewH, true);
-
       // Distance fog: tall boulders near the horizon poke above the haze band, so the rock itself
       // fades into the haze colour with distance and dissolves just before the horizon.
       const horizonDist = -HORIZON_DY;
@@ -176,13 +172,6 @@
       const alpha = 1 - fadeT * fadeT * (3 - 2 * fadeT);
       if (alpha <= 0.01) return;
       const haze = fogMix > 0.001 ? this.getHazeRgb() : null;
-      const fogColor = (rgb) => {
-        if (!haze) return null;
-        const r = Math.round(rgb[0] + (haze[0] - rgb[0]) * fogMix);
-        const g = Math.round(rgb[1] + (haze[1] - rgb[1]) * fogMix);
-        const b = Math.round(rgb[2] + (haze[2] - rgb[2]) * fogMix);
-        return `rgb(${r}, ${g}, ${b})`;
-      };
       const prevAlpha = ctx.globalAlpha;
       ctx.globalAlpha = prevAlpha * alpha;
 
@@ -191,34 +180,37 @@
       const horizonY = horizonProj ? horizonProj.sy : viewH * 0.24;
       const fadeTopY = horizonY - 46;
       const fadeBotY = horizonY + 8;
-      const rgbStr = (c, a) => `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${a})`;
-      const skyFadeFill = (rgb, minSy) => {
-        if (!haze || minSy >= fadeBotY) return null;
-        const r = Math.round(rgb[0] + (haze[0] - rgb[0]) * fogMix);
-        const g = Math.round(rgb[1] + (haze[1] - rgb[1]) * fogMix);
-        const b = Math.round(rgb[2] + (haze[2] - rgb[2]) * fogMix);
-        const grad = ctx.createLinearGradient(0, fadeTopY, 0, fadeBotY);
-        grad.addColorStop(0, rgbStr(haze, 0));
-        grad.addColorStop(0.55, rgbStr([r, g, b], 0.55));
-        grad.addColorStop(1, rgbStr([r, g, b], 1));
-        return grad;
-      };
       const edgeStroke = `rgba(28, 22, 16, ${(0.16 * (1 - fogMix)).toFixed(3)})`;
+
+      // Project every distinct vertex once with the real projection (exact on the curved ground).
+      // The facets share their corners, so this is a fraction of projecting facet by facet; the
+      // screen positions go into a reused array instead of one object per vertex.
+      const mesh = obs._mesh || (obs._mesh = buildMesh(obs));
+      const verts = mesh.verts;
+      const nVerts = verts.length;
+      if (vertOk.length < nVerts + 1) {
+        vertXY = new Float64Array((nVerts + 1) * 4);
+        vertOk = new Uint8Array((nVerts + 1) * 2);
+      }
+      for (let i = 0; i < nVerts; i++) {
+        const v = verts[i];
+        vertOk[i] = this.projectDeltaInto(vertXY, i, p.dx + v[0], p.dy + v[1], v[2], viewW, viewH) ? 1 : 0;
+      }
 
       // Ground shadow cast toward the south-east (thins out with distance as well)
       const sOffX = obs.radius * 0.22;
       const sOffY = obs.radius * 0.16;
+      const tmp = nVerts; // spare slot after the vertices
       ctx.fillStyle = `rgba(0, 0, 0, ${(0.30 * (1 - fogMix)).toFixed(3)})`;
       ctx.beginPath();
       let started = false;
       for (const v of obs.base) {
-        const sp = projV(v, sOffX, sOffY);
-        if (!sp) continue;
+        if (!this.projectDeltaInto(vertXY, tmp, p.dx + v[0] + sOffX, p.dy + v[1] + sOffY, v[2], viewW, viewH)) continue;
         if (!started) {
-          ctx.moveTo(sp.sx, sp.sy);
+          ctx.moveTo(vertXY[tmp * 2], vertXY[tmp * 2 + 1]);
           started = true;
         } else {
-          ctx.lineTo(sp.sx, sp.sy);
+          ctx.lineTo(vertXY[tmp * 2], vertXY[tmp * 2 + 1]);
         }
       }
       if (started) {
@@ -229,38 +221,80 @@
       // Faceted body: draw only facets facing the camera (positive screen-space winding)
       ctx.lineJoin = 'round';
       ctx.lineWidth = 1;
-      for (const f of obs.facets) {
-        const pts = [];
-        for (const v of f.verts) {
-          const sp = projV(v);
-          if (!sp) break;
-          pts.push(sp);
-        }
-        if (pts.length !== f.verts.length) continue;
+      ctx.strokeStyle = edgeStroke;
+      const facets = obs.facets;
+      for (let k = 0; k < facets.length; k++) {
+        const idx = mesh.facets[k];
+        const n = idx.length;
         let area = 0;
-        for (let i = 0; i < pts.length; i++) {
-          const a = pts[i];
-          const b = pts[(i + 1) % pts.length];
-          area += a.sx * b.sy - b.sx * a.sy;
-        }
-        if (area <= 0.5) continue;
         let minSy = Infinity;
-        for (const sp of pts) minSy = Math.min(minSy, sp.sy);
-        const skyFade = skyFadeFill(f.rgb, minSy);
-        ctx.fillStyle = skyFade || fogColor(f.rgb) || f.color;
-        // Facet edge lines would stay crisp against the sky, so skip them on fading facets
-        ctx.strokeStyle = skyFade ? 'rgba(0, 0, 0, 0)' : edgeStroke;
+        let complete = true;
+        for (let i = 0; i < n; i++) {
+          if (!vertOk[idx[i]]) {
+            complete = false;
+            break;
+          }
+          const a = idx[i] * 2;
+          const b = idx[(i + 1) % n] * 2;
+          area += vertXY[a] * vertXY[b + 1] - vertXY[b] * vertXY[a + 1];
+          if (vertXY[a + 1] < minSy) minSy = vertXY[a + 1];
+        }
+        if (!complete || area <= 0.5) continue;
+
+        // Colour: the facet's own, mixed toward the haze with distance; a facet reaching above
+        // the horizon fades out upward instead (and gets no edge line, which would stay crisp
+        // against the sky)
+        const f = facets[k];
+        let skyFade = false;
+        if (haze) {
+          const r = Math.round(f.rgb[0] + (haze[0] - f.rgb[0]) * fogMix);
+          const g = Math.round(f.rgb[1] + (haze[1] - f.rgb[1]) * fogMix);
+          const b = Math.round(f.rgb[2] + (haze[2] - f.rgb[2]) * fogMix);
+          if (minSy < fadeBotY) {
+            skyFade = true;
+            const grad = ctx.createLinearGradient(0, fadeTopY, 0, fadeBotY);
+            grad.addColorStop(0, `rgba(${haze[0]}, ${haze[1]}, ${haze[2]}, 0)`);
+            grad.addColorStop(0.55, `rgba(${r}, ${g}, ${b}, 0.55)`);
+            grad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 1)`);
+            ctx.fillStyle = grad;
+          } else {
+            ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+          }
+        } else {
+          ctx.fillStyle = f.color;
+        }
         ctx.beginPath();
-        ctx.moveTo(pts[0].sx, pts[0].sy);
-        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].sx, pts[i].sy);
+        ctx.moveTo(vertXY[idx[0] * 2], vertXY[idx[0] * 2 + 1]);
+        for (let i = 1; i < n; i++) ctx.lineTo(vertXY[idx[i] * 2], vertXY[idx[i] * 2 + 1]);
         ctx.closePath();
         ctx.fill();
-        ctx.stroke();
+        if (!skyFade) ctx.stroke();
       }
       ctx.lineJoin = 'miter';
       ctx.globalAlpha = prevAlpha;
     }
   }
+
+  // Distinct vertices of a rock / solid and, for each facet, the indices of its corners in that
+  // list (facets share their corner arrays; found once per object and kept on it)
+  function buildMesh(obs) {
+    const index = new Map();
+    const verts = [];
+    const idOf = (v) => {
+      let i = index.get(v);
+      if (i === undefined) {
+        i = verts.length;
+        index.set(v, i);
+        verts.push(v);
+      }
+      return i;
+    };
+    return { verts, facets: obs.facets.map((f) => f.verts.map(idOf)) };
+  }
+
+  // Reused per-frame storage for projected vertices (screen x, y pairs) and whether each projected
+  let vertXY = new Float64Array(128);
+  let vertOk = new Uint8Array(64);
 
   global.TankUtil.mixin(global.HorizonWorld, WorldProps);
 })(window);

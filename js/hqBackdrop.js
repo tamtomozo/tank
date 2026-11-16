@@ -10,6 +10,8 @@
   // (holo table, wall screens, radar sweep, compound pulses) are drawn every frame while visible.
 
   const FADE_MS = 600; // matches the opacity transitions in css/hqbackdrop.css
+  // Touch-first devices (phones, tablets): lighter redraws, see _loop and _drawRoom (js/game/quality.js)
+  const LOW_POWER = global.GameQuality.touch;
   const TAU = Math.PI * 2;
   const FONT_UI = '"Segoe UI", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", system-ui, sans-serif';
   const FONT_MONO = '"Cascadia Mono", Consolas, ui-monospace, monospace';
@@ -50,6 +52,7 @@
       this.room = null; // { still canvas, layout, leds, rows }
       this.map = null; // { still canvas, marks }
       this._raf = null;
+      this._drawnAt = -Infinity; // time of the last redraw (30 fps limit on phones)
 
       window.addEventListener('resize', () => {
         this.room = null;
@@ -98,6 +101,10 @@
           return;
         }
         this._raf = requestAnimationFrame(frame);
+        // Phones / tablets: the slow ambient animation is redrawn at ~30 fps (the fades between
+        // scenes are CSS transitions and stay smooth)
+        if (LOW_POWER && ms - this._drawnAt < 30) return;
+        this._drawnAt = ms;
         this._fitCanvases();
         const t = ms / 1000;
         const crossfading = ms - this.switchedAt < FADE_MS;
@@ -111,7 +118,7 @@
     _fitCanvases() {
       const w = global.innerWidth;
       const h = global.innerHeight;
-      const dpr = Math.min(global.devicePixelRatio || 1, 2);
+      const dpr = global.GameQuality.menuRatio();
       if (w === this.w && h === this.h && dpr === this.dpr) return;
       this.w = w;
       this.h = h;
@@ -497,10 +504,6 @@
         return [tx + x * hs, baseY - hs * 0.55 + z * hs * tilt - hgt * hs * 0.7];
       }));
       g.save();
-      g.strokeStyle = 'rgba(125, 211, 252, 0.55)';
-      g.lineWidth = 1;
-      g.shadowColor = 'rgba(56, 189, 248, 0.8)';
-      g.shadowBlur = 6;
       g.beginPath();
       for (let i = 0; i <= N; i++) {
         for (let j = 0; j <= N; j++) {
@@ -514,6 +517,18 @@
           else g.lineTo(x, y);
         }
       }
+      if (LOW_POWER) {
+        // A canvas shadow blurs the whole wireframe again on every frame; on phones the glow is
+        // a wide faint stroke under the lines instead
+        g.strokeStyle = 'rgba(56, 189, 248, 0.16)';
+        g.lineWidth = 5;
+        g.stroke();
+      } else {
+        g.shadowColor = 'rgba(56, 189, 248, 0.8)';
+        g.shadowBlur = 6;
+      }
+      g.strokeStyle = 'rgba(125, 211, 252, 0.55)';
+      g.lineWidth = 1;
       g.stroke();
       g.restore();
       // Enemy compounds marked on the holo terrain

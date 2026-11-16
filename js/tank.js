@@ -508,11 +508,21 @@
       ctx.translate(bodyProj.sx, bodyProj.sy);
       ctx.scale(s, s);
 
+      // The still parts (track bases, hull, turret) come from sprites, see _spriteSet()
+      this._drawScale = s;
+      const sprites = this._spriteSet();
       const vib = this._engineVibration();
       if (this.isBunker) {
         this._drawBunkerBase(ctx);
       } else {
-        this._drawHullAndTracks(ctx, nightFactor, vib);
+        ctx.save();
+        ctx.rotate(this.hullAngle);
+        stamp(ctx, sprites.tracks, TRACKS_BOX);
+        this._paintTrackMotion(ctx);
+        this._shakeWithEngine(ctx, vib);
+        if (this.boosting) this._paintBoostFlames(ctx);
+        stamp(ctx, sprites.hull, HULL_BOX);
+        ctx.restore();
       }
 
       // 3. Rotating 2D Turret (rides on the vibrating hull, slides back along the barrel on firing)
@@ -521,7 +531,14 @@
         vib.x - Math.cos(this.turretAngle) * this.turretKick,
         vib.y - Math.sin(this.turretAngle) * this.turretKick
       );
-      this._drawTurret(ctx);
+      if (this.recoil > 0 || this.muzzleFlashTimer > 0) {
+        // Just fired: barrel recoil and muzzle flash are drawn live
+        this._drawTurret(ctx);
+      } else {
+        ctx.rotate(this.turretAngle);
+        stamp(ctx, sprites.turret, TURRET_BOX);
+        this._paintAntenna(ctx);
+      }
       ctx.restore();
 
       ctx.restore();
@@ -587,62 +604,96 @@
       };
     }
 
+    // Hull and tracks drawn directly (vector). The battlefield uses sprites for the still parts
+    // instead (see draw()); this is the same picture, used for previews (briefing).
     _drawHullAndTracks(ctx, nightFactor = 0, vib = null) {
       ctx.save();
       ctx.rotate(this.hullAngle);
+      this._paintTrackBases(ctx);
+      this._paintTrackMotion(ctx);
+      this._shakeWithEngine(ctx, vib);
+      if (this.boosting) this._paintBoostFlames(ctx);
+      this._paintHull(ctx);
+      ctx.restore();
+    }
 
-      const trackWidth = 10 + (this.engineLevel - 1) * 0.9;
-      const trackLen = 48;
-      const trackOffsetY = 16;
+    _trackWidth() {
+      return 10 + (this.engineLevel - 1) * 0.9;
+    }
 
-      // Draw Left (-1) & Right (+1) 2D Caterpillar Treads
-      const drawTrack = (ySign, phase) => {
-        const ty = ySign * trackOffsetY - trackWidth * 0.5;
-        // Track rubber base
-        ctx.fillStyle = '#181b20';
-        ctx.strokeStyle = '#374151';
-        ctx.lineWidth = 1.5;
-        ctx.fillRect(-trackLen * 0.5, ty, trackLen, trackWidth);
-        ctx.strokeRect(-trackLen * 0.5, ty, trackLen, trackWidth);
+    // Rubber base of the left and right track (hull-local axes, like every _paint* below)
+    _paintTrackBases(ctx) {
+      const trackWidth = this._trackWidth();
+      ctx.fillStyle = '#181b20';
+      ctx.strokeStyle = '#374151';
+      ctx.lineWidth = 1.5;
+      for (const ySign of [-1, 1]) {
+        const ty = ySign * TRACK_OFFSET_Y - trackWidth * 0.5;
+        ctx.fillRect(-TRACK_LEN * 0.5, ty, TRACK_LEN, trackWidth);
+        ctx.strokeRect(-TRACK_LEN * 0.5, ty, TRACK_LEN, trackWidth);
+      }
+    }
 
-        // Animated individual caterpillar tread cleats
-        ctx.fillStyle = '#4b5563';
-        const spacing = 7;
+    // What moves on the tracks: the tread cleats running along them, with the sprocket wheel
+    // highlights at both ends on top
+    _paintTrackMotion(ctx) {
+      const trackWidth = this._trackWidth();
+      const half = TRACK_LEN * 0.5;
+
+      // Cleats: 3 units wide every 7 units, starting `offset` behind the rear end of the track.
+      // Both tracks are one dashed stroke (each sub-path starts its own dash pattern).
+      const spacing = 7;
+      ctx.strokeStyle = '#4b5563';
+      ctx.lineWidth = trackWidth - 2;
+      ctx.lineCap = 'butt';
+      ctx.setLineDash([3, spacing - 3]);
+      ctx.lineDashOffset = 0;
+      ctx.beginPath();
+      for (const ySign of [-1, 1]) {
+        const phase = ySign < 0 ? this.leftTrackPhase : this.rightTrackPhase;
         const offset = ((phase % spacing) + spacing) % spacing;
-        for (let tx = -trackLen * 0.5 + offset; tx < trackLen * 0.5 - 2; tx += spacing) {
-          ctx.fillRect(tx, ty + 1, 3, trackWidth - 2);
-        }
-
-        // Front & rear sprocket wheel highlights
-        ctx.fillStyle = this.accentColor;
-        ctx.fillRect(trackLen * 0.5 - 4, ty + 2, 3, trackWidth - 4);
-        ctx.fillRect(-trackLen * 0.5 + 1, ty + 2, 3, trackWidth - 4);
-      };
-
-      drawTrack(-1, this.leftTrackPhase);
-      drawTrack(1, this.rightTrackPhase);
-
-      // Everything above the tracks shakes with the engine (offset rotated into hull-local axes)
-      if (vib) {
-        const c = Math.cos(this.hullAngle);
-        const sn = Math.sin(this.hullAngle);
-        ctx.translate(vib.x * c + vib.y * sn, -vib.x * sn + vib.y * c);
+        const start = -half + offset;
+        const count = Math.ceil((half - 2 - start) / spacing); // cleats that start before the front end
+        if (count <= 0) continue;
+        ctx.moveTo(start, ySign * TRACK_OFFSET_Y);
+        ctx.lineTo(start + (count - 1) * spacing + 3, ySign * TRACK_OFFSET_Y);
       }
+      ctx.stroke();
+      ctx.setLineDash([]);
 
-      // Turbo boost flame jets
-      if (this.boosting) {
-        for (const ey of [-7, 7]) {
-          const fLen = 14 + Math.random() * 10;
-          ctx.fillStyle = 'rgba(56, 189, 248, 0.88)';
-          ctx.beginPath();
-          ctx.moveTo(-24, ey - 3.5);
-          ctx.lineTo(-24 - fLen, ey);
-          ctx.lineTo(-24, ey + 3.5);
-          ctx.closePath();
-          ctx.fill();
-        }
+      // Front & rear sprocket wheel highlights
+      ctx.fillStyle = this.accentColor;
+      for (const ySign of [-1, 1]) {
+        const ty = ySign * TRACK_OFFSET_Y - trackWidth * 0.5;
+        ctx.fillRect(half - 4, ty + 2, 3, trackWidth - 4);
+        ctx.fillRect(-half + 1, ty + 2, 3, trackWidth - 4);
       }
+    }
 
+    // Everything above the tracks shakes with the engine (offset rotated into hull-local axes)
+    _shakeWithEngine(ctx, vib) {
+      if (!vib) return;
+      const c = Math.cos(this.hullAngle);
+      const sn = Math.sin(this.hullAngle);
+      ctx.translate(vib.x * c + vib.y * sn, -vib.x * sn + vib.y * c);
+    }
+
+    // Turbo boost flame jets
+    _paintBoostFlames(ctx) {
+      for (const ey of [-7, 7]) {
+        const fLen = 14 + Math.random() * 10;
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.88)';
+        ctx.beginPath();
+        ctx.moveTo(-24, ey - 3.5);
+        ctx.lineTo(-24 - fLen, ey);
+        ctx.lineTo(-24, ey + 3.5);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+
+    // The hull itself: nothing here moves, it only depends on the tank's colours and armour level
+    _paintHull(ctx) {
       // Main armored hull
       ctx.fillStyle = this.hullColor;
       ctx.strokeStyle = '#111827';
@@ -690,14 +741,19 @@
         ctx.fillStyle = this.accentColor;
         ctx.fillRect(22, -10, 3.5, 20);
       }
-
-      ctx.restore();
     }
 
+    // Turret drawn directly (vector), with barrel recoil, muzzle flash and the swaying antenna
     _drawTurret(ctx) {
       ctx.save();
       ctx.rotate(this.turretAngle);
+      this._paintTurret(ctx, true);
+      ctx.restore();
+    }
 
+    // Turret in its own axes (barrel along +x). live: with what changes from frame to frame (barrel
+    // recoil, muzzle flash, antenna); without it this is the still picture kept as a sprite.
+    _paintTurret(ctx, live) {
       // Turret shadow on hull
       ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
       ctx.beginPath();
@@ -705,7 +761,7 @@
       ctx.fill();
 
       // Cannon Barrel(s) with Recoil!
-      const rx = -this.recoil;
+      const rx = live ? -this.recoil : 0;
       ctx.save();
       ctx.translate(rx, 0);
 
@@ -748,7 +804,7 @@
       }
 
       // Muzzle Flash
-      if (this.muzzleFlashTimer > 0) {
+      if (live && this.muzzleFlashTimer > 0) {
         const tipX = 36 + (this.cannonLevel - 1) * 3;
         ctx.fillStyle = this.cannonLevel >= 5 ? 'rgba(56, 189, 248, 0.9)' : 'rgba(254, 240, 138, 0.92)';
         ctx.beginPath();
@@ -790,17 +846,81 @@
         }
       }
 
-      // Swaying whip antenna
+      if (live) this._paintAntenna(ctx);
+    }
+
+    // Swaying whip antenna
+    _paintAntenna(ctx) {
       ctx.strokeStyle = '#cbd5e1';
       ctx.lineWidth = 1.2;
       ctx.beginPath();
       ctx.moveTo(-9, -6);
       ctx.lineTo(-16 - this.antennaLag, -9);
       ctx.stroke();
+    }
 
-      ctx.restore();
+    // ---- Sprites (battlefield drawing) ----------------------------------------------------------
+    // Track bases, hull and turret are a few dozen small shapes that only change with the tank's
+    // colours and tuning levels. On the battlefield they are painted once per look into sprites and
+    // stamped from there every frame (three stamps instead of ~80 canvas calls per tank).
+
+    // Sprites for this tank's look at the resolution it is currently shown at
+    _spriteSet() {
+      // Canvas pixels per tank unit right now -> sprite resolution (2, 4 or 8 px per unit)
+      const density = (this._drawScale || 1) * Tank2D.pixelRatio;
+      const res = density <= 2 ? 2 : density <= 4 ? 4 : 8;
+      const cur = this._sprites;
+      if (cur && cur.res === res && cur.cannon === this.cannonLevel && cur.armor === this.armorLevel
+        && cur.engine === this.engineLevel && cur.sub === this.subLevel) {
+        return cur;
+      }
+      const key = [
+        res, this.hullColor, this.hullDark, this.turretColor, this.accentColor, this.isPlayer ? 1 : 0,
+        this.cannonLevel, this.armorLevel, this.engineLevel, this.subLevel
+      ].join('|');
+      let set = spriteCache.get(key);
+      if (!set) {
+        set = {
+          res,
+          cannon: this.cannonLevel,
+          armor: this.armorLevel,
+          engine: this.engineLevel,
+          sub: this.subLevel,
+          tracks: makeSprite(TRACKS_BOX, res, (g) => this._paintTrackBases(g)),
+          hull: makeSprite(HULL_BOX, res, (g) => this._paintHull(g)),
+          turret: makeSprite(TURRET_BOX, res, (g) => this._paintTurret(g, false))
+        };
+        spriteCache.set(key, set);
+      }
+      this._sprites = set;
+      return set;
     }
   }
+
+  const TRACK_LEN = 48;
+  const TRACK_OFFSET_Y = 16;
+
+  // Sprite bounds in tank units (the painted shapes plus a little margin for their outlines)
+  const TRACKS_BOX = { x: -26, y: -26, w: 52, h: 52 };
+  const HULL_BOX = { x: -27, y: -19, w: 55, h: 38 };
+  const TURRET_BOX = { x: -18, y: -17, w: 65, h: 35 };
+  const spriteCache = new Map(); // look + resolution -> { tracks, hull, turret }
+
+  function makeSprite(box, res, paint) {
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.ceil(box.w * res);
+    canvas.height = Math.ceil(box.h * res);
+    const g = canvas.getContext('2d');
+    g.setTransform(res, 0, 0, res, -box.x * res, -box.y * res);
+    paint(g);
+    return canvas;
+  }
+
+  const stamp = (ctx, sprite, box) => ctx.drawImage(sprite, box.x, box.y, box.w, box.h);
+
+  // Canvas pixels per CSS pixel of the battlefield canvas (set by js/game/render.js every frame);
+  // picks the sprite resolution
+  Tank2D.pixelRatio = 1;
 
   // Numeric fields set by applyStats (the tuning's stat objects may leave some out)
   Tank2D.TUNED_STATS = [

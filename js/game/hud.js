@@ -3,13 +3,27 @@
 
   // HUD panels (status, HP / boost bars, scrap, weapons, boss banner).
   // Values are written through dirty-checked setters so the DOM is only touched when they change.
-  // Bars read CSS variables on <html> (--hp-ratio, --boost-ratio, ... see css/hud.css).
+  // Bars read CSS variables (--hp-ratio, --boost-ratio, ... see css/hud.css) that are set on the
+  // bar element itself: set on <html> they made the browser re-style the whole page every frame.
+  // The bars follow every frame (frame()); the texts are refreshed about 10 times a second, since
+  // each change lays the panels out again.
+
+  const TEXT_INTERVAL_MS = 100;
 
   function create(game) {
     const { world, combat, squad, tuning } = game;
 
     // Cached HUD element refs + dirty-checked writes: only touch the DOM when a value actually changes
-    const rootStyle = document.documentElement.style;
+    const styleOf = (id) => document.getElementById(id).style;
+    const varStyle = {
+      '--hp-ratio': styleOf('hud-hp-fill'),
+      '--hp-hue': styleOf('hud-hp-fill'),
+      '--boost-ratio': styleOf('hud-boost-fill'),
+      '--reload-ratio': styleOf('hud-reload-fill'),
+      '--sub-ratio': styleOf('hud-sub-fill'),
+      '--boss-hp-ratio': styleOf('boss-hp-fill'),
+      '--damage-alpha': styleOf('damage-vignette')
+    };
     const hudEl = {
       area: document.getElementById('hud-area'),
       objective: document.getElementById('hud-objective'),
@@ -38,11 +52,28 @@
     const setVar = (name, value) => {
       if (lastVar.get(name) !== value) {
         lastVar.set(name, value);
-        rootStyle.setProperty(name, value);
+        varStyle[name].setProperty(name, value);
       }
     };
 
+    let lastTextAt = -Infinity;
+
+    // Once per frame: bars every time, texts when TEXT_INTERVAL_MS has passed (now = frame time in ms)
+    function frame(timeInfo, now) {
+      updateBars();
+      if (now - lastTextAt >= TEXT_INTERVAL_MS || now < lastTextAt) {
+        lastTextAt = now;
+        updateTexts(timeInfo);
+      }
+    }
+
+    // Everything at once (after a change made while the game is paused: tuning, depot, restart)
     function update(timeInfo = world.getTimeInfo()) {
+      updateBars();
+      updateTexts(timeInfo);
+    }
+
+    function updateBars() {
       const player = game.player;
       const hpRatio = Math.max(0, Math.min(1, player.hp / player.maxHp));
       const boostRatio = Math.max(0, Math.min(1, player.boostEnergy / player.maxBoost));
@@ -55,6 +86,30 @@
       setVar('--boost-ratio', boostRatio.toFixed(3));
       setVar('--reload-ratio', reloadRatio.toFixed(3));
       setVar('--damage-alpha', (combat.damageFlash * 0.85).toFixed(3));
+
+      const subLv = player.subLevel;
+      if (subLv <= 0) {
+        setVar('--sub-ratio', '0');
+      } else if (subLv <= 2) {
+        setVar('--sub-ratio', Math.max(0, Math.min(1, 1 - player.subHeat)).toFixed(3));
+      } else {
+        const maxSubCd = Math.max(0.55, 1.0 - (subLv - 3) * 0.2);
+        const subRatio = player.subCooldown <= 0.01 ? 1 : Math.max(0, 1 - player.subCooldown / maxSubCd);
+        setVar('--sub-ratio', subRatio.toFixed(3));
+      }
+
+      const boss = combat.enemies.find((e) => e.alive && e.kind === 'boss');
+      if (boss) {
+        if (hudEl.bossBanner.hidden) hudEl.bossBanner.hidden = false;
+        setVar('--boss-hp-ratio', Math.max(0, boss.hp / boss.maxHp).toFixed(3));
+      } else if (!hudEl.bossBanner.hidden) {
+        hudEl.bossBanner.hidden = true;
+      }
+    }
+
+    function updateTexts(timeInfo) {
+      const player = game.player;
+      const boostRatio = Math.max(0, Math.min(1, player.boostEnergy / player.maxBoost));
 
       const curDistrict = combat.currentDistrict;
       const securedCount = combat.districtsSecured;
@@ -100,11 +155,8 @@
       const subLv = player.subLevel;
       setText(hudEl.subName, tuning.subWeaponName());
       if (subLv <= 0) {
-        setVar('--sub-ratio', '0');
         setText(hudEl.subText, '未装備');
       } else if (subLv <= 2) {
-        const coolRatio = Math.max(0, Math.min(1, 1 - player.subHeat));
-        setVar('--sub-ratio', coolRatio.toFixed(3));
         if (player.subOverheated) {
           const remSec = player.subHeat / 0.50;
           setText(hudEl.subText, `OVERHEAT 冷却中 ${remSec.toFixed(1)}s`);
@@ -114,24 +166,12 @@
           setText(hudEl.subText, 'READY');
         }
       } else {
-        const maxSubCd = Math.max(0.55, 1.0 - (subLv - 3) * 0.2);
-        const subRatio = player.subCooldown <= 0.01 ? 1 : Math.max(0, 1 - player.subCooldown / maxSubCd);
-        setVar('--sub-ratio', subRatio.toFixed(3));
         setText(hudEl.subText,
           player.subCooldown <= 0.01 ? 'READY' : `COOLING ${player.subCooldown.toFixed(1)}s`);
       }
-
-
-      const boss = combat.enemies.find((e) => e.alive && e.kind === 'boss');
-      if (boss) {
-        if (hudEl.bossBanner.hidden) hudEl.bossBanner.hidden = false;
-        setVar('--boss-hp-ratio', Math.max(0, boss.hp / boss.maxHp).toFixed(3));
-      } else if (!hudEl.bossBanner.hidden) {
-        hudEl.bossBanner.hidden = true;
-      }
     }
 
-    return { update };
+    return { update, frame };
   }
 
   global.GameHud = { create };

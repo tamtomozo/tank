@@ -28,6 +28,14 @@ dialog.game-dialog::backdrop {
   overscroll-behavior: contain;
 }
 
+/* Phones / small windows: a full-screen blur over the animated scene behind a dialog is redone
+   every frame; the dark tint alone does the job there */
+@media (pointer: coarse), (max-width: 960px), (max-height: 560px) {
+  dialog.game-dialog::backdrop {
+    backdrop-filter: none;
+  }
+}
+
 .dialog-shell {
   display: grid;
   gap: 1rem;

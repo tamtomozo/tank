@@ -18,8 +18,13 @@
   overflow: clip;
 }
 
+/* Placed by js/game/radar.js through the `translate` property (px from the top-left corner):
+   moving a marker then needs no layout, the browser only shifts its layer */
 .target-arrow {
   position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  will-change: translate;
   inline-size: 1.5rem;
   block-size: 1.5rem;
   transform: translate(-50%, -50%) rotate(var(--arrow-deg, 0deg));

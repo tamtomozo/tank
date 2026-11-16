@@ -341,6 +341,23 @@
       };
     }
 
+    // Screen position only, written to out[i * 2] (x) and out[i * 2 + 1] (y); false if the point
+    // can't be projected. Same result as projectDelta(dx, dy, wz, viewW, viewH, true) without
+    // creating an object — for the many vertices of rocks and solids drawn every frame.
+    projectDeltaInto(out, i, dx, dy, wz, viewW, viewH) {
+      if (dy > MAX_BEHIND_DY) return false;
+      const th = -dy / CYL_R;
+      const r = CYL_R + wz;
+      const vy = r * Math.sin(th) - CAM_Y;
+      const vz = r * Math.cos(th) - CYL_R - CAM_Z;
+      const depth = vy * DIR_Y + vz * DIR_Z;
+      if (depth <= 40) return false;
+      const scale = this.getFocal(viewH) / depth;
+      out[i * 2] = viewW * 0.5 + dx * scale;
+      out[i * 2 + 1] = viewH * 0.5 - (vy * UP_Y + vz * UP_Z) * scale;
+      return true;
+    }
+
     // Inverse projection from mouse screen coordinates (sx, sy) to wrapped world ground point (wx, wy)
     screenToWorld(sx, sy, camX, camY, viewW, viewH) {
       const focal = this.getFocal(viewH);
@@ -400,6 +417,8 @@
         x: this.wrapX(x),
         y: this.wrapY(y),
         angle,
+        cos: Math.cos(angle), // for the draw transform (sky.js), so it isn't recomputed every frame
+        sin: Math.sin(angle),
         life: 1.0
       });
     }
