@@ -246,7 +246,8 @@ dialog.area-dialog {
 }
 
 /* First-load "click to connect" screen (#audio-gate): waits for the gesture that unlocks audio.
-   Fades in after a short delay so it doesn't flash when the browser unlocks audio by itself. */
+   The screen is solid black from the first paint; only the panel fades in, after a short delay so
+   it doesn't flash when the browser unlocks audio by itself. */
 .audio-gate {
   position: fixed;
   inset: 0;
@@ -254,9 +255,15 @@ dialog.area-dialog {
   display: grid;
   place-items: center;
   padding-inline: 1rem;
-  background: rgb(7 11 20 / 0.45);
+  background: #000;
   cursor: pointer;
-  animation: audio-gate-in 0.5s ease-out 0.35s both;
+}
+
+/* Connected: fade from black to the operations room (duration = GATE_FADE_MS in js/areaSelect.js) */
+.audio-gate.is-leaving {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1.2s ease-in-out;
 }
 
 .audio-gate[hidden] {
@@ -273,6 +280,7 @@ dialog.area-dialog {
   border-radius: 0.5rem;
   background: var(--panel-bg);
   text-align: center;
+  animation: audio-gate-in 0.5s ease-out 0.35s both;
 }
 
 .audio-gate-panel .dialog-badge {
@@ -306,7 +314,7 @@ dialog.area-dialog {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .audio-gate,
+  .audio-gate-panel,
   .audio-gate-hint {
     animation: none;
   }

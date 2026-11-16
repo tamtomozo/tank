@@ -296,8 +296,9 @@
   </div>
 
   <!-- First-load "click to connect" screen: the browser keeps audio muted until the first click /
-       key press, so the sortie select (and its BGM) waits for one (js/areaSelect.js) -->
-  <div id="audio-gate" class="audio-gate" role="status" hidden>
+       key press, so the sortie select (and its BGM) waits for one (js/areaSelect.js).
+       Shown from the first paint so the page starts on a black screen; hidden by JS if not needed. -->
+  <div id="audio-gate" class="audio-gate" role="status">
     <div class="audio-gate-panel">
       <div class="dialog-badge">OPERATIONS HQ — STANDBY</div>
       <p class="audio-gate-title">作戦本部 回線待機中</p>

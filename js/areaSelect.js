@@ -13,6 +13,7 @@
   const { AREAS } = global.GameData; // js/data/operations.js
   const { el } = global.TankUtil;
 
+  const GATE_FADE_MS = 1200; // the black "click to connect" screen fades out this slowly (see .audio-gate.is-leaving)
   const OPEN_DELAY_MS = 900; // pause on the empty battlefield before the window starts drawing
   const BOOT_INTRO_MS = 1450; // boot-up sequence length before Mio starts talking (css/hudframe.css)
 
@@ -40,6 +41,7 @@
       this._selection = null;
       this._gateCleanup = null; // set while the "click to connect" screen waits for the first gesture
       this.gate = document.getElementById('audio-gate');
+      this._gateFadeTimer = null;
 
       this.btnBack.addEventListener('click', () => this.showAreas());
       // Closing sequence + cleanup; Esc is handled below (back to the area list)
@@ -79,6 +81,7 @@
         this._waitForAudioUnlock(() => this._show(areaId, delayMs));
         return;
       }
+      this._hideGate(); // shown from page load: not needed this time
       this._show(areaId, delayMs);
     }
 
@@ -184,7 +187,7 @@
         window.removeEventListener('pointerup', onGesture, true);
         window.removeEventListener('keydown', onGesture, true);
         ctx.removeEventListener('statechange', onStateChange);
-        if (this.gate) this.gate.hidden = true;
+        this._hideGate();
         this._gateCleanup = null;
       };
       this._gateCleanup = cleanup;
@@ -193,7 +196,26 @@
       window.addEventListener('keydown', onGesture, true);
       // Some browsers start the context on their own a moment later (autoplay allowed for the site)
       ctx.addEventListener('statechange', onStateChange);
-      if (this.gate) this.gate.hidden = false;
+      this._showGate();
+    }
+
+    _showGate() {
+      if (!this.gate) return;
+      clearTimeout(this._gateFadeTimer);
+      this._gateFadeTimer = null;
+      this.gate.classList.remove('is-leaving');
+      this.gate.hidden = false;
+    }
+
+    // Fade the black screen out slowly to reveal the operations room, then remove it
+    _hideGate() {
+      if (!this.gate || this.gate.hidden || this._gateFadeTimer != null) return;
+      this.gate.classList.add('is-leaving');
+      this._gateFadeTimer = setTimeout(() => {
+        this._gateFadeTimer = null;
+        this.gate.hidden = true;
+        this.gate.classList.remove('is-leaving');
+      }, GATE_FADE_MS);
     }
 
     // ---------------------------------------------------------------- helpers
