@@ -262,13 +262,11 @@
       this.audio.playUpgrade();
     }
 
-    // Full resupply: player and all wingmen back to full armour, boost and weapon cooling
+    // Full resupply: player and all wingmen back to full armour, boost and main-gun reload
     _resupply(player) {
       if (player.alive) {
         player.hp = player.maxHp;
         player.boostEnergy = player.maxBoost;
-        player.subHeat = 0;
-        player.subOverheated = false;
         player.reloadTimer = 0;
         this.spawnDustOrSmoke(player.x, player.y, 10, 14, '#4ade80');
       }

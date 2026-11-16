@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  // Shooting and damage: main cannon / sub weapons, shells in flight, explosions with knockback,
+  // Shooting and damage: main cannon, shells in flight, explosions with knockback,
   // and damage to the player, wingmen, enemies and props.
   // Part of CombatManager (js/combat/combat.js): the methods below are mixed into its prototype.
 
@@ -68,79 +68,6 @@
         this.shakeIntensity = Math.max(this.shakeIntensity, 0.45);
       } else {
         this.audio.playCannon(tank.isAlly ? 0.5 : 0.6);
-      }
-      return true;
-    }
-
-    fireSubWeapon(player) {
-      if (!player.alive || player.subLevel <= 0 || player.subCooldown > 0) return false;
-
-      const subLv = player.subLevel;
-      if (subLv <= 2 && player.subOverheated) return false;
-
-      const muzzle = player.getMuzzleWorld();
-      const perpX = -muzzle.dirY;
-      const perpY = muzzle.dirX;
-      const ox = this.world.wrapX(muzzle.x + perpX * 8);
-      const oy = this.world.wrapY(muzzle.y + perpY * 8);
-
-      if (subLv <= 2) {
-        player.subCooldown = subLv === 1 ? 0.14 : 0.11;
-        const heatStep = subLv === 1 ? 0.065 : 0.055;
-        player.subHeat = Math.min(1, player.subHeat + heatStep);
-        if (player.subHeat >= 1) {
-          player.subOverheated = true;
-        }
-        const jitter = (Math.random() - 0.5) * 0.08;
-        const ang = player.turretAngle + jitter;
-        const speed = 780;
-        this._countShot();
-        this.projectiles.push({
-          kind: 'autocannon',
-          fromPlayer: true,
-          source: 'player',
-          x: ox,
-          y: oy,
-          z: muzzle.z,
-          vx: Math.cos(ang) * speed,
-          vy: Math.sin(ang) * speed,
-          vz: -10,
-          gScale: 0.1,
-          damage: subLv === 1 ? 12 : 17,
-          splashRadius: 20,
-          color: '#34d399',
-          radius: 3.2,
-          life: 1.15,
-          trailTimer: 0
-        });
-        this.audio.playAutocannon();
-      } else {
-        player.subCooldown = Math.max(0.55, 1.0 - (subLv - 3) * 0.2);
-        const count = subLv >= 5 ? 3 : subLv === 4 ? 2 : 1;
-        for (let i = 0; i < count; i++) {
-          const spread = (i - (count - 1) * 0.5) * 0.22;
-          const ang = player.turretAngle + spread;
-          this._countShot();
-          this.projectiles.push({
-            kind: 'missile',
-            fromPlayer: true,
-            source: 'player',
-            x: ox,
-            y: oy,
-            z: muzzle.z + 6,
-            vx: Math.cos(ang) * 420,
-            vy: Math.sin(ang) * 420,
-            vz: 45,
-            gScale: 0.15,
-            damage: 28 + (subLv - 3) * 9,
-            splashRadius: 48,
-            color: '#38bdf8',
-            radius: 4.5,
-            life: 2.8,
-            trailTimer: 0
-          });
-        }
-        this.audio.playCannon(0.5);
       }
       return true;
     }
@@ -332,37 +259,13 @@
         p.life -= dt;
         if (p.life <= 0) continue;
 
-        if (p.kind === 'missile' && this.enemies.length > 0) {
-          let best = null;
-          let bestD = Infinity;
-          for (const e of this.enemies) {
-            if (!e.alive) continue;
-            const dx = this.world.deltaX(p.x, e.x);
-            const dy = this.world.deltaY(p.y, e.y);
-            const dSq = dx * dx + dy * dy;
-            if (dSq < bestD) {
-              bestD = dSq;
-              best = e;
-            }
-          }
-          if (best && bestD < 700 * 700) {
-            const dx = this.world.deltaX(p.x, best.x);
-            const dy = this.world.deltaY(p.y, best.y);
-            const len = Math.max(1, Math.hypot(dx, dy));
-            const desiredVx = (dx / len) * 440;
-            const desiredVy = (dy / len) * 440;
-            p.vx += (desiredVx - p.vx) * Math.min(1, dt * 5.2);
-            p.vy += (desiredVy - p.vy) * Math.min(1, dt * 5.2);
-          }
-        }
-
         p.vz -= SHELL_GRAVITY * p.gScale * dt;
         p.x = this.world.wrapX(p.x + p.vx * dt);
         p.y = this.world.wrapY(p.y + p.vy * dt);
         p.z += p.vz * dt;
 
         p.trailTimer += dt;
-        if (p.trailTimer > (p.kind === 'missile' ? 0.03 : 0.055) && p.kind !== 'autocannon') {
+        if (p.trailTimer > 0.055) {
           p.trailTimer = 0;
           this.spawnDustOrSmoke(p.x, p.y, p.z, 1, p.color);
         }
@@ -378,12 +281,7 @@
             if (Math.hypot(dx, dy) < e.radius + 9) {
               hit = true;
               if (p.source === 'player') this.stats.shotsHit += 1;
-              if (p.kind === 'autocannon') {
-                this.damageEnemy(e, p.damage, p.source);
-                this.spawnDustOrSmoke(p.x, p.y, p.z, 3, '#34d399');
-              } else {
-                this.explodeAt(p.x, p.y, p.splashRadius, p.damage, true, player, true, p.source);
-              }
+              this.explodeAt(p.x, p.y, p.splashRadius, p.damage, true, player, true, p.source);
               break;
             }
           }
@@ -404,9 +302,7 @@
             const dy = this.world.deltaY(p.y, prop.y);
             if (Math.hypot(dx, dy) < prop.radius + 8) {
               hit = true;
-              if (p.kind === 'autocannon') {
-                this.damageProp(prop, p.damage, player, p.source);
-              } else if (this.explodeAt(p.x, p.y, p.splashRadius, p.damage, true, player, false, p.source) > 0 &&
+              if (this.explodeAt(p.x, p.y, p.splashRadius, p.damage, true, player, false, p.source) > 0 &&
                   p.source === 'player') {
                 this.stats.shotsHit += 1;
               }
@@ -426,9 +322,7 @@
             const surfaceZ = obs.height * (1 - dSq / rSq); // dome-shaped hit profile
             if (p.z < surfaceZ) {
               hit = true;
-              if (p.kind === 'autocannon') {
-                this.spawnDustOrSmoke(p.x, p.y, p.z, 3, '#a8a29e');
-              } else if (this.explodeAt(p.x, p.y, p.splashRadius, p.damage, p.fromPlayer, player, false, p.source) > 0 &&
+              if (this.explodeAt(p.x, p.y, p.splashRadius, p.damage, p.fromPlayer, player, false, p.source) > 0 &&
                   p.source === 'player') {
                 this.stats.shotsHit += 1;
               }
@@ -440,9 +334,7 @@
         // Ground impact
         if (!hit && p.z <= 0) {
           hit = true;
-          if (p.kind === 'autocannon') {
-            this.spawnDustOrSmoke(p.x, p.y, 0, 2, '#a8a29e');
-          } else if (this.explodeAt(p.x, p.y, p.splashRadius, p.damage, p.fromPlayer, player, false, p.source) > 0 &&
+          if (this.explodeAt(p.x, p.y, p.splashRadius, p.damage, p.fromPlayer, player, false, p.source) > 0 &&
               p.source === 'player') {
             this.stats.shotsHit += 1; // near miss whose splash still caught an enemy
           }

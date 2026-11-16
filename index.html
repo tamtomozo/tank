@@ -80,23 +80,20 @@
 
     <!-- Top Tactical HUD -->
     <header class="hud-top">
+      <!-- Top-left column: operation window with HP / boost / main gun under it -->
+      <div class="hud-top-left">
       <div class="hud-panel hud-mission">
         <div class="hud-title-row">
-          <span id="hud-area" class="badge-tag">AREA 1</span>
-          <strong id="hud-objective" class="tabular-num">第1地区 拠点 残り 2/2（確保 0/3地区）</strong>
-          <span class="divider">|</span>
-          <strong id="hud-clock" class="tabular-num">DAY 1 07:00 朝</strong>
+          <strong id="hud-objective">—</strong>
         </div>
         <div class="hud-sub-row">
-          <span>残存敵戦力: <strong id="hud-enemies" class="tabular-num">0</strong></span>
-          <span class="divider">|</span>
-          <span>撃破: <strong id="hud-kills" class="tabular-num">0</strong></span>
+          <strong id="hud-clock" class="tabular-num">DAY 1 07:00</strong>
         </div>
         <div class="hud-sub-row">
-          <span>小隊: <strong id="hud-squad" class="tabular-num">5/5 隊列</strong></span>
+          <span>小隊 <strong id="hud-squad" class="tabular-num">5/5</strong></span>
         </div>
         <div class="hud-sub-row">
-          <span>座標 (2400×2400): <strong id="hud-coords" class="tabular-num">X: 1200 / Y: 1200</strong></span>
+          <span>座標 <strong id="hud-coords" class="tabular-num">X: 1200 / Y: 1200</strong></span>
         </div>
       </div>
 
@@ -112,13 +109,23 @@
         </div>
         <div class="stat-meter">
           <div class="meter-label">
-            <span>キャタピラ・ブースト<span class="key-hint"> (SHIFT)</span></span>
+            <span>キャタピラ・ブースト</span>
             <strong id="hud-boost-text" class="tabular-num">100%</strong>
           </div>
           <div class="meter-track">
             <div id="hud-boost-fill" class="meter-fill boost-fill"></div>
           </div>
         </div>
+        <div class="stat-meter">
+          <div class="meter-label">
+            <span id="hud-cannon-name">105mm 戦車砲</span>
+            <strong id="hud-reload-text" class="reload-text tabular-num">READY</strong>
+          </div>
+          <div class="meter-track">
+            <div id="hud-reload-fill" class="meter-fill reload-fill"></div>
+          </div>
+        </div>
+      </div>
       </div>
 
       <!-- Top-right column: resources/actions with the controls guide below -->
@@ -132,9 +139,6 @@
           </div>
         </div>
         <div class="hud-actions">
-          <button id="btn-garage" type="button" class="btn-hud btn-accent" title="補給は確保した地区の拠点で" hidden>
-            補給メニュー <kbd>U</kbd>
-          </button>
           <button id="btn-control-mode" type="button" class="btn-hud" aria-pressed="false" title="操縦モード切替 (C)">
             🎮<span class="btn-label"> 戦車操縦</span> <kbd>C</kbd>
           </button>
@@ -152,7 +156,6 @@
         <div><kbd>C</kbd> 操縦モード切替</div>
         <div><kbd>マウス</kbd> 360° 砲塔照準</div>
         <div><kbd>SHIFT</kbd> ターボ加速 &amp; ジャンプ</div>
-        <div>確保地区の拠点で補給</div>
       </div>
       </div>
     </header>
@@ -201,32 +204,8 @@
     </section>
 
 
-    <!-- Bottom Weapon & Radar HUD -->
+    <!-- Bottom Radar HUD -->
     <footer class="hud-bottom">
-      <div class="hud-panel hud-weapons">
-        <div class="weapon-slot">
-          <div class="weapon-header">
-            <span class="weapon-name" id="hud-cannon-name">105mm 戦車砲</span>
-            <span class="weapon-key">左クリック / SPACE</span>
-          </div>
-          <div class="meter-track">
-            <div id="hud-reload-fill" class="meter-fill reload-fill"></div>
-          </div>
-          <div class="weapon-status" id="hud-reload-text">READY</div>
-        </div>
-
-        <div class="weapon-slot">
-          <div class="weapon-header">
-            <span class="weapon-name" id="hud-sub-name">未装備</span>
-            <span class="weapon-key">右クリック / F</span>
-          </div>
-          <div class="meter-track">
-            <div id="hud-sub-fill" class="meter-fill sub-fill"></div>
-          </div>
-          <div class="weapon-status" id="hud-sub-text">READY</div>
-        </div>
-      </div>
-
       <div class="hud-panel hud-radar">
         <canvas id="radar-canvas" width="136" height="136" aria-label="自機周辺レーダー（半径1200）"></canvas>
         <div class="radar-caption">LOCAL RADAR 1200</div>
@@ -242,7 +221,6 @@
       </div>
       <div class="touch-buttons">
         <button type="button" class="touch-btn touch-btn-fire" data-touch="fire" aria-label="主砲発射">主砲</button>
-        <button type="button" class="touch-btn touch-btn-sub" data-touch="sub" aria-label="副兵装">副兵装</button>
         <button type="button" class="touch-btn touch-btn-boost" data-touch="boost" aria-label="ターボ加速・ジャンプ">BOOST</button>
       </div>
     </div>
@@ -278,7 +256,6 @@
             <li><kbd>C</kbd>：操縦モード切替（戦車操縦 ／ 押した方向移動）</li>
             <li><kbd>マウス移動</kbd>：360° 砲塔照準・ターゲット追従</li>
             <li><kbd>左クリック</kbd> / <kbd>Space</kbd>：主砲発射</li>
-            <li><kbd>右クリック</kbd> / <kbd>F</kbd>：副兵装</li>
           </ul>
         </div>
         <div class="briefing-card">

@@ -59,14 +59,10 @@
       this.armorReduction = 0;
       this.turretTraverseSpeed = options.turretTraverseSpeed ?? 6.5;
 
-      // Visual levels from the tuning (gun barrel, ERA, track width) + sub weapon (player)
+      // Visual levels from the tuning (gun barrel, ERA, track width)
       this.cannonLevel = 1;
       this.armorLevel = 1;
       this.engineLevel = 1;
-      this.subLevel = 0;
-      this.subCooldown = 0;
-      this.subHeat = 0;
-      this.subOverheated = false;
 
       this.boostEnergy = 100;
       this.maxBoost = 100;
@@ -157,11 +153,6 @@
       this.cannonLevel = st.visual.cannon;
       this.armorLevel = st.visual.armor;
       this.engineLevel = st.visual.engine;
-      if (st.subLevel !== undefined) {
-        this.subLevel = st.subLevel;
-        this.subHeat = 0;
-        this.subOverheated = false;
-      }
       if (refill) {
         this.hp = this.maxHp;
         this.boostEnergy = this.maxBoost;
@@ -286,16 +277,6 @@
     _tickTimers(dt) {
       this.vibPhase += dt;
       if (this.reloadTimer > 0) this.reloadTimer = Math.max(0, this.reloadTimer - dt);
-      if (this.subCooldown > 0) this.subCooldown = Math.max(0, this.subCooldown - dt);
-      if (this.subOverheated) {
-        this.subHeat = Math.max(0, this.subHeat - dt * 0.50);
-        if (this.subHeat <= 0) {
-          this.subOverheated = false;
-        }
-      } else if (this.subHeat > 0) {
-        const coolRate = this.subCooldown <= 0 ? 0.58 : 0.18;
-        this.subHeat = Math.max(0, this.subHeat - dt * coolRate);
-      }
       if (this.recoil > 0) this.recoil = Math.max(0, this.recoil - dt * 42);
       this._stepTurretKick(dt);
       if (this.muzzleFlashTimer > 0) this.muzzleFlashTimer = Math.max(0, this.muzzleFlashTimer - dt);
@@ -835,17 +816,6 @@
       ctx.arc(-2, -4, 4.5, 0, Math.PI * 2);
       ctx.fill();
 
-      // Sub-weapon roof mount
-      if (this.subLevel >= 1) {
-        if (this.subLevel <= 2) {
-          ctx.fillStyle = '#1e293b';
-          ctx.fillRect(0, 5.5, 16, 2.8);
-        } else {
-          ctx.fillStyle = this.accentColor;
-          ctx.fillRect(-5, 4.5, 10, 7.5);
-        }
-      }
-
       if (live) this._paintAntenna(ctx);
     }
 
@@ -871,12 +841,12 @@
       const res = density <= 2 ? 2 : density <= 4 ? 4 : 8;
       const cur = this._sprites;
       if (cur && cur.res === res && cur.cannon === this.cannonLevel && cur.armor === this.armorLevel
-        && cur.engine === this.engineLevel && cur.sub === this.subLevel) {
+        && cur.engine === this.engineLevel) {
         return cur;
       }
       const key = [
         res, this.hullColor, this.hullDark, this.turretColor, this.accentColor, this.isPlayer ? 1 : 0,
-        this.cannonLevel, this.armorLevel, this.engineLevel, this.subLevel
+        this.cannonLevel, this.armorLevel, this.engineLevel
       ].join('|');
       let set = spriteCache.get(key);
       if (!set) {
@@ -885,7 +855,6 @@
           cannon: this.cannonLevel,
           armor: this.armorLevel,
           engine: this.engineLevel,
-          sub: this.subLevel,
           tracks: makeSprite(TRACKS_BOX, res, (g) => this._paintTrackBases(g)),
           hull: makeSprite(HULL_BOX, res, (g) => this._paintHull(g)),
           turret: makeSprite(TURRET_BOX, res, (g) => this._paintTurret(g, false))

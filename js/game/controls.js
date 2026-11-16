@@ -109,9 +109,6 @@
         const fireTarget = game.activeTarget || barrelForwardTarget(340);
         combat.fireMainCannon(player, fireTarget.x, fireTarget.y);
       }
-      if (!locked && (mouse.right || keys.has('KeyF') || touch.sub)) {
-        combat.fireSubWeapon(player);
-      }
     }
 
     return { update, barrelForwardTarget };

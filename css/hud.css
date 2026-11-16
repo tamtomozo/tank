@@ -1,4 +1,4 @@
-/* HUD panels: status (top-left), HP / boost (top-centre), resources & controls (top-right), weapons (bottom) */
+/* HUD panels: status (top-left), HP / boost / main gun (top-centre), resources & controls (top-right), radar (bottom-right) */
 
 /* HUD Panels */
 .hud-panel {
@@ -37,10 +37,18 @@
   pointer-events: auto;
 }
 
-.hud-mission {
-  min-inline-size: 12.5rem;
-  /* long district / location texts wrap instead of widening the panel (keeps the top row on one line) */
-  max-inline-size: 21rem;
+/* Top-left column: operation window, HP / boost / main gun panel under it (same width) */
+.hud-top-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  inline-size: 19rem;
+  max-inline-size: 100%;
+  pointer-events: none;
+}
+
+.hud-top-left > * {
+  pointer-events: auto;
 }
 
 .hud-title-row {
@@ -49,18 +57,6 @@
   align-items: center;
   gap: 0.2rem 0.5rem;
   margin-block-end: 0.25rem;
-}
-
-.badge-tag {
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.09em;
-  padding-inline: 0.4rem;
-  padding-block: 0.1rem;
-  border-radius: 0.25rem;
-  background: rgb(56 189 248 / 0.18);
-  color: var(--accent-cyan);
-  border: 1px solid rgb(56 189 248 / 0.35);
 }
 
 .hud-sub-row {
@@ -76,14 +72,7 @@
   color: var(--text-main);
 }
 
-.divider {
-  opacity: 0.4;
-}
-
 .hud-vital {
-  flex: 1 1 18rem;
-  max-inline-size: 26rem;
-  margin-inline-start: auto; /* sits midway between the mission panel and the top-right column */
   display: grid;
   gap: 0.45rem;
 }
@@ -129,14 +118,13 @@
   background: linear-gradient(90deg, #0284c7, #38bdf8);
 }
 
+.meter-label .reload-text {
+  color: var(--accent-bright);
+}
+
 .reload-fill {
   transform: scaleX(var(--reload-ratio, 1));
   background: linear-gradient(90deg, #d97706, #fbbf24);
-}
-
-.sub-fill {
-  transform: scaleX(var(--sub-ratio, 0));
-  background: linear-gradient(90deg, #059669, #34d399);
 }
 
 /* Top-right column: resources/actions panel with the controls guide underneath */
@@ -228,18 +216,6 @@
   background: rgb(245 158 11 / 0.34);
 }
 
-.btn-hud.has-afford {
-  box-shadow: 0 0 12px rgb(245 158 11 / 0.55);
-  border-color: var(--accent-bright);
-}
-
-/* Garage is only usable inside a captured compound (and not in combat) */
-.btn-hud.is-locked {
-  opacity: 0.5;
-  box-shadow: none;
-  filter: grayscale(0.6);
-}
-
 /* Boss Banner */
 .boss-banner {
   position: absolute;
@@ -273,57 +249,20 @@
   background: linear-gradient(90deg, #b91c1c, #f97316);
 }
 
-/* Wave Banner */
-/* Bottom HUD */
+/* Bottom HUD: the radar on the right */
 .hud-bottom {
   position: absolute;
   inset-block-end: 0.85rem;
   inset-inline: 0.85rem;
   display: flex;
   align-items: flex-end;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 0.75rem;
   pointer-events: none;
 }
 
 .hud-bottom > * {
   pointer-events: auto;
-}
-
-.hud-weapons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.85rem;
-  min-inline-size: min(92vw, 24rem);
-}
-
-.weapon-slot {
-  flex: 1 1 10.5rem;
-  display: grid;
-  gap: 0.25rem;
-}
-
-.weapon-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 0.4rem;
-}
-
-.weapon-name {
-  font-size: 0.82rem;
-  font-weight: 700;
-}
-
-.weapon-key {
-  font-size: 0.68rem;
-  color: var(--text-muted);
-}
-
-.weapon-status {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  color: var(--accent-bright);
 }
 
 .hud-controls-hint {

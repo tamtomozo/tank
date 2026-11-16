@@ -150,22 +150,6 @@
       noise.stop(now + 0.46);
     }
 
-    playAutocannon() {
-      if (!this.ctx || this.muted) return;
-      const now = this.ctx.currentTime;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(260, now);
-      osc.frequency.exponentialRampToValueAtTime(75, now + 0.07);
-      gain.gain.setValueAtTime(0.18, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-      osc.connect(gain);
-      gain.connect(this.master);
-      osc.start(now);
-      osc.stop(now + 0.09);
-    }
-
     playExplosion(size = 1) {
       if (!this.ctx || this.muted) return;
       const now = this.ctx.currentTime;

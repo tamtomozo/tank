@@ -180,10 +180,6 @@
 
     supplyBlocked(baseName) {
       return `交戦中です。補給は敵を退けてからにしてください。拠点${baseName}で待っています。`;
-    },
-
-    garageUnavailable() {
-      return '補給と僚機の補充は、確保した地区の拠点で白旗の円に入ったときに行えます。';
     }
   };
 

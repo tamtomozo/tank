@@ -1,30 +1,29 @@
 (function (global) {
   'use strict';
 
-  // Keyboard / mouse state and the HUD buttons (depot menu, control mode, mute).
+  // Keyboard / mouse state and the HUD buttons (control mode, mute).
   //   input.keys        held key codes (KeyboardEvent.code)
-  //   input.mouse       pointer position on the canvas + held buttons (left = main gun, right = sub weapon)
+  //   input.mouse       pointer position on the canvas + left button held (main gun)
   //   input.controlMode 'tank' (throttle + steer) | 'direct' (move in pressed direction)
   //   input.setControlMode(mode)  switch the mode without the radio call (start-up defaults)
   //   input.touch       on-screen stick / buttons (js/game/touchControls.js fills it on phones)
   //   input.release()   forget every held key / button (menus opening, restarts, window blur)
 
   function create(game) {
-    const { canvas, audio, radio, depot, areaSelect, briefing, results } = game;
+    const { canvas, audio, radio, areaSelect, briefing, results } = game;
     const { start: startDialog, garage: garageDialog, gameover: gameoverDialog } = game.dialogs;
 
     const keys = new Set();
     const mouse = {
       x: game.view.w * 0.5,
       y: game.view.h * 0.35,
-      left: false,
-      right: false
+      left: false
     };
     const input = {
       keys,
       mouse,
       controlMode: 'tank',
-      touch: { active: false, moveX: 0, moveY: 0, fire: false, sub: false, boost: false },
+      touch: { active: false, moveX: 0, moveY: 0, fire: false, boost: false },
       setControlMode(mode) {
         input.controlMode = mode;
         syncControlModeUI();
@@ -32,7 +31,6 @@
       release() {
         keys.clear();
         mouse.left = false;
-        mouse.right = false;
       }
     };
 
@@ -46,7 +44,6 @@
     window.addEventListener('pointerdown', unlockAudio, true);
     window.addEventListener('keydown', unlockAudio, true);
 
-    const btnGarage = document.getElementById('btn-garage');
     const btnControlMode = document.getElementById('btn-control-mode');
     const btnStartMode = document.getElementById('btn-start-mode');
     const hudMoveHint = document.getElementById('hud-move-hint');
@@ -85,22 +82,6 @@
     };
     syncControlModeUI();
 
-    // U / Tab: only closes the depot menu; the menu opens on its own when entering a compound
-    // in a secured district
-    const toggleGarage = () => {
-      if (!game.started || !game.player.alive) return;
-      if (garageDialog.open) {
-        depot.close();
-      } else {
-        radio.say(global.RadioComms.script.garageUnavailable(), { key: 'garage-hint' });
-      }
-    };
-
-    btnGarage.addEventListener('click', () => {
-      toggleGarage();
-      btnGarage.blur();
-    });
-
     if (btnControlMode) {
       btnControlMode.addEventListener('click', () => {
         toggleControlMode();
@@ -127,9 +108,9 @@
     window.addEventListener('keydown', (e) => {
       if (areaSelect.isOpen || briefing.isOpen || results.isOpen) return; // these screens handle their own keys
       const code = e.code;
-      if (code === 'Tab' || code === 'KeyU') {
+      // Tab would move the focus onto a HUD button, which Space would then press
+      if (code === 'Tab') {
         e.preventDefault();
-        if (!radio.controlsLocked) toggleGarage();
         return;
       }
       if (code === 'KeyC' && radio.controlsLocked) return; // don't cut into Mio's district report
@@ -166,12 +147,10 @@
       // Fingers on the battlefield don't fire: phones use the on-screen buttons (touchControls.js)
       if (e.pointerType === 'touch') return;
       if (e.button === 0) mouse.left = true;
-      if (e.button === 2) mouse.right = true;
     });
 
     window.addEventListener('pointerup', (e) => {
       if (e.button === 0) mouse.left = false;
-      if (e.button === 2) mouse.right = false;
     });
 
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());

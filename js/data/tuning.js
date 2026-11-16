@@ -50,17 +50,9 @@
   // Player's main gun per cannon level (HUD)
   const CANNON_TITLES = ['105mm 戦車砲', '120mm 長砲身', '150mm 制退重砲', '連装 150mm 重砲', 'プラズマ・レール砲'];
 
-  // Sub weapon (right click / F): fixed equipment of the player's tank.
-  // Level 1-2: coaxial autocannon (heat), 3-5: homing micro missiles (1-3 per salvo) — js/combat/weapons.js
-  const SUB_WEAPON = {
-    level: 3,
-    titles: ['未装備', '同軸機銃', '20mm 機関砲', '誘導ミサイル', '2連装ミサイル', '3連装ミサイル']
-  };
-
   const GameData = global.GameData || (global.GameData = {});
   GameData.TUNING_AXES = TUNING_AXES;
   GameData.TUNING_RULES = TUNING_RULES;
   GameData.TUNING_UNITS = TUNING_UNITS;
   GameData.CANNON_TITLES = CANNON_TITLES;
-  GameData.SUB_WEAPON = SUB_WEAPON;
 })(window);

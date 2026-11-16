@@ -31,7 +31,6 @@
 /* Keyboard hints mean nothing without a keyboard */
 .is-touch .btn-hud kbd,
 .is-touch .btn-close-dialog kbd,
-.is-touch .key-hint,
 .is-touch .hud-controls-hint {
   display: none;
 }
@@ -112,7 +111,7 @@
   cursor: pointer;
 }
 
-/* Ring: reload (main gun), cooldown / heat (sub weapon), boost energy — vars set by js/game/hud.js */
+/* Ring: reload (main gun), boost energy — vars set by js/game/hud.js */
 .touch-btn::before {
   content: '';
   position: absolute;
@@ -125,14 +124,7 @@
 }
 
 .touch-btn-fire { --ring: var(--reload-ratio, 1); }
-.touch-btn-sub { --ring: var(--sub-ratio, 1); }
 .touch-btn-boost { --ring: var(--boost-ratio, 1); }
-
-/* No sub weapon fitted */
-.touch-btn.is-empty {
-  opacity: 0.35;
-  filter: grayscale(1);
-}
 
 .touch-btn.is-held {
   opacity: 1;
@@ -148,15 +140,6 @@
   inline-size: 5rem;
   block-size: 5rem;
   font-size: 1rem;
-}
-
-.touch-btn-sub {
-  --tb: #34d399;
-  --tb-glow: rgb(16 185 129 / 0.35);
-  inset-inline-end: calc(6.6rem + var(--safe-r));
-  inset-block-end: calc(0.9rem + var(--safe-b));
-  inline-size: 3.6rem;
-  block-size: 3.6rem;
 }
 
 .touch-btn-boost {
@@ -242,14 +225,9 @@
   gap: 0.45rem;
 }
 
-.is-touch .hud-mission {
-  flex: 0 1 16.5rem;
-  min-inline-size: 0;
-  max-inline-size: 16.5rem;
-}
-
-.is-touch #hud-objective {
-  font-size: 0.7rem;
+.is-touch .hud-top-left {
+  inline-size: 14.5rem;
+  gap: 0.35rem;
 }
 
 .is-touch .hud-title-row {
@@ -258,27 +236,11 @@
   font-size: 0.74rem;
 }
 
-.is-touch .hud-title-row .divider {
-  display: none;
-}
-
-.is-touch .badge-tag {
-  font-size: 0.6rem;
-}
-
 .is-touch .hud-sub-row {
   font-size: 0.68rem;
 }
 
-/* coordinates: the radar already shows where things are */
-.is-touch .hud-mission .hud-sub-row:last-child {
-  display: none;
-}
-
 .is-touch .hud-vital {
-  flex: 1 1 8rem;
-  min-inline-size: 6rem;
-  max-inline-size: 15rem;
   gap: 0.3rem;
 }
 
@@ -333,11 +295,6 @@
   font-size: 0.74rem;
 }
 
-/* The depot menu opens by itself inside a secured compound; the button only says "not here" */
-.is-touch #btn-garage {
-  display: none;
-}
-
 #btn-fullscreen[hidden] {
   display: none;
 }
@@ -372,7 +329,7 @@
   font-size: 0.55rem;
 }
 
-/* Bottom: the weapons panel gives way to the rings around the fire / sub-weapon buttons */
+/* Bottom: empty on phones (the radar moved up, the corners belong to the stick and buttons) */
 .is-touch .hud-bottom {
   display: none;
 }

@@ -5,7 +5,7 @@
   // Axes, budget and names: js/data/tuning.js. Edited on the briefing (js/tuningPanel.js) and
   // kept across sorties; applied to the tanks by GameMission.applyTuning (js/game/mission.js).
 
-  const { TUNING_AXES, TUNING_RULES, CANNON_TITLES, SUB_WEAPON } = global.GameData;
+  const { TUNING_AXES, TUNING_RULES, CANNON_TITLES } = global.GameData;
 
   class TankTuning {
     constructor() {
@@ -71,7 +71,6 @@
         maxBoost: 100 + (engine - 1) * 25,
         maxHp: 120 + (armor - 1) * 45,
         armorReduction: (armor - 1) * 0.08,
-        subLevel: SUB_WEAPON.level,
         visual: { cannon, armor, engine }
       };
     }
@@ -105,10 +104,6 @@
 
     cannonName() {
       return CANNON_TITLES[this.levels.player.cannon - 1] || CANNON_TITLES[0];
-    }
-
-    subWeaponName() {
-      return SUB_WEAPON.titles[SUB_WEAPON.level] || '未装備';
     }
   }
 
