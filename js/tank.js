@@ -59,7 +59,7 @@
       this.armorReduction = 0;
       this.turretTraverseSpeed = options.turretTraverseSpeed ?? 6.5;
 
-      // Upgrade visual levels (player)
+      // Visual levels from the tuning (gun barrel, ERA, track width) + sub weapon (player)
       this.cannonLevel = 1;
       this.armorLevel = 1;
       this.engineLevel = 1;
@@ -147,35 +147,28 @@
       ctx.restore();
     }
 
-    applyPlayerUpgrades(up) {
-      if (!this.isPlayer) return;
-      this.cannonLevel = up.cannon;
-      this.armorLevel = up.armor;
-      this.engineLevel = up.engine;
-      this.subLevel = up.subweapon;
-      if (this.subLevel > 2) {
+    // Stats from the radar-chart tuning (TankTuning.playerStats / allyStats, js/tuning.js).
+    // refill: fill armour and boost to the new maximum (a fresh tank before the sortie);
+    // otherwise HP is only clamped to the new maximum.
+    applyStats(st, refill = false) {
+      for (const key of Tank2D.TUNED_STATS) {
+        if (st[key] !== undefined) this[key] = st[key];
+      }
+      this.cannonLevel = st.visual.cannon;
+      this.armorLevel = st.visual.armor;
+      this.engineLevel = st.visual.engine;
+      if (st.subLevel !== undefined) {
+        this.subLevel = st.subLevel;
         this.subHeat = 0;
         this.subOverheated = false;
       }
-
-      this.damage = 40 + (up.cannon - 1) * 18;
-      this.splashRadius = 54 + (up.cannon - 1) * 10;
-      this.shellSpeed = 560 + (up.cannon - 1) * 65;
-      this.cannonRange = 460 + (up.cannon - 1) * 45;
-
-      this.reloadTime = Math.max(0.45, 1.35 - (up.reload - 1) * 0.2);
-
-      const prevMax = this.maxHp;
-      this.maxHp = 120 + (up.armor - 1) * 45;
-      if (this.maxHp > prevMax) {
-        this.hp = Math.min(this.maxHp, this.hp + (this.maxHp - prevMax));
+      if (refill) {
+        this.hp = this.maxHp;
+        this.boostEnergy = this.maxBoost;
+      } else {
+        this.hp = Math.min(this.hp, this.maxHp);
+        this.boostEnergy = Math.min(this.boostEnergy, this.maxBoost);
       }
-      this.armorReduction = (up.armor - 1) * 0.08;
-
-      this.maxSpeed = 225 + (up.engine - 1) * 34;
-      this.accel = 460 + (up.engine - 1) * 75;
-      this.turnSpeed = 2.8 + (up.engine - 1) * 0.26;
-      this.maxBoost = 100 + (up.engine - 1) * 25;
     }
 
     get turretAngle() {
@@ -809,6 +802,11 @@
     }
   }
 
+  // Numeric fields set by applyStats (the tuning's stat objects may leave some out)
+  Tank2D.TUNED_STATS = [
+    'damage', 'splashRadius', 'shellSpeed', 'cannonRange', 'reloadTime',
+    'maxSpeed', 'accel', 'turnSpeed', 'maxBoost', 'maxHp', 'armorReduction'
+  ];
   Tank2D.ALERT_MARK_DURATION = 1.8; // seconds the "!" spotted mark stays up
   // Turret recoil slide: ~6 units back at peak, ~5 Hz spring with light damping (one small overshoot)
   Tank2D.TURRET_KICK_IMPULSE = 300; // units/s backwards when the main gun fires

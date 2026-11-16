@@ -2,12 +2,13 @@
   'use strict';
 
   // Pre-operation briefing scene, shown before the tactical phase of every sortie.
-  // Five steps: current strategic situation, districts & compounds, enemy intel, terrain, start time.
+  // Five steps: strategic situation, operation (start time, districts & compounds), tank tuning
+  // (radar charts, js/tuningPanel.js), enemy intel, terrain.
   // Left: a tactical map of the whole area (highlighting what the current step talks about).
   // Right: the details for the step. Bottom: Mio narrates each step.
 
   // 'tactical' = start time followed by districts & compounds (in that order)
-  const STEP_IDS = ['status', 'tactical', 'squad', 'enemies', 'terrain'];
+  const STEP_IDS = ['status', 'tactical', 'tuning', 'enemies', 'terrain'];
 
   const { ENEMY_INFO, ENEMY_SPECS, DISTRICT_TEMPLATES } = global.GameData; // js/data/enemies.js
   const { el } = global.TankUtil;
@@ -24,9 +25,16 @@
       this.world = deps.world;
       this.combat = deps.combat;
       this.squad = deps.squad;
-      this.upgrades = deps.upgrades;
+      this.tuning = deps.tuning;
       this.audio = deps.audio;
       this.getPlayer = deps.getPlayer;
+
+      // ③ 車両調整: radar charts for the player's tank and the wingmen; every change re-fits the
+      // tanks waiting on the HQ pad (deps.onTune)
+      this.tuningPanel = new global.TuningPanel(dialog.querySelector('#briefing-tuning'), this.tuning, {
+        audio: this.audio,
+        onChange: (unit) => { if (deps.onTune) deps.onTune(unit); }
+      });
 
       this.mapCanvas = dialog.querySelector('#briefing-map');
       this.mioText = dialog.querySelector('#briefing-mio-text');
@@ -81,6 +89,7 @@
       this.onBack = onBack;
       this.titleEl.textContent = `作戦本部 ブリーフィング — ${this.area.name}「${this.operation.name}」`;
       this._buildPanels();
+      this.tuningPanel.render();
       if (this.dialog.open) {
         this.goTo(0);
         return;
@@ -113,7 +122,7 @@
     // ------------------------------------------------------------------ data helpers
     // Combat power of both armies: sum over units of armour (HP) x firepower (damage per second).
     // Enemy = every compound's garrison template (all districts, HP scaled per district tier);
-    // ours = the player's tank + living wingmen with their current upgrades.
+    // ours = the player's tank + living wingmen with their current tuning.
     _powerBalance() {
       const specs = ENEMY_SPECS;
       const tpls = DISTRICT_TEMPLATES;
@@ -153,30 +162,12 @@
 
     _status() {
       const combat = this.combat;
-      const player = this.getPlayer();
-      const allies = combat.allies.filter((a) => a.alive);
-      const hurt = allies.filter((a) => a.hp < a.maxHp - 0.5).length;
       const cur = combat.currentDistrict || combat.districts.find((d) => !d.unlocked) || null;
-      const secured = combat.districts.filter((d) => d.secured);
-      const depots = combat.bases.filter((b) => b.cleared && combat.districts[b.districtId].secured);
-      const lv = this.upgrades.levels;
       return {
         objective: cur,
-        remaining: cur ? combat.districtRemaining(cur.id) : 0,
-        objectiveBases: cur ? cur.baseIds.length : 0,
-        securedCount: secured.length,
         districtCount: combat.districts.length,
-        capturedCount: combat.bases.filter((b) => b.cleared).length,
         baseCount: combat.bases.length,
-        squadSize: 1 + allies.length,
-        squadMax: this.squad.maxSize,
-        alliesHurt: hurt,
-        playerHp: Math.ceil(player.hp),
-        playerMaxHp: player.maxHp,
-        scrap: combat.scrap,
-        playerLv: `主砲Lv${lv.cannon} ／ 装填Lv${lv.reload} ／ 装甲Lv${lv.armor} ／ エンジンLv${lv.engine} ／ 副兵装Lv${lv.subweapon}`,
-        squadLv: `装甲Lv${lv.allyArmor || 1} ／ 主砲Lv${lv.allyGun || 1} ／ 機動力Lv${lv.allyEngine || 1}`,
-        depots: depots.map((b) => b.name)
+        squadMax: this.squad.maxSize
       };
     }
 
@@ -189,9 +180,9 @@
           const pb = this._powerBalance();
           return `ハヤセ将軍より、全車への戦況概要です。戦力差は約${pb.ratio.toFixed(1)}倍……ですが、勝機はあります。目を通しておいてください、隊長。`;
         }
-        case 'squad':
-          return `小隊の状況です。小隊は${st.squadSize}両${st.alliesHurt > 0 ? `、うち僚機${st.alliesHurt}両が損傷しています` : '、全車健在です'}。`
-            + `保有スクラップは${st.scrap}。強化の状況も確認しておいてください。`;
+        case 'tuning':
+          return `車両調整です。主砲・装填・機動・装甲の4項目に、自機と僚機それぞれ${this.tuning.budget}ポイントを配分してください。`
+            + 'どこかを上げるなら、ほかを下げる必要があります。出撃後は調整できません。作戦に合わせて決めてください、隊長。';
         case 'tactical': {
           // Same order as the panel: operation name, objective, start time, then districts & compounds
           const t = this.world.getTimeInfo();
@@ -237,8 +228,8 @@
           + `だが彼らはまだ知らない――たった${st.squadMax}両の小隊が、この戦況を塗り替えようとしていることを。`),
         el('p', 'scenario-lead',
           'この作戦は、最前線で砲火をくぐる諸君のためにある。'
-          + `まず${target ? target.name : '第1地区'}の敵拠点を叩け。確保した地区は諸君の補給線となり、新たな装甲と火力をもたらす。`
-          + `拠点を落とすたびに小隊は強くなり、${st.districtCount}地区すべてを制圧したとき、${this.area.name}は再び我々の大地となる。`
+          + `まず${target ? target.name : '第1地区'}の敵拠点を叩け。確保した地区は諸君の補給線となり、失った僚機を補う。`
+          + `拠点を落とすたびに前線は押し上がり、${st.districtCount}地区すべてを制圧したとき、${this.area.name}は再び我々の大地となる。`
           + `作戦名「${this.operation.name}」――その鉄槌を振るうのは、諸君だ。`)
       );
 
@@ -278,7 +269,7 @@
       cols.append(
         side('is-ours', '我が軍　第1機甲小隊', [
           ['兵力', `戦車 ${pb.ourTanks} 両`],
-          ['強み', '機動力と連携。確保した地区での補給と部隊強化'],
+          ['強み', '機動力と連携。確保した地区での補給と僚機補充'],
           ['弱み', '数で劣る。補給は地区を確保するまで受けられない']
         ]),
         side('is-enemy', `敵軍　${this.area.name}守備隊`, [
@@ -294,20 +285,10 @@
         cols,
         el('p', 'power-comment',
           `数の上では、敵は我が小隊の約${pb.ratio.toFixed(1)}倍の戦力を持つ。だが敵は${pb.enemyBases}つの拠点に分散し、互いを支援できない。`
-          + '一拠点ずつ確実に落とし、確保した地区で補給と強化を重ねれば、天秤は必ず我々に傾く。'),
+          + '一拠点ずつ確実に落とし、確保した地区で補給を重ねれば、天秤は必ず我々に傾く。'),
         el('p', 'scenario-sign', `―― ${GENERAL}`)
       );
       }
-
-      // 2. Platoon information (split out of the strategic situation)
-      const squadBox = this.dialog.querySelector('#briefing-squad');
-      squadBox.replaceChildren(
-        kv('小隊', `${st.squadSize} / ${st.squadMax} 両${st.alliesHurt > 0 ? `（僚機 ${st.alliesHurt} 両が損傷）` : '（全車健在）'}`, true),
-        kv('自機装甲', `${st.playerHp} / ${st.playerMaxHp}`),
-        kv('保有スクラップ', `⚙ ${st.scrap}`),
-        kv('自機の強化', st.playerLv),
-        kv('小隊の強化', st.squadLv)
-      );
 
       // 2. Districts & compounds
       const dTable = this.dialog.querySelector('#briefing-districts');

@@ -36,8 +36,9 @@
     const audio = new global.TankAudio();
     const world = new global.HorizonWorld();
     const combat = new global.CombatManager(world, audio);
-    const upgrades = new global.UpgradeManager(dialogs.garage, audio);
-    const squad = new global.SquadManager(world, combat);
+    const tuning = new global.TankTuning(); // radar-chart tuning, kept across sorties
+    const depot = new global.DepotMenu(dialogs.garage, audio);
+    const squad = new global.SquadManager(world, combat, tuning);
     const radio = new global.RadioComms(document.getElementById('radio-panel'), audio);
     const results = new global.ResultsReport(document.getElementById('results-dialog'));
     const areaSelect = new global.AreaSelectScene(document.getElementById('area-dialog'), { audio });
@@ -45,9 +46,10 @@
       world,
       combat,
       squad,
-      upgrades,
+      tuning,
       audio,
-      getPlayer: () => game.player
+      getPlayer: () => game.player,
+      onTune: () => game.mission.applyTuning(true) // tanks are still on the HQ pad: refit + refill
     });
 
     // Placeholder tank until mission.start() builds the one for the sortie
@@ -57,7 +59,7 @@
       y: world.hq.y,
       hullAngle: -Math.PI * 0.5
     });
-    player.applyPlayerUpgrades(upgrades.levels);
+    player.applyStats(tuning.playerStats(), true);
 
     // Shared state of the running game (read and written by the js/game/ modules)
     const game = {
@@ -68,7 +70,8 @@
       audio,
       world,
       combat,
-      upgrades,
+      tuning,
+      depot,
       squad,
       radio,
       results,

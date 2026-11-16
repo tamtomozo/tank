@@ -2,7 +2,7 @@
   'use strict';
 
   // Mission flow: (re)starting a sortie at the operations HQ, Mio's radio reports on combat events,
-  // supply depots in secured districts (garage + resupply), the drive back to the HQ once the area
+  // supply depots in secured districts (resupply + wingman reinforcement), the drive back to the HQ once the area
   // is secured and the end of the sortie (after-action report / game over).
 
   // Supply-depot trigger zone around a captured compound's white flag (the compound centre)
@@ -15,14 +15,23 @@
   const SCENE_SWITCH_DELAY_MS = 250;
 
   function create(game) {
-    const { world, combat, upgrades, squad, radio, results, areaSelect, briefing, audio } = game;
+    const { world, combat, tuning, depot, squad, radio, results, areaSelect, briefing, audio } = game;
     const { start: startDialog, garage: garageDialog, gameover: gameoverDialog } = game.dialogs;
 
-    // New sortie: fresh tank on the HQ pad, upgrades, world, platoon and clock, then the
-    // sortie-select screen (area → operation) and the briefing
+    // Radar-chart tuning (js/tuning.js) → the player's tank and every wingman. refill: fresh tanks
+    // waiting on the HQ pad (full armour / boost). Re-run on every change on the briefing.
+    function applyTuning(refill = true) {
+      game.player.applyStats(tuning.playerStats(), refill);
+      combat.magnetRadius = tuning.pickupRadius();
+      squad.applyTuning(refill);
+      game.hud.update();
+    }
+
+    // New sortie: fresh tank on the HQ pad, world, platoon and clock, then the sortie-select
+    // screen (area → operation) and the briefing (where the tanks are tuned). The tuning itself
+    // is kept from the previous sortie.
     function start() {
       audio.init();
-      upgrades.reset();
       const player = new global.Tank2D(world, {
         isPlayer: true,
         x: world.hq.x,
@@ -30,12 +39,12 @@
         hullAngle: -Math.PI * 0.5
       });
       game.player = player;
-      player.applyPlayerUpgrades(upgrades.levels);
       // Respawn destroyed crates/barrels and clear old decals so a restart is a genuinely fresh run
       world.resetDynamic();
       combat.reset(player);
       radio.clear();
-      squad.reset(player, upgrades.levels);
+      squad.reset(player);
+      applyTuning(true);
       world.dayTime = 0.30;
       world.dayCount = 1;
       game.cam.x = player.x;
@@ -79,8 +88,8 @@
     });
 
     // ---- Supply depots: compounds in a SECURED district ---------------------------------------
-    // Supply and upgrades are only available once a whole district is secured. Driving onto the
-    // white flag of one of its compounds opens the garage (upgrades + free resupply), once per visit
+    // Supply is only available once a whole district is secured. Driving onto the white flag of
+    // one of its compounds opens the depot menu (free resupply + wingman reinforcement), once per visit
     // (drive off the flag zone to re-arm). The zone is drawn as a ring around the flag (render.js).
     // Compounds in a district still being fought over offer nothing; there is no automatic resupply.
     const { SUPPLY_PROMPT_RADIUS, SUPPLY_REARM_RADIUS } = SUPPLY_ZONE;
@@ -107,21 +116,18 @@
             continue;
           }
           b.supplyArmed = false; // once per visit
-          openUpgradeMenu(`拠点 ${b.name}（${district.name}・確保済み）— 部隊強化・補給`, { depotSupply: true });
+          openDepotMenu(`拠点 ${b.name}（${district.name}・確保済み）— 補給・僚機補充`);
         }
       }
     }
 
-    // Platoon upgrade menu (garage): opened when entering a compound in a secured district
-    function openUpgradeMenu(title, options = {}) {
+    // Depot menu (#garage-dialog): opened when entering a compound in a secured district
+    function openDepotMenu(title) {
       const player = game.player;
       if (!player.alive || garageDialog.open || gameoverDialog.open) return;
       game.input.release();
       document.getElementById('garage-title').textContent = title;
-      upgrades.open(player, combat, () => {
-        squad.applyUpgrades(upgrades.levels);
-        game.hud.update();
-      }, squad, options);
+      depot.open(player, combat, squad, () => game.hud.update());
     }
 
     // Radio reports for what happened in combat this frame (compound alerted / captured, district secured)
@@ -134,7 +140,7 @@
           ev.base.supplyArmed = false; // the depot menu is offered on the next visit (leave and return)
           radio.say(global.RadioComms.script.baseCaptured(ev.base.name));
         } else if (ev.type === 'districtSecured') {
-          // No automatic upgrade menu: upgrades happen by entering a compound in a secured district.
+          // No automatic depot menu: it opens by entering a compound in a secured district.
           // Mio reports in steps (short result line, then details); the next district is unlocked
           // only after the last of those transmissions has finished.
           const next = ev.next;
@@ -195,7 +201,7 @@
       }
     }
 
-    return { start, handleCombatEvents, checkSupplyDepots, checkReturnToHq, checkEnd };
+    return { start, applyTuning, handleCombatEvents, checkSupplyDepots, checkReturnToHq, checkEnd };
   }
 
   global.GameMission = { create, SUPPLY_ZONE };

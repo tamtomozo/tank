@@ -6,7 +6,7 @@
   // Bars read CSS variables on <html> (--hp-ratio, --boost-ratio, ... see css/hud.css).
 
   function create(game) {
-    const { world, combat, squad, upgrades } = game;
+    const { world, combat, squad, tuning } = game;
 
     // Cached HUD element refs + dirty-checked writes: only touch the DOM when a value actually changes
     const rootStyle = document.documentElement.style;
@@ -93,15 +93,15 @@
       setText(hudEl.boostText, `${Math.round(boostRatio * 100)}%`);
       setText(hudEl.scrap, String(combat.scrap));
 
-      setText(hudEl.cannonName, upgrades.getCannonName());
+      setText(hudEl.cannonName, tuning.cannonName());
       setText(hudEl.reloadText,
         player.reloadTimer <= 0.02 ? 'READY' : `装填中 ${player.reloadTimer.toFixed(1)}s`);
 
-      const subLv = upgrades.levels.subweapon;
-      setText(hudEl.subName, upgrades.getSubWeaponName());
+      const subLv = player.subLevel;
+      setText(hudEl.subName, tuning.subWeaponName());
       if (subLv <= 0) {
         setVar('--sub-ratio', '0');
-        setText(hudEl.subText, '地区確保時の部隊強化で解放');
+        setText(hudEl.subText, '未装備');
       } else if (subLv <= 2) {
         const coolRatio = Math.max(0, Math.min(1, 1 - player.subHeat));
         setVar('--sub-ratio', coolRatio.toFixed(3));

@@ -240,6 +240,23 @@
       });
     }
 
+    // Tuning click on the briefing's radar charts: one short, soft blip
+    playTune() {
+      if (!this.ctx || this.muted) return;
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(720, now);
+      osc.frequency.exponentialRampToValueAtTime(980, now + 0.05);
+      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+      osc.connect(gain);
+      gain.connect(this.master);
+      osc.start(now);
+      osc.stop(now + 0.1);
+    }
+
     // Radio squelch: a short burst of band-passed static followed by a two-tone chirp
     playRadio() {
       if (!this.ctx || this.muted || !this.noiseBuffer) return;

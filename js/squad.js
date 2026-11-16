@@ -35,12 +35,12 @@
   const { wrapAngle, clamp } = global.TankUtil;
 
   class SquadManager {
-    constructor(world, combat) {
+    constructor(world, combat, tuning) {
       this.world = world;
       this.combat = combat;
+      this.tuning = tuning; // TankTuning (js/tuning.js)
       this.mode = 'formation'; // 'formation' | 'engage'
       this.formHeading = -Math.PI * 0.5;
-      this.levels = null;
       this._time = 0;
     }
 
@@ -61,14 +61,13 @@
       return this.allies.length < MAX_ALLIES;
     }
 
-    reset(player, levels) {
+    reset(player) {
       this.allies.length = 0;
       this.mode = 'formation';
       this.formHeading = player.hullAngle;
-      this.levels = levels;
       this._time = 0;
       for (let i = 0; i < MAX_ALLIES; i++) this.spawnAlly(player);
-      this.reinforcements = 0; // wingmen added later via the garage (for the after-action report)
+      this.reinforcements = 0; // wingmen added later at supply depots (for the after-action report)
     }
 
     spawnAlly(player) {
@@ -89,52 +88,19 @@
       return ally;
     }
 
-    // Wingmen are upgraded through their own platoon items in the garage
-    // (allyArmor / allyGun / allyEngine), independent of the player's tank upgrades.
-    applyUpgrades(levels) {
-      this.levels = levels;
-      for (const a of this.allies) this._applyStats(a, false);
+    // Wingmen share the 僚機 tuning (radar chart on the briefing, js/tuning.js), set apart from the
+    // player's tank. refill = fresh tanks before the sortie (full armour).
+    applyTuning(refill = false) {
+      for (const a of this.allies) this._applyStats(a, refill);
     }
 
-    // Stats a wingman has at the current platoon upgrade levels
+    // Stats a wingman has at the current 僚機 tuning
     getAllyStats() {
-      const lv = this.levels || {};
-      const arm = lv.allyArmor || 1;
-      const gun = lv.allyGun || 1;
-      const eng = lv.allyEngine || 1;
-      return {
-        maxHp: 130 + (arm - 1) * 40,
-        armorReduction: 0.1 + (arm - 1) * 0.06,
-        damage: 26 + (gun - 1) * 12,
-        shellSpeed: 520 + (gun - 1) * 50,
-        splashRadius: 44 + (gun - 1) * 6,
-        reloadTime: Math.max(1.0, 2.0 - (gun - 1) * 0.2),
-        maxSpeed: 255 + (eng - 1) * 36, // a bit faster than the leader so wingmen can catch up
-        accel: 470 + (eng - 1) * 60,
-        turnSpeed: 2.9 + (eng - 1) * 0.2,
-        maxBoost: 100 + (eng - 1) * 25,
-        visual: { cannon: Math.min(4, gun), armor: Math.min(5, arm), engine: Math.min(5, eng) }
-      };
+      return this.tuning.allyStats();
     }
 
-    _applyStats(a, fresh) {
-      const st = this.getAllyStats();
-      const prevMax = a.maxHp;
-      a.maxHp = st.maxHp;
-      if (fresh) a.hp = a.maxHp;
-      else if (a.maxHp > prevMax) a.hp = Math.min(a.maxHp, a.hp + (a.maxHp - prevMax));
-      a.armorReduction = st.armorReduction;
-      a.damage = st.damage;
-      a.shellSpeed = st.shellSpeed;
-      a.splashRadius = st.splashRadius;
-      a.reloadTime = st.reloadTime;
-      a.maxSpeed = st.maxSpeed;
-      a.accel = st.accel;
-      a.turnSpeed = st.turnSpeed;
-      a.maxBoost = st.maxBoost;
-      a.cannonLevel = st.visual.cannon;
-      a.armorLevel = st.visual.armor;
-      a.engineLevel = st.visual.engine;
+    _applyStats(a, refill) {
+      a.applyStats(this.getAllyStats(), refill);
     }
 
     update(dt, player) {

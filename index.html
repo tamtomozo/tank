@@ -14,12 +14,13 @@
   <link rel="stylesheet" href="css/briefing.css">
   <link rel="stylesheet" href="css/areaselect.css">
   <link rel="stylesheet" href="css/results.css">
-  <link rel="stylesheet" href="css/garage.css">
+  <link rel="stylesheet" href="css/depot.css">
+  <link rel="stylesheet" href="css/tuning.css">
   <!-- shared helpers & data first: every later script reads them at load time -->
   <script src="js/util.js" defer></script>
   <script src="js/typewriter.js" defer></script>
   <script src="js/data/enemies.js" defer></script>
-  <script src="js/data/upgrades.js" defer></script>
+  <script src="js/data/tuning.js" defer></script>
   <script src="js/data/operations.js" defer></script>
   <script src="js/audio.js" defer></script>
   <script src="js/bgm.js" defer></script>
@@ -39,7 +40,9 @@
   <script src="js/squad.js" defer></script>
   <script src="js/hudframe.js" defer></script>
   <script src="js/radio.js" defer></script>
-  <script src="js/upgrades.js" defer></script>
+  <script src="js/tuning.js" defer></script>
+  <script src="js/tuningPanel.js" defer></script>
+  <script src="js/depot.js" defer></script>
   <script src="js/areaSelect.js" defer></script>
   <script src="js/briefing.js" defer></script>
   <script src="js/results.js" defer></script>
@@ -118,8 +121,8 @@
           </div>
         </div>
         <div class="hud-actions">
-          <button id="btn-garage" type="button" class="btn-hud btn-accent" title="部隊強化は確保した地区の拠点で" hidden>
-            強化ガレージ <kbd>U</kbd>
+          <button id="btn-garage" type="button" class="btn-hud btn-accent" title="補給は確保した地区の拠点で" hidden>
+            補給メニュー <kbd>U</kbd>
           </button>
           <button id="btn-control-mode" type="button" class="btn-hud" aria-pressed="false" title="操縦モード切替 (C)">
             🎮 戦車操縦 <kbd>C</kbd>
@@ -135,7 +138,7 @@
         <div><kbd>C</kbd> 操縦モード切替</div>
         <div><kbd>マウス</kbd> 360° 砲塔照準</div>
         <div><kbd>SHIFT</kbd> ターボ加速 &amp; ジャンプ</div>
-        <div>確保地区の拠点で部隊強化</div>
+        <div>確保地区の拠点で補給</div>
       </div>
       </div>
     </header>
@@ -206,7 +209,7 @@
           <div class="meter-track">
             <div id="hud-sub-fill" class="meter-fill sub-fill"></div>
           </div>
-          <div class="weapon-status" id="hud-sub-text">地区確保時の部隊強化で解放</div>
+          <div class="weapon-status" id="hud-sub-text">READY</div>
         </div>
       </div>
 
@@ -234,16 +237,17 @@
             <li><kbd>C</kbd>：操縦モード切替（戦車操縦 ／ 押した方向移動）</li>
             <li><kbd>マウス移動</kbd>：360° 砲塔照準・ターゲット追従</li>
             <li><kbd>左クリック</kbd> / <kbd>Space</kbd>：主砲発射</li>
-            <li><kbd>右クリック</kbd> / <kbd>F</kbd>：副兵装（解放後）</li>
+            <li><kbd>右クリック</kbd> / <kbd>F</kbd>：副兵装</li>
           </ul>
         </div>
         <div class="briefing-card">
-          <h2>惑星マップ &amp; 強化</h2>
+          <h2>惑星マップ &amp; 補給</h2>
           <ul>
             <li>マップは上下・左右すべてループ連結（無限周回）</li>
             <li><kbd>Shift</kbd>：ターボ加速（ジャンプ台で空中跳躍）</li>
             <li>エリア1＝3地区（各2拠点）。地区を確保すると次の地区が解放される</li>
-            <li>地区を確保すると、その地区の拠点の白旗まわりの円に入るたびに部隊強化・補給メニューが開く（補給はここでのみ）</li>
+            <li>戦車はブリーフィングの「車両調整」で、レーダーチャートにポイントを配分して調整する（自機・僚機）</li>
+            <li>地区を確保すると、その地区の拠点の白旗まわりの円に入るたびに補給・僚機補充メニューが開く（補給はここでのみ）</li>
             <li>敵・クレート破壊でスクラップ＆修理キット回収</li>
             <li>最大5両の小隊で出撃：僚機は敵接近で自動散開・交戦し、平時は楔形隊列に戻る</li>
             <li>敵拠点（砦マーク）に近づくと待機車両が出撃する</li>
@@ -348,7 +352,7 @@
         <nav class="briefing-steps" aria-label="ブリーフィング項目">
           <button type="button" class="briefing-step" aria-selected="true">① 司令書</button>
           <button type="button" class="briefing-step" aria-selected="false">② 司令内容</button>
-          <button type="button" class="briefing-step" aria-selected="false">③ 小隊状況</button>
+          <button type="button" class="briefing-step" aria-selected="false">③ 車両調整</button>
           <button type="button" class="briefing-step" aria-selected="false">④ 敵機情報</button>
           <button type="button" class="briefing-step" aria-selected="false">⑤ 地理情報</button>
         </nav>
@@ -382,12 +386,13 @@
             <div id="briefing-time" class="briefing-time"></div>
             <h4 class="briefing-subhead">地区と拠点の配置</h4>
             <table id="briefing-districts" class="briefing-table"></table>
-            <p class="briefing-note">地区内の拠点をすべて制圧すると、その地区を確保。確保した地区の拠点では補給と部隊強化ができる。</p>
+            <p class="briefing-note">地区内の拠点をすべて制圧すると、その地区を確保。確保した地区の拠点では補給と僚機の補充ができる。</p>
             <p class="briefing-note">作戦本部（マップ中央）から出撃。全地区を制圧した瞬間に作戦時間が確定し、作戦本部の円内まで自走で帰還すると作戦終了。</p>
           </section>
           <section class="briefing-panel" hidden>
-            <h3>小隊状況</h3>
-            <div id="briefing-squad" class="briefing-kv-list"></div>
+            <h3>車両調整</h3>
+            <p class="briefing-note tuning-lead">チャートの軸をクリック／ドラッグ、または −／＋ で調整。合計ポイントは固定（上げるなら他を下げる）。出撃後は変更不可。</p>
+            <div id="briefing-tuning" class="tuning-grid"></div>
           </section>
           <section class="briefing-panel" hidden>
             <h3>敵機情報</h3>
@@ -431,7 +436,7 @@
     </div>
   </dialog>
 
-  <!-- Upgrade & Repair Garage Modal -->
+  <!-- Supply-depot menu: resupply + wingman reinforcement (js/depot.js) -->
   <dialog id="garage-dialog" class="game-dialog garage-dialog has-hud-frame" closedby="any" aria-labelledby="garage-title">
     <div class="hud-frame" aria-hidden="true">
       <span class="bf-scan"></span>
@@ -448,32 +453,22 @@
       <!-- Fixed header: scrap on hand stays visible while the cards below scroll -->
       <header class="dialog-header garage-header hud-boot" style="--boot-i: 0">
         <div>
-          <div class="dialog-badge">FIELD GARAGE &amp; ARMORY</div>
-          <h2 id="garage-title">部隊強化（自機・小隊）</h2>
+          <div class="dialog-badge">FIELD SUPPLY DEPOT</div>
+          <h2 id="garage-title">補給・僚機補充</h2>
         </div>
         <div class="garage-scrap-pill">
           <span>保有スクラップ:</span>
           <strong id="garage-scrap" class="tabular-num">0</strong>
         </div>
         <form method="dialog">
-          <button type="submit" value="close" class="btn-close-dialog" aria-label="ガレージを閉じる">
+          <button type="submit" value="close" class="btn-close-dialog" aria-label="補給メニューを閉じる">
             ✕ 戦闘へ戻る <kbd>ESC</kbd>
           </button>
         </form>
       </header>
 
       <div class="garage-body">
-        <section class="garage-stats-strip hud-boot" style="--boot-i: 1" aria-label="現在の戦車性能">
-          <div class="spec-item"><span>主砲火力</span><strong id="spec-damage" class="tabular-num">40</strong></div>
-          <div class="spec-item"><span>装填時間</span><strong id="spec-reload" class="tabular-num">1.35s</strong></div>
-          <div class="spec-item"><span>最大装甲</span><strong id="spec-hp" class="tabular-num">120</strong></div>
-          <div class="spec-item"><span>最高速度</span><strong id="spec-speed" class="tabular-num">220</strong></div>
-          <div class="spec-item"><span>副兵装</span><strong id="spec-sub">未装備</strong></div>
-          <div class="spec-item is-squad"><span>僚機 最大装甲</span><strong id="spec-ally-hp" class="tabular-num">130</strong></div>
-          <div class="spec-item is-squad"><span>僚機 主砲火力</span><strong id="spec-ally-dmg" class="tabular-num">26</strong></div>
-        </section>
-
-        <div id="upgrade-grid" class="upgrade-grid hud-boot" style="--boot-i: 2"></div>
+        <div id="depot-grid" class="upgrade-grid hud-boot" style="--boot-i: 1"></div>
       </div>
     </div>
   </dialog>

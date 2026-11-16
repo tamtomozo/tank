@@ -1,14 +1,14 @@
 (function (global) {
   'use strict';
 
-  // Keyboard / mouse state and the HUD buttons (garage, control mode, mute).
+  // Keyboard / mouse state and the HUD buttons (depot menu, control mode, mute).
   //   input.keys        held key codes (KeyboardEvent.code)
   //   input.mouse       pointer position on the canvas + held buttons (left = main gun, right = sub weapon)
   //   input.controlMode 'tank' (throttle + steer) | 'direct' (move in pressed direction)
   //   input.release()   forget every held key / button (menus opening, restarts, window blur)
 
   function create(game) {
-    const { canvas, audio, radio, upgrades, areaSelect, briefing, results } = game;
+    const { canvas, audio, radio, depot, areaSelect, briefing, results } = game;
     const { start: startDialog, garage: garageDialog, gameover: gameoverDialog } = game.dialogs;
 
     const keys = new Set();
@@ -77,12 +77,12 @@
     };
     syncControlModeUI();
 
-    // U / Tab: only closes the menu; the menu opens on its own when entering a compound
-    // in a secured district (or at the moment a district is secured)
+    // U / Tab: only closes the depot menu; the menu opens on its own when entering a compound
+    // in a secured district
     const toggleGarage = () => {
       if (!game.started || !game.player.alive) return;
       if (garageDialog.open) {
-        upgrades.close();
+        depot.close();
       } else {
         radio.say(global.RadioComms.script.garageUnavailable(), { key: 'garage-hint' });
       }

@@ -1,0 +1,258 @@
+/* Briefing ③ 車両調整: radar-chart tuning of the player's tank and the wingmen — js/tuningPanel.js */
+
+.tuning-lead {
+  margin-block: 0 0.7rem;
+}
+
+.tuning-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17.5rem, 1fr));
+  gap: 0.75rem;
+}
+
+.tuning-card {
+  --tc: #fbbf24; /* unit colour: amber = own tank */
+  --tc-soft: rgb(251 191 36 / 0.26);
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.7rem;
+  border-radius: 0.55rem;
+  background: rgb(255 255 255 / 0.03);
+  border: 1px solid rgb(245 158 11 / 0.3);
+  border-block-start: 3px solid var(--tc);
+  min-inline-size: 0;
+}
+
+.tuning-card.is-ally {
+  --tc: #7dd3fc; /* cyan = wingmen (same as the platoon colour in the depot menu) */
+  --tc-soft: rgb(125 211 252 / 0.24);
+  border-color: rgb(56 189 248 / 0.3);
+  border-block-start-color: var(--tc);
+}
+
+.tuning-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.3rem 0.6rem;
+}
+
+.tuning-card-title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.tuning-card-title h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--tc);
+  letter-spacing: 0.06em;
+}
+
+.tuning-card-note {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.tuning-points {
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Unspent points: highlighted so the player notices they can still raise an axis */
+.tuning-points.has-left {
+  color: #fde68a;
+  font-weight: 700;
+}
+
+/* Chart, with the reset button tucked into its top-right corner */
+.tuning-card-body {
+  position: relative;
+}
+
+.tuning-reset {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  padding-block: 0.25rem;
+  padding-inline: 0.5rem;
+  font-size: 0.72rem;
+}
+
+.tuning-radar {
+  display: block;
+  inline-size: 100%;
+  max-inline-size: 13rem;
+  margin-inline: auto;
+  overflow: visible;
+  cursor: pointer;
+  touch-action: none; /* dragging along an axis must not scroll the briefing */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.tr-ring {
+  fill: none;
+  stroke: rgb(148 180 218 / 0.16);
+  stroke-width: 1;
+}
+
+.tr-ring.is-outer {
+  fill: rgb(15 23 42 / 0.35);
+  stroke: rgb(148 180 218 / 0.4);
+}
+
+.tr-axis {
+  stroke: rgb(148 180 218 / 0.28);
+  stroke-width: 1;
+}
+
+/* Standard spread (Lv3 everywhere) as a dashed reference */
+.tr-standard {
+  fill: none;
+  stroke: rgb(226 232 240 / 0.32);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.tr-shape {
+  fill: var(--tc-soft);
+  stroke: var(--tc);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  transition: d 160ms ease;
+}
+
+.tr-handle {
+  fill: var(--tc);
+  stroke: #0f172a;
+  stroke-width: 1.5;
+  transition: cx 160ms ease, cy 160ms ease;
+}
+
+.tr-label {
+  fill: var(--text-main);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tr-shape,
+  .tr-handle {
+    transition: none;
+  }
+}
+
+.tuning-stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.3rem;
+  margin: 0;
+}
+
+.tuning-stat {
+  display: grid;
+  gap: 0.05rem;
+  padding-block: 0.25rem;
+  padding-inline: 0.4rem;
+  border-radius: 0.35rem;
+  background: rgb(255 255 255 / 0.04);
+}
+
+.tuning-stats dt {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.tuning-stats dd {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--tc);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tuning-axes {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tuning-axis {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  padding-block: 0.15rem;
+  padding-inline: 0.5rem;
+  border-radius: 0.4rem;
+  background: rgb(255 255 255 / 0.04);
+}
+
+.tuning-axis-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-main);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tuning-axis-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.tuning-axis-lv {
+  min-inline-size: 2.4em;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--tc);
+}
+
+.tuning-step {
+  appearance: none;
+  inline-size: 1.6rem;
+  block-size: 1.6rem;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 0.35rem;
+  border: 1px solid rgb(255 255 255 / 0.22);
+  background: rgb(255 255 255 / 0.07);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.tuning-step:hover:not(:disabled) {
+  background: rgb(255 255 255 / 0.16);
+  border-color: var(--tc);
+}
+
+.tuning-step:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.tuning-reset:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

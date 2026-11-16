@@ -1,6 +1,4 @@
-/* Garage / upgrade dialog — js/upgrades.js */
-
-/* Garage Dialog */
+/* Supply-depot menu (#garage-dialog): resupply + wingman reinforcement — js/depot.js */
 .dialog-header {
   display: flex;
   flex-wrap: wrap;
@@ -16,11 +14,11 @@
   font-size: 1.35rem;
 }
 
-/* Garage window: fixed width so changing values never resize it; the header (scrap on hand)
+/* Depot window: fixed width so changing values never resize it; the header (scrap on hand)
    stays put while only the body below it scrolls. Opens/closes a bit quicker than the briefing. */
 dialog.garage-dialog {
   --bt: 0.6;
-  inline-size: min(94dvw, 56rem);
+  inline-size: min(94dvw, 42rem);
   overflow: hidden;
 }
 
@@ -79,55 +77,10 @@ dialog.garage-dialog {
   background: rgb(255 255 255 / 0.16);
 }
 
-.garage-stats-strip {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
-  gap: 0.55rem;
-}
-
-.spec-item {
-  background: rgb(255 255 255 / 0.04);
-  border: 1px solid rgb(255 255 255 / 0.1);
-  border-radius: 0.45rem;
-  padding-inline: 0.7rem;
-  padding-block: 0.45rem;
-  display: grid;
-  gap: 0.1rem;
-}
-
-.spec-item span {
-  font-size: 0.72rem;
-  color: var(--text-muted);
-}
-
-.spec-item strong {
-  font-size: 0.96rem;
-  color: var(--accent-cyan);
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
 .upgrade-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(15.5rem, 1fr));
   gap: 0.75rem;
-}
-
-/* Section headings inside the garage grid: player tank vs platoon (wingmen) */
-.upgrade-section-title {
-  grid-column: 1 / -1;
-  margin: 0;
-  margin-block-start: 0.35rem;
-  padding-block-end: 0.3rem;
-  border-block-end: 1px solid rgb(245 158 11 / 0.35);
-  color: var(--accent-bright);
-  font-size: 0.9rem;
-  letter-spacing: 0.08em;
-}
-
-.upgrade-section-title.is-squad {
-  border-block-end-color: rgb(56 189 248 / 0.4);
-  color: #7dd3fc;
 }
 
 .upgrade-card.is-squad {
@@ -135,18 +88,9 @@ dialog.garage-dialog {
   background: rgb(56 189 248 / 0.05);
 }
 
-.upgrade-section-title.is-supply {
-  border-block-end-color: rgb(34 197 94 / 0.45);
-  color: #86efac;
-}
-
 .upgrade-card.is-supply {
   border-color: rgb(34 197 94 / 0.35);
   background: rgb(34 197 94 / 0.07);
-}
-
-.spec-item.is-squad strong {
-  color: #7dd3fc;
 }
 
 .upgrade-card {
@@ -192,22 +136,6 @@ dialog.garage-dialog {
   font-size: 0.8rem;
   line-height: 1.45;
   color: var(--text-muted);
-}
-
-.upgrade-pips {
-  display: flex;
-  gap: 0.25rem;
-}
-
-.upgrade-pip {
-  flex: 1;
-  block-size: 0.3rem;
-  border-radius: 999px;
-  background: rgb(255 255 255 / 0.14);
-}
-
-.upgrade-pip.is-filled {
-  background: var(--accent-bright);
 }
 
 .btn-upgrade {
