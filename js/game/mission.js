@@ -11,11 +11,15 @@
     SUPPLY_REARM_RADIUS: 110 // leave beyond this to be offered the menu again
   };
 
+  // Pause between the sortie-select screen and the briefing (either way) once one has closed
+  const SCENE_SWITCH_DELAY_MS = 250;
+
   function create(game) {
-    const { world, combat, upgrades, squad, radio, results, briefing, audio } = game;
+    const { world, combat, upgrades, squad, radio, results, areaSelect, briefing, audio } = game;
     const { start: startDialog, garage: garageDialog, gameover: gameoverDialog } = game.dialogs;
 
-    // New sortie: fresh tank on the HQ pad, upgrades, world, platoon and clock, then the briefing
+    // New sortie: fresh tank on the HQ pad, upgrades, world, platoon and clock, then the
+    // sortie-select screen (area → operation) and the briefing
     function start() {
       audio.init();
       upgrades.reset();
@@ -41,13 +45,23 @@
       game.overShown = false;
       game.returnedToHq = false;
       game.input.release();
-      // Briefing first (the game stays paused while it is open); the tactical phase and Mio's
-      // mission-start report begin once it is closed with 作戦開始.
-      briefing.open(() => {
-        radio.say(global.RadioComms.script.missionStart(
-          combat.districts.length ? combat.districts[0].name : null,
-          combat.districts.length
-        ));
+      // Sortie select, then the briefing (the game stays paused while either is open); the tactical
+      // phase and Mio's mission-start report begin once the briefing is closed with 作戦開始.
+      areaSelect.open(openBriefing);
+    }
+
+    // Briefing for the picked { area, operation }; 作戦選択へ goes back to that area's operation list
+    function openBriefing(selection) {
+      game.operation = selection;
+      briefing.open(selection, {
+        delayMs: SCENE_SWITCH_DELAY_MS,
+        onStart: () => {
+          radio.say(global.RadioComms.script.missionStart(
+            combat.districts.length ? combat.districts[0].name : null,
+            combat.districts.length
+          ));
+        },
+        onBack: () => areaSelect.open(openBriefing, { areaId: selection.area.id, delayMs: SCENE_SWITCH_DELAY_MS })
       });
     }
 

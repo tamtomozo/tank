@@ -11,6 +11,8 @@
       this.engineOsc = null;
       this.clatterGain = null;
       this.clatterOsc = null;
+      this.bgm = null; // operations-meeting BGM (js/bgm.js), built on first use
+      this._bgmWanted = false; // asked to play before the AudioContext existed
     }
 
     init() {
@@ -62,6 +64,22 @@
       this.clatterOsc.connect(this.clatterGain);
       this.clatterGain.connect(this.master);
       this.clatterOsc.start();
+
+      if (this._bgmWanted) this.startBriefingBgm();
+    }
+
+    // Operations-meeting BGM: plays while the sortie-select screen / briefing are open.
+    // Both calls are safe to repeat (start while playing / stop while stopped do nothing).
+    startBriefingBgm() {
+      this._bgmWanted = true;
+      if (!this.ctx || !global.BriefingBgm) return;
+      if (!this.bgm) this.bgm = new global.BriefingBgm(this);
+      this.bgm.start();
+    }
+
+    stopBriefingBgm(fadeSec) {
+      this._bgmWanted = false;
+      if (this.bgm) this.bgm.stop(fadeSec);
     }
 
     setMuted(muted) {

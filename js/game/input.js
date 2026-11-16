@@ -8,7 +8,7 @@
   //   input.release()   forget every held key / button (menus opening, restarts, window blur)
 
   function create(game) {
-    const { canvas, audio, radio, upgrades, briefing, results } = game;
+    const { canvas, audio, radio, upgrades, areaSelect, briefing, results } = game;
     const { start: startDialog, garage: garageDialog, gameover: gameoverDialog } = game.dialogs;
 
     const keys = new Set();
@@ -29,7 +29,7 @@
       }
     };
 
-    // The PLANET PANZER title window is no longer shown; the game starts straight into the briefing
+    // The PLANET PANZER title window is no longer shown; the game starts straight into the sortie select
     // (see the end of bootstrap). Audio is unlocked on the first user gesture instead of the DEPLOY click.
     const unlockAudio = () => {
       audio.init();
@@ -71,7 +71,7 @@
     const toggleControlMode = () => {
       input.controlMode = input.controlMode === 'tank' ? 'direct' : 'tank';
       syncControlModeUI();
-      if (game.started && !startDialog.open && !briefing.isOpen && !garageDialog.open && !gameoverDialog.open) {
+      if (game.started && !startDialog.open && !areaSelect.isOpen && !briefing.isOpen && !garageDialog.open && !gameoverDialog.open) {
         radio.say(global.RadioComms.script.controlMode(input.controlMode === 'direct'), { key: 'control-mode', priority: 'high' });
       }
     };
@@ -117,7 +117,7 @@
     });
 
     window.addEventListener('keydown', (e) => {
-      if (briefing.isOpen || results.isOpen) return; // these screens handle their own keys
+      if (areaSelect.isOpen || briefing.isOpen || results.isOpen) return; // these screens handle their own keys
       const code = e.code;
       if (code === 'Tab' || code === 'KeyU') {
         e.preventDefault();

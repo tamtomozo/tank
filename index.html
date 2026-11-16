@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="css/dialogs.css">
   <link rel="stylesheet" href="css/hudframe.css">
   <link rel="stylesheet" href="css/briefing.css">
+  <link rel="stylesheet" href="css/areaselect.css">
   <link rel="stylesheet" href="css/results.css">
   <link rel="stylesheet" href="css/garage.css">
   <!-- shared helpers & data first: every later script reads them at load time -->
@@ -19,7 +20,9 @@
   <script src="js/typewriter.js" defer></script>
   <script src="js/data/enemies.js" defer></script>
   <script src="js/data/upgrades.js" defer></script>
+  <script src="js/data/operations.js" defer></script>
   <script src="js/audio.js" defer></script>
+  <script src="js/bgm.js" defer></script>
   <script src="js/planet/planet.js" defer></script>
   <script src="js/planet/terrain.js" defer></script>
   <script src="js/planet/ground.js" defer></script>
@@ -37,6 +40,7 @@
   <script src="js/hudframe.js" defer></script>
   <script src="js/radio.js" defer></script>
   <script src="js/upgrades.js" defer></script>
+  <script src="js/areaSelect.js" defer></script>
   <script src="js/briefing.js" defer></script>
   <script src="js/results.js" defer></script>
   <!-- the running game (js/game/) and its entry point -->
@@ -64,7 +68,7 @@
     <header class="hud-top">
       <div class="hud-panel hud-mission">
         <div class="hud-title-row">
-          <span class="badge-tag">AREA 1</span>
+          <span id="hud-area" class="badge-tag">AREA 1</span>
           <strong id="hud-objective" class="tabular-num">第1地区 拠点 残り 2/2（確保 0/3地区）</strong>
           <span class="divider">|</span>
           <strong id="hud-clock" class="tabular-num">DAY 1 07:00 朝</strong>
@@ -258,6 +262,69 @@
     </div>
   </dialog>
 
+  <!-- Sortie select: area → operation, then the briefing (contents built by js/areaSelect.js) -->
+  <dialog id="area-dialog" class="game-dialog area-dialog has-hud-frame" aria-labelledby="area-title">
+    <div class="hud-frame" aria-hidden="true">
+      <span class="bf-scan"></span>
+      <span class="bf-edge bf-top"></span>
+      <span class="bf-edge bf-right"></span>
+      <span class="bf-edge bf-bottom"></span>
+      <span class="bf-edge bf-left"></span>
+      <span class="bf-corner bf-tl"></span>
+      <span class="bf-corner bf-tr"></span>
+      <span class="bf-corner bf-br"></span>
+      <span class="bf-corner bf-bl"></span>
+    </div>
+    <div class="dialog-shell area-shell">
+      <header class="area-header hud-boot" style="--boot-i: 0">
+        <div>
+          <div class="dialog-badge">OPERATIONS HQ — SORTIE SELECT</div>
+          <h2 id="area-title" class="briefing-title">作戦選択</h2>
+        </div>
+        <ol class="area-flow" aria-label="出撃までの手順">
+          <li class="area-flow-step is-active" aria-current="step">① エリア選択</li>
+          <li class="area-flow-step">② 作戦選択</li>
+          <li class="area-flow-step">③ ブリーフィング</li>
+        </ol>
+      </header>
+
+      <div class="area-body hud-boot" style="--boot-i: 1">
+        <section id="area-phase-area" class="area-phase" aria-label="エリア選択">
+          <div id="area-list" class="area-list"></div>
+        </section>
+        <section id="area-phase-op" class="area-phase" aria-label="作戦選択" hidden>
+          <p id="area-op-context" class="area-op-context"></p>
+          <div id="op-list" class="op-list"></div>
+        </section>
+      </div>
+
+      <div class="briefing-mio hud-boot" style="--boot-i: 2">
+        <div class="radio-avatar" aria-hidden="true">
+          <svg viewBox="0 0 40 40">
+            <circle cx="20" cy="17" r="8" fill="currentColor"/>
+            <path d="M7 39c1-8 6-12 13-12s12 4 13 12Z" fill="currentColor"/>
+            <path d="M10 18a10 10 0 0 1 20 0" fill="none" stroke="#fde68a" stroke-width="2.4"/>
+            <rect x="8" y="16" width="4" height="7" rx="1.5" fill="#fde68a"/>
+            <rect x="28" y="16" width="4" height="7" rx="1.5" fill="#fde68a"/>
+            <path d="M30 22c0 4-3 6-7 6" fill="none" stroke="#fde68a" stroke-width="1.8"/>
+          </svg>
+        </div>
+        <div class="briefing-mio-body">
+          <div class="radio-header">
+            <span class="radio-callsign">HQ</span>
+            <span class="radio-name">オペレーター ミオ</span>
+          </div>
+          <p id="area-mio-text" class="briefing-mio-text" aria-hidden="true"></p>
+          <span id="area-mio-sr" class="sr-only" aria-live="polite"></span>
+        </div>
+      </div>
+
+      <div class="dialog-footer-actions area-footer hud-boot" style="--boot-i: 3">
+        <button type="button" id="area-back" class="btn-hud" hidden>◀ エリア選択に戻る <kbd>ESC</kbd></button>
+      </div>
+    </div>
+  </dialog>
+
   <!-- Pre-operation briefing (contents built by js/briefing.js) -->
   <dialog id="briefing-dialog" class="game-dialog briefing-dialog has-hud-frame" aria-labelledby="briefing-title">
     <!-- Boot-up frame: corner brackets → edges draw → panel fills → contents appear -->
@@ -356,6 +423,7 @@
       </div>
 
       <form method="dialog" class="dialog-footer-actions hud-boot" style="--boot-i: 4">
+        <button value="back" class="btn-hud briefing-back-select">◀ 作戦選択へ</button>
         <button type="button" id="briefing-prev" class="btn-hud">戻る</button>
         <button type="button" id="briefing-next" class="btn-hud btn-accent">次へ</button>
         <button value="start" class="btn-primary-lg">作戦開始</button>

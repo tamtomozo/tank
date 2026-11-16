@@ -14,7 +14,6 @@
 
   const OPEN_DELAY_MS = 900; // pause before the briefing window starts drawing
   const BOOT_INTRO_MS = 1450; // boot-up sequence length before Mio starts talking (matches css/hudframe.css)
-  const OPERATION_NAME = '砂塵の鉄槌'; // name of the Area 1 operation shown in the briefing
   const GENERAL = '惑星機甲軍 司令官 ハヤセ将軍'; // author of the strategic overview (original character)
   // 両軍のパワーバランス (司令書). Temporarily hidden: set to true to show it again.
   const SHOW_POWER_BALANCE = false;
@@ -39,21 +38,31 @@
 
       this.mio = new global.Typewriter(this.mioText, this.mioSr); // Mio's narration
 
+      this.titleEl = dialog.querySelector('#briefing-title');
+
       this.step = 0;
       this.onStart = null;
+      this.onBack = null;
       this._openTimer = null;
+      // Area + operation picked on the sortie-select screen (js/areaSelect.js, js/data/operations.js)
+      this.area = null;
+      this.operation = null;
 
       this.tabs.forEach((tab, i) => tab.addEventListener('click', () => this.goTo(i)));
       this.btnPrev.addEventListener('click', () => this.goTo(this.step - 1));
       this.btnNext.addEventListener('click', () => this.goTo(this.step + 1));
-      // 作戦開始 / Esc play the frame's closing sequence before the window actually closes
+      // 作戦開始 / 作戦選択へ / Esc play the frame's closing sequence before the window actually closes
       global.HudFrame.animateCloses(dialog);
-      // Closing the briefing in any way (作戦開始 / Esc) starts the operation
+      // 作戦選択へ goes back to the sortie-select screen; any other close (作戦開始 / Esc) starts the operation
       dialog.addEventListener('close', () => {
         this._stopTyping();
+        const back = dialog.returnValue === 'back';
         dialog.returnValue = '';
-        const cb = this.onStart;
+        // The operations-meeting BGM continues back on the sortie-select screen; it ends with the briefing
+        if (!back) this.audio.stopBriefingBgm();
+        const cb = back ? this.onBack : this.onStart;
         this.onStart = null;
+        this.onBack = null;
         if (cb) cb();
       });
     }
@@ -63,8 +72,14 @@
       return this.dialog.open || this._openTimer != null;
     }
 
-    open(onStart) {
+    // selection = { area, operation } from the sortie-select screen.
+    // onStart: 作戦開始 (or Esc) / onBack: 作戦選択へ
+    open(selection, { onStart = null, onBack = null, delayMs = OPEN_DELAY_MS } = {}) {
+      this.area = selection.area;
+      this.operation = selection.operation;
       this.onStart = onStart;
+      this.onBack = onBack;
+      this.titleEl.textContent = `作戦本部 ブリーフィング — ${this.area.name}「${this.operation.name}」`;
       this._buildPanels();
       if (this.dialog.open) {
         this.goTo(0);
@@ -77,8 +92,9 @@
         this._openTimer = null;
         global.HudFrame.boot(this.dialog);
         this.dialog.showModal();
+        this.audio.startBriefingBgm(); // normally already playing from the sortie-select screen
         this.goTo(0, BOOT_INTRO_MS);
-      }, OPEN_DELAY_MS);
+      }, delayMs);
     }
 
     goTo(index, sayDelayMs = 0) {
@@ -181,9 +197,9 @@
           const t = this.world.getTimeInfo();
           const target = st.objective || d0;
           const names = target ? target.baseIds.map((id) => this.combat.bases[id].name).join('と') : '';
-          return `作戦名は「${OPERATION_NAME}」、目標はエリア1の${this.combat.districts.length}地区の制圧です。`
+          return `作戦名は「${this.operation.name}」、目標は${this.area.name}の${this.combat.districts.length}地区の制圧です。`
             + `戦術行動の開始はDAY ${t.day}の${t.clockText}、${t.phaseName}です。`
-            + `作戦区域はエリア1、3つの地区に分かれています。${target ? `${target.name}の拠点${names}を制圧してください。` : ''}`
+            + `作戦区域は${this.area.name}、${this.combat.districts.length}つの地区に分かれています。${target ? `${target.name}の拠点${names}を制圧してください。` : ''}`
             + '後続の地区は、前の地区を確保すると解放されます。'
             + '全地区を制圧した時点で作戦時間が確定します。その後は、この作戦本部まで帰還してください。';
         }
@@ -214,7 +230,7 @@
       const target = st.objective || combat.districts[0];
       const statusBox = this.dialog.querySelector('#briefing-status');
       statusBox.replaceChildren(
-        el('p', 'scenario-prehead', 'エリア1奪還作戦に臨む、第1機甲小隊の全戦車兵へ'),
+        el('p', 'scenario-prehead', `${this.area.name}奪還作戦に臨む、第1機甲小隊の全戦車兵へ`),
         el('h4', 'scenario-catch', 'この荒野を取り戻すのは、君たちの履帯だ。'),
         el('p', 'scenario-deck',
           `敵は${st.districtCount}つの地区に${st.baseCount}つの拠点を築き、勝利を確信している。`
@@ -222,8 +238,8 @@
         el('p', 'scenario-lead',
           'この作戦は、最前線で砲火をくぐる諸君のためにある。'
           + `まず${target ? target.name : '第1地区'}の敵拠点を叩け。確保した地区は諸君の補給線となり、新たな装甲と火力をもたらす。`
-          + `拠点を落とすたびに小隊は強くなり、${st.districtCount}地区すべてを制圧したとき、エリア1は再び我々の大地となる。`
-          + `作戦名「${OPERATION_NAME}」――その鉄槌を振るうのは、諸君だ。`)
+          + `拠点を落とすたびに小隊は強くなり、${st.districtCount}地区すべてを制圧したとき、${this.area.name}は再び我々の大地となる。`
+          + `作戦名「${this.operation.name}」――その鉄槌を振るうのは、諸君だ。`)
       );
 
       // Power balance of both armies (balance bar + side-by-side comparison + general's assessment).
@@ -265,7 +281,7 @@
           ['強み', '機動力と連携。確保した地区での補給と部隊強化'],
           ['弱み', '数で劣る。補給は地区を確保するまで受けられない']
         ]),
-        side('is-enemy', '敵軍　エリア1守備隊', [
+        side('is-enemy', `敵軍　${this.area.name}守備隊`, [
           ['兵力', `戦車 約${pb.enemyTanks} 両・トーチカ 約${pb.enemyBunkers} 基（推定）`],
           ['強み', '数と、トーチカに守られた拠点の防御'],
           ['弱み', `${pb.districts}地区・${pb.enemyBases}拠点に分散。待機中は動かない`]
@@ -356,7 +372,7 @@
       // Operation name and objective (shown above the start time, name first)
       const opBox = this.dialog.querySelector('#briefing-operation');
       opBox.replaceChildren(
-        kv('作戦名', `「${OPERATION_NAME}」`, true),
+        kv('作戦名', `「${this.operation.name}」`, true),
         kv('目標', `${combat.districts.length}地区の制圧`)
       );
     }

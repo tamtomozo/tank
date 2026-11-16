@@ -40,6 +40,7 @@
     const squad = new global.SquadManager(world, combat);
     const radio = new global.RadioComms(document.getElementById('radio-panel'), audio);
     const results = new global.ResultsReport(document.getElementById('results-dialog'));
+    const areaSelect = new global.AreaSelectScene(document.getElementById('area-dialog'), { audio });
     const briefing = new global.BriefingScene(document.getElementById('briefing-dialog'), {
       world,
       combat,
@@ -71,7 +72,9 @@
       squad,
       radio,
       results,
+      areaSelect,
       briefing,
+      operation: null, // { area, operation } picked on the sortie-select screen (js/data/operations.js)
       player, // replaced on every (re)start
       // Camera locked to player center so the tank sits at exact screen center
       cam: { x: player.x, y: player.y, starOffsetX: 0 },
@@ -101,7 +104,7 @@
       const dt = Math.min(0.05, (now - lastTime) / 1000);
       lastTime = now;
 
-      const paused = !game.started || dialogs.start.open || briefing.isOpen || dialogs.garage.open || dialogs.gameover.open || results.isOpen;
+      const paused = !game.started || dialogs.start.open || areaSelect.isOpen || briefing.isOpen || dialogs.garage.open || dialogs.gameover.open || results.isOpen;
       // While Mio reports a secured district (controls locked) the in-game clock and the mission
       // timer stand still; the radio itself and on-screen effects keep running
       const timeFrozen = radio.controlsLocked;
