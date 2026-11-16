@@ -7,7 +7,7 @@
   const { DISTRICT_TEMPLATES, ENEMY_SPECS } = global.GameData;
 
   const ALERT_RADIUS = 650; // the player this close to a compound puts it on alert
-  const ENEMY_REACTION_TIME = 0.5; // s an alerted tank holds still (turret tracking only) before moving/firing
+  const ENEMY_REACTION_TIME = 1.0; // s an alerted tank holds still (turret tracking only) before moving/firing
 
   const ALLY_ALERT_RADIUS = 450; // wingmen alone must come closer before they are spotted
   const BASE_CLEAR_BONUS = 50; // scrap reward for neutralising a compound
@@ -122,12 +122,14 @@
         }
       }
       this.audio.playAlert();
+      this.audio.playBugle(0.7); // charge call right after the alarm, as the garrison sorties
       this.events.push({ type: 'alert', base });
     }
 
     _updateBases(dt, player) {
-      // Alert compounds that a friendly tank has come close to
-      const friendlies = [player, ...this.allies];
+      // Alert compounds that a friendly tank has come close to. At night the garrison can't see
+      // an approach: a compound only wakes up once one of its units is hit (see damageEnemy).
+      const friendlies = this.world.isNightTime() ? [] : [player, ...this.allies];
       for (const base of this.bases) {
         if (base.locked || base.alerted || base.cleared) continue;
         for (const f of friendlies) {

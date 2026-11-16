@@ -17,6 +17,11 @@
       return Math.max(0, Math.min(1, (pal.nightFactor - 0.28) / 0.72));
     }
 
+    // Night proper (the HUD's 夜 phase, 19:00-05:00): enemy compounds don't notice an approach
+    isNightTime() {
+      return this.getTimeInfo().phaseName === '夜';
+    }
+
     // Shared forward headlight beam geometry used for ground beam rendering, night cutout, and auto lock-on
     getHeadlightMetrics(range = 460) {
       const pal = this.getPalette();

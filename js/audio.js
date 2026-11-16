@@ -302,6 +302,61 @@
       });
     }
 
+    // Bugle charge call when an enemy compound sorties (G C E G - E G, played on the natural
+    // bugle notes). Brassy tone: sawtooth through a lowpass that opens on each attack, a slight
+    // scoop up into the pitch and vibrato on the held notes. Overlapping calls are skipped.
+    playBugle(delay = 0) {
+      if (!this.ctx || this.muted) return;
+      const start = this.ctx.currentTime + delay;
+      if (this._bugleUntil && start < this._bugleUntil) return;
+      const S = 0.12; // short note
+      const L = 0.42; // held note
+      const notes = [
+        [392.0, S], [523.25, S], [659.25, S], [783.99, L],
+        [659.25, S], [783.99, L * 1.9]
+      ];
+      const bus = this.ctx.createGain();
+      bus.gain.value = 0.5;
+      bus.connect(this.master);
+      let t = start;
+      for (const [freq, dur] of notes) {
+        const osc = this.ctx.createOscillator();
+        const filter = this.ctx.createBiquadFilter();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(freq * 0.96, t);
+        osc.frequency.exponentialRampToValueAtTime(freq, t + 0.04);
+        filter.type = 'lowpass';
+        filter.Q.value = 2;
+        filter.frequency.setValueAtTime(freq * 1.5, t);
+        filter.frequency.exponentialRampToValueAtTime(freq * 5, t + 0.05);
+        const end = t + dur;
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.16, t + 0.025);
+        gain.gain.exponentialRampToValueAtTime(0.11, t + 0.09);
+        gain.gain.setValueAtTime(0.11, end - 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.0001, end);
+        if (dur > 0.3) {
+          const lfo = this.ctx.createOscillator();
+          const depth = this.ctx.createGain();
+          lfo.frequency.value = 5.5;
+          depth.gain.setValueAtTime(0, t);
+          depth.gain.linearRampToValueAtTime(freq * 0.012, t + dur * 0.6);
+          lfo.connect(depth);
+          depth.connect(osc.frequency);
+          lfo.start(t);
+          lfo.stop(end);
+        }
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(bus);
+        osc.start(t);
+        osc.stop(end + 0.02);
+        t = end + 0.025; // tongued gap between notes
+      }
+      this._bugleUntil = t;
+    }
+
     playWaveClear() {
       if (!this.ctx || this.muted) return;
       const now = this.ctx.currentTime;
