@@ -152,22 +152,28 @@
   font-size: 0.7rem;
 }
 
-/* ================================================================ 2. upright phone during a sortie */
+/* ================================================================ 2. upright phone (landscape only) */
 .rotate-notice {
   position: fixed;
   inset: 0;
-  z-index: 45;
+  z-index: 60; /* above the "click to connect" screen (50) */
   display: grid;
   place-content: center;
   justify-items: center;
   gap: 0.6rem;
   padding: 1.5rem;
   text-align: center;
-  background: rgb(7 11 20 / 0.94);
+  background: var(--bg-space);
 }
 
 .rotate-notice[hidden] {
   display: none;
+}
+
+/* Modal dialogs live in the top layer, above any z-index: hide them while the phone is upright */
+.is-upright dialog,
+.is-upright dialog::backdrop {
+  visibility: hidden;
 }
 
 .rotate-notice-icon {

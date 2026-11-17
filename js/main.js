@@ -142,7 +142,7 @@
       frameNo += 1;
 
       const menuOpen = !game.started || dialogs.start.open || areaSelect.isOpen || briefing.isOpen || dialogs.garage.open || dialogs.gameover.open || results.isOpen;
-      // Phones held upright during a sortie: the game waits behind the "turn sideways" screen
+      // Phones held upright: everything waits behind the "turn sideways" screen (landscape only)
       const paused = game.touchUi.update(menuOpen) || menuOpen;
       // While Mio reports a secured district (controls locked) the in-game clock and the mission
       // timer stand still; the radio itself and on-screen effects keep running

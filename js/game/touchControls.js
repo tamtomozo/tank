@@ -7,8 +7,9 @@
   //   - buttons (right): main gun, boost -> input.touch.fire / boost while held
   //   - radar moved under the top-right panel (the bottom-right corner belongs to the buttons)
   //   - fullscreen button where the browser supports it
-  //   - "turn the phone sideways" screen: the battlefield needs a landscape screen; while a phone
-  //     is held upright during a sortie the game waits behind this screen
+  //   - landscape only: while a phone is held upright (menus and the "click to connect" screen
+  //     included) everything waits behind the "turn the phone sideways" screen; on the first tap
+  //     the game goes fullscreen and locks the screen sideways where the browser allows (Android)
   //
   //   touchUi.update(menuOpen) once per frame (main.js) -> true while the game must wait (upright)
 
@@ -162,23 +163,36 @@
         btnFull.setAttribute('aria-pressed', String(on));
         btnFull.classList.toggle('is-active', on);
       };
+      const enterFullscreen = () => {
+        root.requestFullscreen({ navigationUI: 'hide' })
+          .then(() => {
+            // Android keeps the game sideways once fullscreen (not supported everywhere)
+            if (screen.orientation && typeof screen.orientation.lock === 'function') {
+              screen.orientation.lock('landscape').catch(() => {});
+            }
+          })
+          .catch(() => {});
+      };
       btnFull.addEventListener('click', () => {
         if (document.fullscreenElement) {
           document.exitFullscreen().catch(() => {});
         } else {
-          root.requestFullscreen({ navigationUI: 'hide' })
-            .then(() => {
-              // Android keeps the game sideways once fullscreen (not supported everywhere)
-              if (screen.orientation && typeof screen.orientation.lock === 'function') {
-                screen.orientation.lock('landscape').catch(() => {});
-              }
-            })
-            .catch(() => {});
+          enterFullscreen();
         }
         btnFull.blur();
       });
       document.addEventListener('fullscreenchange', syncFull);
       syncFull();
+      // Landscape from the start: the very first tap (usually "click to connect") goes fullscreen
+      // and turns the screen sideways. Only once: leaving fullscreen afterwards is the player's call.
+      // Not needed when launched from the home screen: the app already runs fullscreen + landscape
+      // (manifest.webmanifest).
+      const installedApp = global.matchMedia && global.matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches;
+      const onFirstTap = () => {
+        window.removeEventListener('pointerup', onFirstTap, true);
+        if (!document.fullscreenElement) enterFullscreen();
+      };
+      if (!installedApp) window.addEventListener('pointerup', onFirstTap, true);
     }
 
     // ---------------------------------------------------------------- per frame
@@ -186,7 +200,7 @@
     let rotateShown = null;
     function update(menuOpen) {
       const upright = window.innerHeight > window.innerWidth;
-      const blockUpright = !menuOpen && upright;
+      const blockUpright = upright; // landscape only, menus included
       const showControls = !menuOpen && !upright;
       if (showControls !== shown) {
         shown = showControls;
@@ -196,6 +210,7 @@
       if (blockUpright !== rotateShown) {
         rotateShown = blockUpright;
         rotateEl.hidden = !blockUpright;
+        root.classList.toggle('is-upright', blockUpright);
         if (blockUpright) input.release();
       }
       return blockUpright;

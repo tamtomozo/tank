@@ -7,6 +7,11 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="PLANET PANZER">
+  <!-- Home-screen install: launches fullscreen + landscape (Android); no Safari bars on iPhone -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <title>PLANET PANZER — 2D惑星戦車バトル</title>
   <!-- order matters (later files win on equal specificity) -->
   <link rel="stylesheet" href="css/base.css">
@@ -225,18 +230,6 @@
       </div>
     </div>
 
-    <!-- Phones held upright during a sortie: the battlefield needs a landscape screen -->
-    <div id="rotate-notice" class="rotate-notice" role="alert" hidden>
-      <div class="rotate-notice-icon" aria-hidden="true">
-        <svg viewBox="0 0 64 64">
-          <rect x="20" y="8" width="24" height="44" rx="4" fill="none" stroke="currentColor" stroke-width="3"/>
-          <path d="M50 40a16 16 0 0 1-12 14" fill="none" stroke="#fbbf24" stroke-width="3" stroke-linecap="round"/>
-          <path d="M36 50l2 4.5 4.5-2" fill="none" stroke="#fbbf24" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <p class="rotate-notice-title">端末を横向きにしてください</p>
-      <p class="rotate-notice-hint">戦闘画面は横向き専用です。横にすると作戦を再開します。</p>
-    </div>
   </main>
 
   <!-- Start Briefing Modal -->
@@ -307,6 +300,20 @@
         <span class="only-touch">画面をタップして接続</span>
       </p>
     </div>
+  </div>
+
+  <!-- Phones are landscape-only: while one is held upright (menus included) everything waits behind
+       this screen (js/game/touchControls.js). Above the "click to connect" screen and the dialogs. -->
+  <div id="rotate-notice" class="rotate-notice" role="alert" hidden>
+    <div class="rotate-notice-icon" aria-hidden="true">
+      <svg viewBox="0 0 64 64">
+        <rect x="20" y="8" width="24" height="44" rx="4" fill="none" stroke="currentColor" stroke-width="3"/>
+        <path d="M50 40a16 16 0 0 1-12 14" fill="none" stroke="#fbbf24" stroke-width="3" stroke-linecap="round"/>
+        <path d="M36 50l2 4.5 4.5-2" fill="none" stroke="#fbbf24" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <p class="rotate-notice-title">端末を横向きにしてください</p>
+    <p class="rotate-notice-hint">このゲームは横向き専用です。横にすると再開します。</p>
   </div>
 
   <!-- Sortie select: area → operation, then the briefing (contents built by js/areaSelect.js) -->
