@@ -186,14 +186,15 @@
     }
 
     // Fort icon size by the player's distance to the compound, so two forts can be compared at a
-    // glance: largest (FORT_SIZE_MAX) from the line where the garrison notices the player
-    // (ALERT_RADIUS) inwards, then linearly smaller outwards, down to FORT_SIZE_FAR at FORT_FAR
-    // (about the farthest an on-screen fort can be) and on until the floor FORT_SIZE_MIN
-    const FORT_ALERT_LINE = global.CombatManager.ALERT_RADIUS;
+    // glance: largest (FORT_SIZE_MAX) from FORT_PEAK inwards (a little outside the line where the
+    // garrison notices the player, ALERT_RADIUS = 650 in combat/bases.js), then linearly smaller
+    // outwards, down to FORT_SIZE_FAR at FORT_FAR (about the farthest an on-screen fort can be)
+    // and on until the floor FORT_SIZE_MIN
+    const FORT_PEAK = 800;
     const FORT_SIZE_MAX = 1.8;
     const FORT_FAR = 1300;
     const FORT_SIZE_FAR = 0.6;
-    const FORT_SIZE_SLOPE = (FORT_SIZE_MAX - FORT_SIZE_FAR) / (FORT_FAR - FORT_ALERT_LINE);
+    const FORT_SIZE_SLOPE = (FORT_SIZE_MAX - FORT_SIZE_FAR) / (FORT_FAR - FORT_PEAK);
     const FORT_SIZE_MIN = 0.45;
 
     // Fort icon above a compound centre; the closer the player, the bigger.
@@ -201,7 +202,7 @@
     function drawBaseFortIcon(base, p, timeSec) {
       const pulse = base.alerted ? 0.5 + 0.5 * Math.sin(timeSec * 9) : 0;
       const dist = Math.hypot(world.deltaX(player.x, base.x), world.deltaY(player.y, base.y));
-      const beyond = Math.max(0, dist - FORT_ALERT_LINE);
+      const beyond = Math.max(0, dist - FORT_PEAK);
       const size = Math.max(FORT_SIZE_MIN, FORT_SIZE_MAX - beyond * FORT_SIZE_SLOPE);
       drawFloatingIcon(p, timeSec, {
         icon: FortIcon,

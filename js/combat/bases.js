@@ -185,5 +185,4 @@
   }
 
   global.TankUtil.mixin(global.CombatManager, CombatBases);
-  global.CombatManager.ALERT_RADIUS = ALERT_RADIUS; // fort icons peak in size at this line (render.js)
 })(window);
