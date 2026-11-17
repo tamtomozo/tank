@@ -113,20 +113,6 @@
   background: linear-gradient(90deg, hsl(var(--hp-hue, 130) 78% 42%), hsl(var(--hp-hue, 130) 85% 55%));
 }
 
-.boost-fill {
-  transform: scaleX(var(--boost-ratio, 1));
-  background: linear-gradient(90deg, #0284c7, #38bdf8);
-}
-
-.meter-label .reload-text {
-  color: var(--accent-bright);
-}
-
-.reload-fill {
-  transform: scaleX(var(--reload-ratio, 1));
-  background: linear-gradient(90deg, #d97706, #fbbf24);
-}
-
 /* Top-right column: resources/actions panel with the controls guide underneath */
 .hud-top-right {
   display: flex;
@@ -298,4 +284,22 @@
   .hud-controls-hint {
     display: none;
   }
+}
+
+/* While the player drives / boosts / fires the status panels and radar fade out so more of the
+   battlefield shows; they fade back in after ~2 s without action (js/game/hud.js) */
+.hud-top,
+.hud-bottom {
+  transition: opacity 0.45s ease-out;
+}
+
+.hud-concealed .hud-top,
+.hud-concealed .hud-bottom {
+  opacity: 0;
+  transition-duration: 0.2s;
+}
+
+.hud-concealed .hud-top *,
+.hud-concealed .hud-bottom * {
+  pointer-events: none;
 }

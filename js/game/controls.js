@@ -59,6 +59,7 @@
         combat.spawnDustOrSmoke(x, y, 2, count, '#a8a29e');
       };
 
+      let moving = false; // any drive input this frame (also hides the HUD, see hud.js)
       if (input.controlMode === 'direct') {
         let moveX = 0;
         let moveY = 0;
@@ -70,6 +71,7 @@
           moveX = touch.moveX;
           moveY = touch.moveY;
         }
+        moving = moveX !== 0 || moveY !== 0;
         player.stepPhysicsDirectional(moveX, moveY, wantBoost, dt, dustCb);
       } else {
         let throttle = 0;
@@ -84,6 +86,7 @@
           throttle = -touch.moveY;
           steer = touch.moveX;
         }
+        moving = throttle !== 0 || steer !== 0;
         player.stepPhysics(throttle, steer, wantBoost, dt, dustCb);
       }
 
@@ -105,7 +108,10 @@
         player.returnTurretStraight(dt);
       }
 
-      if (!locked && (mouse.left || keys.has('Space') || touch.fire)) {
+      const firing = !locked && (mouse.left || keys.has('Space') || touch.fire);
+      // The player is busy driving / fighting: hud.js keeps the HUD panels out of the way meanwhile
+      game.playerActing = moving || wantBoost || firing;
+      if (firing) {
         const fireTarget = game.activeTarget || barrelForwardTarget(340);
         combat.fireMainCannon(player, fireTarget.x, fireTarget.y);
       }

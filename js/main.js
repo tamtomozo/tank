@@ -178,7 +178,7 @@
       mission.checkEnd();
 
       const timeInfo = world.getTimeInfo();
-      hud.frame(timeInfo, now);
+      hud.frame(timeInfo, now, !paused && game.player.alive);
       // The battlefield is hidden while the HQ backdrop fully covers it
       if (!backdrop.covering) {
         if (resizePending) {
