@@ -163,7 +163,7 @@
         });
       }
 
-      // Boost Jump Pads (launch tank into 2D airborne arc!)
+      // Jump Pads (launch tank into 2D airborne arc!)
       const rampCoords = [
         [820, 920], [1580, 920], [820, 1520], [1580, 1520],
         [400, 420], [2000, 420], [400, 1980], [2000, 1980]

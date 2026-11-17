@@ -69,7 +69,7 @@
           throttle = Math.abs(angDiff) < 1.8 ? 0.85 : -0.35;
         }
 
-        e.stepPhysics(throttle, steer, false, dt, null);
+        e.stepPhysics(throttle, steer, dt, null);
 
         if (!idle && tgt.alive && dist < 760) {
           // Lead the target using actual velocity (correct in both tank & directional control modes)
@@ -98,10 +98,6 @@
             player.y = this.world.wrapY(player.y + ny * push);
             e.x = this.world.wrapX(e.x - nx * push);
             e.y = this.world.wrapY(e.y - ny * push);
-
-            if (player.boosting && Math.abs(player.speed) > 180) {
-              this.damageEnemy(e, 24 * dt * 4, 'player');
-            }
           }
         }
       }

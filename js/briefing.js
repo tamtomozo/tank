@@ -197,7 +197,7 @@
         case 'enemies':
           return '敵は軽戦車、中戦車、トーチカで構成されています。拠点で待機していますが、接近するか攻撃すると出撃してきます。';
         case 'terrain':
-          return '大型の岩は砲弾を防ぐ遮蔽物になります。ジャンプ台はブーストで飛び越えられます。マップは上下左右がつながっています。'
+          return '大型の岩は砲弾を防ぐ遮蔽物になります。ジャンプ台に勢いよく進入すると飛び越えられます。マップは上下左右がつながっています。'
             + '準備ができたら、作戦本部から出撃してください。';
         default:
           return '';
@@ -323,7 +323,7 @@
       const terrain = this.dialog.querySelector('#briefing-terrain');
       const items = [
         ['rock', `大型の岩 ×${world.obstacles.length}`, '通行不可。砲弾を防ぐ遮蔽物として使える。'],
-        ['ramp', `ジャンプ台 ×${world.ramps.length}`, 'ブーストで進入すると空中に跳躍する。'],
+        ['ramp', `ジャンプ台 ×${world.ramps.length}`, '勢いよく進入すると空中に跳躍する。'],
         ['gully', `涸れ川 ×${world.gullies.length}`, '走行可能な浸食溝。進路の目印になる。'],
         ['hardpan', `ひび割れ地帯 ×${world.hardpans.length}`, '乾いた泥の平地。走行への影響はない。'],
         ['wrap', `マップ ${world.width}×${world.height}`, '上下左右がつながっている（端を越えると反対側へ）。']

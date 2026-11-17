@@ -1,15 +1,15 @@
 (function (global) {
   'use strict';
 
-  // HUD panels (status, HP bar, scrap, boss banner) and the reload / boost rings on the touch buttons.
+  // HUD panels (status, HP bar, scrap, boss banner) and the reload ring on the touch fire button.
   // Values are written through dirty-checked setters so the DOM is only touched when they change.
-  // Bars read CSS variables (--hp-ratio, --boost-ratio, ... see css/hud.css, css/touch.css) set on the
+  // Bars read CSS variables (--hp-ratio, --reload-ratio, ... see css/hud.css, css/touch.css) set on the
   // bar element itself: set on <html> they made the browser re-style the whole page every frame.
   // The bars follow every frame (frame()); the texts are refreshed about 10 times a second, since
   // each change lays the panels out again.
 
   const TEXT_INTERVAL_MS = 100;
-  // The status panels and radar hide while the player drives / boosts / fires, so more of the
+  // The status panels and radar hide while the player drives / fires, so more of the
   // battlefield shows, and come back once nothing has been done for this long
   const HUD_REVEAL_IDLE_MS = 2000;
 
@@ -18,7 +18,7 @@
 
     // Cached HUD element refs + dirty-checked writes: only touch the DOM when a value actually changes
     const styleOf = (id) => document.getElementById(id).style;
-    // Reload / boost: shown only as rings around the on-screen buttons on phones (css/touch.css)
+    // Reload: shown only as a ring around the on-screen fire button on phones (css/touch.css)
     const touchBtn = (action) => {
       const el = global.GameQuality.touch ? document.querySelector(`.touch-btn[data-touch="${action}"]`) : null;
       return el ? [el.style] : [];
@@ -26,7 +26,6 @@
     const varStyle = {
       '--hp-ratio': [styleOf('hud-hp-fill')],
       '--hp-hue': [styleOf('hud-hp-fill')],
-      '--boost-ratio': touchBtn('boost'),
       '--reload-ratio': touchBtn('fire'),
       '--boss-hp-ratio': [styleOf('boss-hp-fill')],
       '--damage-alpha': [styleOf('damage-vignette')]
@@ -90,14 +89,12 @@
     function updateBars() {
       const player = game.player;
       const hpRatio = Math.max(0, Math.min(1, player.hp / player.maxHp));
-      const boostRatio = Math.max(0, Math.min(1, player.boostEnergy / player.maxBoost));
       const reloadRatio = player.reloadTime > 0
         ? Math.max(0, Math.min(1, 1 - player.reloadTimer / player.reloadTime))
         : 1;
 
       setVar('--hp-ratio', hpRatio.toFixed(3));
       setVar('--hp-hue', String(Math.round(hpRatio * 125)));
-      setVar('--boost-ratio', boostRatio.toFixed(3));
       setVar('--reload-ratio', reloadRatio.toFixed(3));
       setVar('--damage-alpha', (combat.damageFlash * 0.85).toFixed(3));
 

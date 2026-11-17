@@ -23,7 +23,7 @@
       keys,
       mouse,
       controlMode: 'tank',
-      touch: { active: false, moveX: 0, moveY: 0, fire: false, boost: false },
+      touch: { active: false, moveX: 0, moveY: 0, fire: false },
       setControlMode(mode) {
         input.controlMode = mode;
         syncControlModeUI();

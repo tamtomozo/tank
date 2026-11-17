@@ -1,4 +1,4 @@
-/* HUD panels: status (top-left), HP / boost / main gun (top-centre), resources & controls (top-right), radar (bottom-right) */
+/* HUD panels: status (top-left), HP (top-centre), resources & controls (top-right), radar (bottom-right) */
 
 /* HUD Panels */
 .hud-panel {
@@ -37,7 +37,7 @@
   pointer-events: auto;
 }
 
-/* Top-left column: operation window, HP / boost / main gun panel under it (same width) */
+/* Top-left column: operation window, HP panel under it (same width) */
 .hud-top-left {
   display: flex;
   flex-direction: column;
@@ -286,7 +286,7 @@
   }
 }
 
-/* While the player drives / boosts / fires the status panels and radar fade out so more of the
+/* While the player drives / fires the status panels and radar fade out so more of the
    battlefield shows; they fade back in after ~2 s without action (js/game/hud.js) */
 .hud-top,
 .hud-bottom {

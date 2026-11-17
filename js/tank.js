@@ -64,9 +64,6 @@
       this.armorLevel = 1;
       this.engineLevel = 1;
 
-      this.boostEnergy = 100;
-      this.maxBoost = 100;
-      this.boosting = false;
       this._velX = 0;
       this._velY = 0;
       // Shove from cannon recoil / incoming blasts, added on top of normal driving and decaying away
@@ -144,7 +141,7 @@
     }
 
     // Stats from the radar-chart tuning (TankTuning.playerStats / allyStats, js/tuning.js).
-    // refill: fill armour and boost to the new maximum (a fresh tank before the sortie);
+    // refill: fill armour to the new maximum (a fresh tank before the sortie);
     // otherwise HP is only clamped to the new maximum.
     applyStats(st, refill = false) {
       for (const key of Tank2D.TUNED_STATS) {
@@ -153,13 +150,7 @@
       this.cannonLevel = st.visual.cannon;
       this.armorLevel = st.visual.armor;
       this.engineLevel = st.visual.engine;
-      if (refill) {
-        this.hp = this.maxHp;
-        this.boostEnergy = this.maxBoost;
-      } else {
-        this.hp = Math.min(this.hp, this.maxHp);
-        this.boostEnergy = Math.min(this.boostEnergy, this.maxBoost);
-      }
+      this.hp = refill ? this.maxHp : Math.min(this.hp, this.maxHp);
     }
 
     get turretAngle() {
@@ -282,24 +273,12 @@
       if (this.muzzleFlashTimer > 0) this.muzzleFlashTimer = Math.max(0, this.muzzleFlashTimer - dt);
     }
 
-    _updateBoost(wantBoost, isMovingInput, dt) {
-      const canBoost = wantBoost && this.boostEnergy > 4 && isMovingInput;
-      this.boosting = canBoost;
-      if (canBoost) {
-        this.boostEnergy = Math.max(0, this.boostEnergy - dt * 36);
-      } else {
-        this.boostEnergy = Math.min(this.maxBoost, this.boostEnergy + dt * 20);
-      }
-      return this.maxSpeed * (canBoost ? 1.58 : 1.0);
-    }
-
-    stepPhysics(throttle, steer, wantBoost, dt, dustCb) {
+    stepPhysics(throttle, steer, dt, dustCb) {
       if (!this.alive) return;
       this._tickTimers(dt);
       if (this.isBunker) return;
 
-      const topSpeed = this._updateBoost(wantBoost, Math.abs(throttle) > 0.05, dt);
-      const targetSpeed = throttle * topSpeed;
+      const targetSpeed = throttle * this.maxSpeed;
       const rate = Math.abs(throttle) > 0.05 ? this.accel : this.accel * 1.4;
       if (this.speed < targetSpeed) {
         this.speed = Math.min(targetSpeed, this.speed + rate * dt);
@@ -324,22 +303,21 @@
     }
 
     // Directional control mode: move directly toward pressed (moveX, moveY) while rotating tank hull smoothly
-    stepPhysicsDirectional(moveX, moveY, wantBoost, dt, dustCb) {
+    stepPhysicsDirectional(moveX, moveY, dt, dustCb) {
       if (!this.alive) return;
       this._tickTimers(dt);
       if (this.isBunker) return;
 
       const inputLen = Math.hypot(moveX, moveY);
       const hasInput = inputLen > 0.05;
-      const topSpeed = this._updateBoost(wantBoost, hasInput, dt);
 
       let targetVx = 0;
       let targetVy = 0;
       if (hasInput) {
         const dirX = moveX / inputLen;
         const dirY = moveY / inputLen;
-        targetVx = dirX * topSpeed;
-        targetVy = dirY * topSpeed;
+        targetVx = dirX * this.maxSpeed;
+        targetVy = dirY * this.maxSpeed;
 
         const targetAngle = Math.atan2(dirY, dirX);
         const diff = wrapAngle(targetAngle - this.hullAngle);
@@ -501,7 +479,6 @@
         stamp(ctx, sprites.tracks, TRACKS_BOX);
         this._paintTrackMotion(ctx);
         this._shakeWithEngine(ctx, vib);
-        if (this.boosting) this._paintBoostFlames(ctx);
         stamp(ctx, sprites.hull, HULL_BOX);
         ctx.restore();
       }
@@ -576,7 +553,7 @@
       const motion = Math.abs(this.speed) + Math.abs(this.turnRate) * 28;
       if (motion < 2) return { x: 0, y: 0 };
       let amp = Math.min(1, motion / 40) *
-        (0.35 + Math.min(1, Math.abs(this.speed) / 200) * 0.55 + (this.boosting ? 0.5 : 0));
+        (0.35 + Math.min(1, Math.abs(this.speed) / 200) * 0.55);
       if (!this.grounded) amp *= 0.3;
       const t = this.vibPhase;
       return {
@@ -593,7 +570,6 @@
       this._paintTrackBases(ctx);
       this._paintTrackMotion(ctx);
       this._shakeWithEngine(ctx, vib);
-      if (this.boosting) this._paintBoostFlames(ctx);
       this._paintHull(ctx);
       ctx.restore();
     }
@@ -657,20 +633,6 @@
       const c = Math.cos(this.hullAngle);
       const sn = Math.sin(this.hullAngle);
       ctx.translate(vib.x * c + vib.y * sn, -vib.x * sn + vib.y * c);
-    }
-
-    // Turbo boost flame jets
-    _paintBoostFlames(ctx) {
-      for (const ey of [-7, 7]) {
-        const fLen = 14 + Math.random() * 10;
-        ctx.fillStyle = 'rgba(56, 189, 248, 0.88)';
-        ctx.beginPath();
-        ctx.moveTo(-24, ey - 3.5);
-        ctx.lineTo(-24 - fLen, ey);
-        ctx.lineTo(-24, ey + 3.5);
-        ctx.closePath();
-        ctx.fill();
-      }
     }
 
     // The hull itself: nothing here moves, it only depends on the tank's colours and armour level
@@ -894,7 +856,7 @@
   // Numeric fields set by applyStats (the tuning's stat objects may leave some out)
   Tank2D.TUNED_STATS = [
     'damage', 'splashRadius', 'shellSpeed', 'cannonRange', 'reloadTime',
-    'maxSpeed', 'accel', 'turnSpeed', 'maxBoost', 'maxHp', 'armorReduction'
+    'maxSpeed', 'accel', 'turnSpeed', 'maxHp', 'armorReduction'
   ];
   Tank2D.ALERT_MARK_DURATION = 1.8; // seconds the "!" spotted mark stays up
   // Turret recoil slide: ~6 units back at peak, ~5 Hz spring with light damping (one small overshoot)

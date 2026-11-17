@@ -223,7 +223,6 @@
 
       let throttle;
       let steer;
-      let boost = false;
 
       if (d < opts.arriveDist) {
         // On station: align with the formation / face the target and match the leader's speed
@@ -248,12 +247,10 @@
           steer = clamp(diff * 2.4, -1, 1);
           const align = Math.max(0, Math.cos(diff));
           throttle = clamp(Math.max(0, ff) + (d / 110) * align, 0, 1);
-          // Turbo to catch up (e.g. outer wingmen after a turn); boost energy limits overuse
-          boost = d > (lead ? 90 : 240) && Math.abs(diff) < 0.5;
         }
       }
 
-      a.stepPhysics(throttle, steer, boost, dt, null);
+      a.stepPhysics(throttle, steer, dt, null);
     }
 
     _avoidance(a) {

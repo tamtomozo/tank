@@ -4,7 +4,7 @@
   // On-screen controls for phones / tablets (GameQuality.touch), plus the phone-only screen bits:
   //   - virtual stick (left): appears where the thumb lands in the left part of the screen;
   //     writes input.touch.moveX / moveY (-1..1, screen directions: +x right, +y down)
-  //   - buttons (right): main gun, boost -> input.touch.fire / boost while held
+  //   - button (right): main gun -> input.touch.fire while held
   //   - radar moved under the top-right panel (the bottom-right corner belongs to the buttons)
   //   - fullscreen button where the browser supports it
   //   - landscape only: while a phone is held upright (menus and the "click to connect" screen
@@ -18,7 +18,7 @@
 
   function create(game) {
     const { input } = game;
-    const touch = { active: false, moveX: 0, moveY: 0, fire: false, boost: false };
+    const touch = { active: false, moveX: 0, moveY: 0, fire: false };
     input.touch = touch;
 
     const enabled = global.GameQuality.touch; // also put <html class="is-touch"> (quality.js)
@@ -114,7 +114,7 @@
     // ---------------------------------------------------------------- buttons (held while touched)
     const buttons = Array.from(panel.querySelectorAll('[data-touch]'));
     for (const btn of buttons) {
-      const action = btn.dataset.touch; // 'fire' | 'boost'
+      const action = btn.dataset.touch; // 'fire'
       const pointers = new Set();
       const sync = () => {
         touch[action] = pointers.size > 0;

@@ -19,7 +19,7 @@
     const { start: startDialog, garage: garageDialog, gameover: gameoverDialog } = game.dialogs;
 
     // Radar-chart tuning (js/tuning.js) → the player's tank and every wingman. refill: fresh tanks
-    // waiting on the HQ pad (full armour / boost). Re-run on every change on the briefing.
+    // waiting on the HQ pad (full armour). Re-run on every change on the briefing.
     function applyTuning(refill = true) {
       game.player.applyStats(tuning.playerStats(), refill);
       combat.magnetRadius = tuning.pickupRadius();

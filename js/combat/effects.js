@@ -152,7 +152,7 @@
     }
 
     // Sand thrown up behind both caterpillar tracks of a moving tank. Emission is distance-based
-    // (faster / boosting tanks kick up more) and limited to tanks near the player to bound cost.
+    // (faster tanks kick up more) and limited to tanks near the player to bound cost.
     _emitTrackDust(tank, dt, player) {
       if (!tank || !tank.alive || tank.isBunker || !tank.grounded) return;
       const motion = Math.abs(tank.speed) + Math.abs(tank.turnRate) * 28;
@@ -164,7 +164,7 @@
       }
 
       tank.dustAccum += motion * dt;
-      const spacing = tank.boosting ? 9 : 16;
+      const spacing = 16;
       if (tank.dustAccum < spacing) return;
       tank.dustAccum = Math.min(tank.dustAccum - spacing, spacing);
 
@@ -177,7 +177,7 @@
       const side = 16 * s;
       const sideX = -sin * side;
       const sideY = cos * side;
-      const strength = Math.min(1.6, Math.abs(tank.speed) / 160) + (tank.boosting ? 0.4 : 0);
+      const strength = Math.min(1.6, Math.abs(tank.speed) / 160);
 
       for (const k of [-1, 1]) {
         const x = tank.x + cos * back + sideX * k;
@@ -253,7 +253,7 @@
 
     // True when the player or any wingman would benefit from a resupply
     needsResupply(player) {
-      if (player.alive && (player.hp < player.maxHp - 0.5 || player.boostEnergy < player.maxBoost - 1)) return true;
+      if (player.alive && player.hp < player.maxHp - 0.5) return true;
       return this.allies.some((a) => a.alive && a.hp < a.maxHp - 0.5);
     }
 
@@ -262,18 +262,16 @@
       this.audio.playUpgrade();
     }
 
-    // Full resupply: player and all wingmen back to full armour, boost and main-gun reload
+    // Full resupply: player and all wingmen back to full armour and main-gun reload
     _resupply(player) {
       if (player.alive) {
         player.hp = player.maxHp;
-        player.boostEnergy = player.maxBoost;
         player.reloadTimer = 0;
         this.spawnDustOrSmoke(player.x, player.y, 10, 14, '#4ade80');
       }
       for (const a of this.allies) {
         if (!a.alive) continue;
         a.hp = a.maxHp;
-        a.boostEnergy = a.maxBoost;
         this.spawnDustOrSmoke(a.x, a.y, 10, 8, '#4ade80');
       }
     }

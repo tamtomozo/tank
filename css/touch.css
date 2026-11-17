@@ -114,7 +114,7 @@
   cursor: pointer;
 }
 
-/* Ring: reload (main gun), boost energy — vars set by js/game/hud.js */
+/* Ring: main-gun reload — var set by js/game/hud.js */
 .touch-btn::before {
   content: '';
   position: absolute;
@@ -127,7 +127,6 @@
 }
 
 .touch-btn-fire { --ring: var(--reload-ratio, 1); }
-.touch-btn-boost { --ring: var(--boost-ratio, 1); }
 
 .touch-btn.is-held {
   opacity: 1;
@@ -143,16 +142,6 @@
   inline-size: 5rem;
   block-size: 5rem;
   font-size: 1rem;
-}
-
-.touch-btn-boost {
-  --tb: #38bdf8;
-  --tb-glow: rgb(56 189 248 / 0.35);
-  inset-inline-end: calc(1.7rem + var(--safe-r));
-  inset-block-end: calc(6.6rem + var(--safe-b));
-  inline-size: 3.6rem;
-  block-size: 3.6rem;
-  font-size: 0.7rem;
 }
 
 /* ================================================================ 2. upright phone (landscape only) */
@@ -218,8 +207,8 @@
 
 /* ================================================================ 3. in-game HUD on phones
    Landscape phone (e.g. 844 x 390):
-     top:    status (left) · HP / boost (centre) · scrap + buttons, radar below (right)
-     bottom: stick (left) · Mio's radio (centre) · buttons with reload / boost rings (right) */
+     top:    status (left) · HP (centre) · scrap + buttons, radar below (right)
+     bottom: stick (left) · Mio's radio (centre) · main-gun button with reload ring (right) */
 .is-touch .hud-panel {
   padding-block: 0.35rem;
   padding-inline: 0.55rem;

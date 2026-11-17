@@ -167,12 +167,11 @@
         if (frameNo % 3 === 0) {
           audio.updateEngine(
             (Math.abs(player.speed) + Math.abs(player.turnRate) * 35) / player.maxSpeed,
-            player.boosting,
             true
           );
         }
       } else if (frameNo % 3 === 0) {
-        audio.updateEngine(0, false, false);
+        audio.updateEngine(0, false);
       }
 
       mission.checkEnd();

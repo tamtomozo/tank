@@ -185,7 +185,7 @@
       ctx.setTransform(pr, 0, 0, pr, 0, 0);
       ctx.globalAlpha = 1;
 
-      // 8. Boost Jump Ramps
+      // 8. Jump Ramps
       for (const ramp of this.ramps) {
         const p = this.project(ramp.x, ramp.y, 0, camX, camY, viewW, viewH);
         if (!p || this._isOffscreen(p, ramp.radius * p.scale + 4, viewW, viewH)) continue;

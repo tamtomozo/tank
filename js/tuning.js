@@ -68,7 +68,6 @@
         maxSpeed: 225 + (engine - 1) * 34,
         accel: 460 + (engine - 1) * 75,
         turnSpeed: 2.8 + (engine - 1) * 0.26,
-        maxBoost: 100 + (engine - 1) * 25,
         maxHp: 120 + (armor - 1) * 45,
         armorReduction: (armor - 1) * 0.08,
         visual: { cannon, armor, engine }
@@ -86,7 +85,6 @@
         maxSpeed: 255 + (engine - 1) * 36,
         accel: 470 + (engine - 1) * 60,
         turnSpeed: 2.9 + (engine - 1) * 0.2,
-        maxBoost: 100 + (engine - 1) * 25,
         maxHp: 130 + (armor - 1) * 40,
         armorReduction: 0.1 + (armor - 1) * 0.06,
         visual: { cannon: Math.min(4, cannon), armor, engine } // wingmen never mount the rail gun

@@ -95,7 +95,7 @@
       }
     }
 
-    updateEngine(speedRatio, boosting, active) {
+    updateEngine(speedRatio, active) {
       if (!this.ctx || !this.engineGain) return;
       const now = this.ctx.currentTime;
       if (!active || this.muted) {
@@ -104,8 +104,8 @@
         return;
       }
       const absSpeed = Math.min(1.4, Math.abs(speedRatio));
-      const targetFreq = 36 + absSpeed * 44 + (boosting ? 22 : 0);
-      const targetVol = 0.055 + absSpeed * 0.085 + (boosting ? 0.04 : 0);
+      const targetFreq = 36 + absSpeed * 44;
+      const targetVol = 0.055 + absSpeed * 0.085;
       this.engineOsc.frequency.setTargetAtTime(targetFreq, now, 0.08);
       this.engineGain.gain.setTargetAtTime(targetVol, now, 0.08);
 

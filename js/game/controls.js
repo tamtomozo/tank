@@ -62,7 +62,6 @@
       const held = (code) => !locked && keys.has(code);
       // On-screen stick / buttons on phones (js/game/touchControls.js)
       const stick = !locked && touch.active && (touch.moveX !== 0 || touch.moveY !== 0);
-      const wantBoost = held('ShiftLeft') || held('ShiftRight') || (!locked && touch.boost);
       const dustCb = (x, y, count) => {
         combat.spawnDustOrSmoke(x, y, 2, count, '#a8a29e');
       };
@@ -80,7 +79,7 @@
           moveY = touch.moveY;
         }
         moving = moveX !== 0 || moveY !== 0;
-        player.stepPhysicsDirectional(moveX, moveY, wantBoost, dt, dustCb);
+        player.stepPhysicsDirectional(moveX, moveY, dt, dustCb);
       } else {
         let throttle = 0;
         if (held('KeyW') || held('ArrowUp')) throttle += 1;
@@ -95,7 +94,7 @@
           steer = touch.moveX;
         }
         moving = throttle !== 0 || steer !== 0;
-        player.stepPhysics(throttle, steer, wantBoost, dt, dustCb);
+        player.stepPhysics(throttle, steer, dt, dustCb);
       }
 
       // Camera leads the tank: it slides ahead along the hull's facing so the screen opens up in
@@ -126,7 +125,7 @@
 
       const firing = !locked && (mouse.left || keys.has('Space') || touch.fire);
       // The player is busy driving / fighting: hud.js keeps the HUD panels out of the way meanwhile
-      game.playerActing = moving || wantBoost || firing;
+      game.playerActing = moving || firing;
       if (firing) {
         const fireTarget = game.activeTarget || barrelForwardTarget(340);
         combat.fireMainCannon(player, fireTarget.x, fireTarget.y);
