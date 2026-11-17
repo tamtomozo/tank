@@ -210,8 +210,8 @@
 
 /* ================================================================ 3. in-game HUD on phones
    Landscape phone (e.g. 844 x 390):
-     top:    status + HP (left) · Mio's radio (centre) · scrap + buttons, radar below (right)
-     bottom: stick (left) · boss HP bar (centre) · main-gun button with reload ring (right) */
+     top:    status (left) · HP (centre) · scrap + buttons, radar below (right)
+     bottom: stick (left) · Mio's radio (centre) · main-gun button with reload ring (right) */
 .is-touch .hud-panel {
   padding-block: 0.35rem;
   padding-inline: 0.55rem;
@@ -335,30 +335,16 @@
   display: none;
 }
 
-/* Mio's radio: smaller, at the top between the status / HP column and the scrap / buttons column,
-   clear of the tank at screen centre (no portrait: the text gets the whole width).
-   Slides in from above. */
+/* Mio's radio: smaller, at the bottom between the stick and the buttons, clear of the tank at
+   screen centre (no portrait: the text gets the whole width) */
 .is-touch .radio-panel {
-  inset-block-start: calc(0.45rem + var(--safe-t));
-  inset-block-end: auto;
+  inset-block-end: calc(0.5rem + var(--safe-b));
   grid-template-columns: minmax(0, 1fr);
-  inline-size: min(34rem, max(16rem, calc(100vw - 33rem)));
-  transform: translate(-50%, -0.8rem);
+  inline-size: min(34rem, max(16rem, calc(100vw - 22rem - var(--safe-l) - var(--safe-r))));
   gap: 0.6rem;
   padding-block: 0.5rem;
   padding-inline: 0.65rem;
   border-radius: 0.6rem;
-}
-
-.is-touch .radio-panel.is-visible {
-  transform: translate(-50%, 0);
-}
-
-/* Wider phones: the top-right buttons show their labels, so leave them more room */
-@media (min-width: 901px) {
-  .is-touch .radio-panel {
-    inline-size: min(34rem, max(16rem, calc(100vw - 38rem)));
-  }
 }
 
 .is-touch .radio-panel > .radio-avatar {
@@ -387,10 +373,8 @@
   line-height: 1.45;
 }
 
-/* Boss HP bar: bottom centre between the stick and the buttons (the radio has the top centre) */
 .is-touch .boss-banner {
-  inset-block-start: auto;
-  inset-block-end: calc(0.6rem + var(--safe-b));
+  inset-block-start: calc(4.4rem + var(--safe-t));
   inline-size: min(60vw, 22rem);
   padding-block: 0.35rem;
 }
