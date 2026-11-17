@@ -2,7 +2,7 @@
   'use strict';
 
   // Mission flow: (re)starting a sortie at the operations HQ, Mio's radio reports on combat events,
-  // supply depots in secured districts (resupply + wingman reinforcement), the drive back to the HQ once the area
+  // supply depots in secured districts (resupply + wingman reinforcement), the drive back to the HQ once the planet
   // is secured and the end of the sortie (after-action report / game over).
 
   // Supply-depot trigger zone around a captured compound's white flag (the compound centre)
@@ -15,7 +15,7 @@
   const SCENE_SWITCH_DELAY_MS = 250;
 
   function create(game) {
-    const { world, combat, tuning, depot, squad, radio, results, areaSelect, briefing, backdrop, audio } = game;
+    const { world, combat, tuning, depot, squad, radio, results, sortieSelect, briefing, backdrop, audio } = game;
     const { start: startDialog, garage: garageDialog, gameover: gameoverDialog } = game.dialogs;
 
     // Radar-chart tuning (js/tuning.js) → the player's tank and every wingman. refill: fresh tanks
@@ -28,7 +28,7 @@
     }
 
     // New sortie: fresh tank on the HQ pad, world, platoon and clock, then the sortie-select
-    // screen (area → operation) and the briefing (where the tanks are tuned). The tuning itself
+    // screens (planet → operation) and the briefing (where the tanks are tuned). The tuning itself
     // is kept from the previous sortie.
     function start() {
       audio.init();
@@ -58,12 +58,12 @@
       game.input.release();
       // Sortie select, then the briefing (the game stays paused while either is open); the tactical
       // phase and Mio's mission-start report begin once the briefing is closed with 作戦開始.
-      // Behind them the battlefield is hidden: the operations room, then the area's tactical map.
+      // Behind them the battlefield is hidden: the operations room, then the planet's tactical map.
       backdrop.show('room');
-      areaSelect.open(openBriefing);
+      sortieSelect.open(openBriefing);
     }
 
-    // Briefing for the picked { area, operation }; 作戦選択へ goes back to that area's operation list
+    // Briefing for the picked { planet, operation }; 作戦選択へ goes back to that planet's operation list
     function openBriefing(selection) {
       game.operation = selection;
       backdrop.show('map', selection);
@@ -73,12 +73,13 @@
           backdrop.hide(); // fade out to the battlefield
           radio.say(global.RadioComms.script.missionStart(
             combat.districts.length ? combat.districts[0].name : null,
-            combat.districts.length
+            combat.districts.length,
+            selection.planet.name
           ));
         },
         onBack: () => {
           backdrop.show('room');
-          areaSelect.open(openBriefing, { areaId: selection.area.id, delayMs: SCENE_SWITCH_DELAY_MS });
+          sortieSelect.open(openBriefing, { planetId: selection.planet.id, delayMs: SCENE_SWITCH_DELAY_MS });
         }
       });
     }
@@ -139,6 +140,11 @@
       depot.open(player, combat, squad, () => game.hud.update());
     }
 
+    // Name of the planet this sortie is fought on (picked on the sortie-select screens)
+    function planetName() {
+      return game.operation ? game.operation.planet.name : '作戦区域';
+    }
+
     // Radio reports for what happened in combat this frame (compound alerted / captured, district secured)
     function handleCombatEvents() {
       for (const ev of combat.drainEvents()) {
@@ -154,7 +160,7 @@
           // only after the last of those transmissions has finished.
           const next = ev.next;
           const nextDir = next ? world.districts[next.id].dir : '';
-          const lines = global.RadioComms.script.districtSecured(ev.district.name, next ? next.name : null, nextDir);
+          const lines = global.RadioComms.script.districtSecured(ev.district.name, next ? next.name : null, nextDir, planetName());
           lines.forEach((line, i) => {
             const isLast = i === lines.length - 1;
             const opts = { lockControls: true };
@@ -172,7 +178,7 @@
     function checkReturnToHq() {
       const player = game.player;
       if (!combat.missionComplete || game.returnedToHq || !player.alive) return;
-      if (radio.controlsLocked) return; // Mio is still reporting the secured area
+      if (radio.controlsLocked) return; // Mio is still reporting the secured planet
       const hq = world.hq;
       const d = Math.hypot(world.deltaX(player.x, hq.x), world.deltaY(player.y, hq.y));
       if (d > hq.returnRadius) return;
@@ -185,11 +191,11 @@
     // End of the sortie, checked every frame
     function checkEnd() {
       const player = game.player;
-      // Back at the HQ with the area secured: the after-action report, once Mio has finished
+      // Back at the HQ with the planet secured: the after-action report, once Mio has finished
       if (game.started && !game.overShown && player.alive && game.returnedToHq && radio.isIdle) {
         game.overShown = true;
         game.input.release();
-        results.open({ stats: combat.stats, combat, squad, player, world, audio }, () => start());
+        results.open({ stats: combat.stats, combat, squad, player, world, audio, planetName: planetName() }, () => start());
       }
 
       // Tank destroyed
@@ -201,7 +207,7 @@
         badge.classList.toggle('danger', !victory);
         badge.classList.toggle('success', victory);
         document.getElementById('gameover-title').textContent = victory
-          ? `エリア1 制圧 — 全${combat.districts.length}地区を確保`
+          ? `${planetName()} 制圧 — 全${combat.districts.length}地区を確保`
           : '車体大破 — MISSION FAILED';
         document.getElementById('gameover-summary').textContent =
           `確保した地区: ${combat.districtsSecured} / ${combat.districts.length} ／ 制圧した拠点: ${combat.bases.filter((b) => b.cleared).length} / ${combat.bases.length} ／ 撃破した敵戦車: ${combat.kills} 両 ／ 残存僚機: ${combat.allies.length} 両 ／ 獲得スクラップ残高: ${combat.scrap}`;

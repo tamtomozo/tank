@@ -64,7 +64,12 @@
       combat,
       getPlayer: () => game.player
     });
-    const areaSelect = new global.AreaSelectScene(document.getElementById('area-dialog'), { audio });
+    // Sortie select: planet select → operation select, two separate windows (js/sortieSelect.js)
+    const sortieSelect = new global.SortieSelect({
+      planetDialog: document.getElementById('planet-dialog'),
+      operationDialog: document.getElementById('operation-dialog'),
+      audio
+    });
     const briefing = new global.BriefingScene(document.getElementById('briefing-dialog'), {
       world,
       combat,
@@ -100,17 +105,17 @@
       squad,
       radio,
       results,
-      areaSelect,
+      sortieSelect,
       briefing,
       backdrop,
-      operation: null, // { area, operation } picked on the sortie-select screen (js/data/operations.js)
+      operation: null, // { planet, operation } picked on the sortie-select screens (js/data/operations.js)
       player, // replaced on every (re)start
       // Camera follows the player, leading it by (lookX, lookY) along its facing (js/game/controls.js)
       cam: { x: player.x, y: player.y, lookX: 0, lookY: 0, starOffsetX: 0 },
       activeTarget: null, // enemy / prop the turret is locked onto (null = aiming straight ahead)
       started: false,
       overShown: false, // after-action report or game-over window already shown for this sortie
-      returnedToHq: false, // area secured AND the player has driven back to the operations HQ
+      returnedToHq: false, // planet secured AND the player has driven back to the operations HQ
       input: null,
       controls: null,
       mission: null,
@@ -141,7 +146,7 @@
       lastTime = now;
       frameNo += 1;
 
-      const menuOpen = !game.started || dialogs.start.open || areaSelect.isOpen || briefing.isOpen || dialogs.garage.open || dialogs.gameover.open || results.isOpen;
+      const menuOpen = !game.started || dialogs.start.open || sortieSelect.isOpen || briefing.isOpen || dialogs.garage.open || dialogs.gameover.open || results.isOpen;
       // Phones held upright: everything waits behind the "turn sideways" screen (landscape only)
       const paused = game.touchUi.update(menuOpen) || menuOpen;
       // While Mio reports a secured district (controls locked) the in-game clock and the mission

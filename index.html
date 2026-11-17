@@ -21,7 +21,7 @@
   <link rel="stylesheet" href="css/dialogs.css">
   <link rel="stylesheet" href="css/hudframe.css">
   <link rel="stylesheet" href="css/briefing.css">
-  <link rel="stylesheet" href="css/areaselect.css">
+  <link rel="stylesheet" href="css/sortieselect.css">
   <link rel="stylesheet" href="css/results.css">
   <link rel="stylesheet" href="css/depot.css">
   <link rel="stylesheet" href="css/tuning.css">
@@ -58,7 +58,10 @@
   <script src="js/depot.js" defer></script>
   <script src="js/tacticalMap.js" defer></script>
   <script src="js/hqBackdrop.js" defer></script>
-  <script src="js/areaSelect.js" defer></script>
+  <script src="js/planetGlobe.js" defer></script>
+  <script src="js/sortieSelect.js" defer></script>
+  <script src="js/planetSelect.js" defer></script>
+  <script src="js/operationSelect.js" defer></script>
   <script src="js/briefing.js" defer></script>
   <script src="js/results.js" defer></script>
   <!-- the running game (js/game/) and its entry point -->
@@ -219,7 +222,7 @@
       <h1 id="start-title" class="dialog-main-title">PLANET PANZER</h1>
       <p class="dialog-lead">
         奥行きに惑星の地平線が広がり、上下左右がシームレスに繋がる戦場を2D戦車で駆け抜けろ！<br>
-        エリア1は3つの地区からなる。地区内の敵拠点をすべて制圧して地区を確保し、次の地区へ進め。
+        惑星アリダの戦場は3つの地区からなる。地区内の敵拠点をすべて制圧して地区を確保し、次の地区へ進め。
       </p>
       <div class="briefing-grid">
         <div class="briefing-card">
@@ -236,7 +239,7 @@
           <ul>
             <li>マップは上下・左右すべてループ連結（無限周回）</li>
             <li>ジャンプ台に勢いよく進入すると空中に跳躍する</li>
-            <li>エリア1＝3地区（各2拠点）。地区を確保すると次の地区が解放される</li>
+            <li>惑星アリダ＝3地区（各2拠点）。地区を確保すると次の地区が解放される</li>
             <li>戦車はブリーフィングの「車両調整」で、レーダーチャートにポイントを配分して調整する（自機・僚機）</li>
             <li>地区を確保すると、その地区の拠点の白旗まわりの円に入るたびに補給・僚機補充メニューが開く（補給はここでのみ）</li>
             <li>敵・クレート破壊でスクラップ＆修理キット回収</li>
@@ -258,18 +261,18 @@
   </dialog>
 
   <!-- Backdrop of the pre-sortie windows (js/hqBackdrop.js): operations room behind the sortie
-       select, full-screen tactical map of the area behind the briefing -->
+       select, full-screen tactical map of the planet behind the briefing -->
   <div id="hq-backdrop" class="hq-backdrop" data-mode="room" aria-hidden="true">
     <canvas class="hq-bd-layer hq-bd-room"></canvas>
     <canvas class="hq-bd-layer hq-bd-map"></canvas>
     <div class="hq-bd-caption">
-      <span id="hq-bd-area" class="hq-bd-caption-area"></span>
+      <span id="hq-bd-planet" class="hq-bd-caption-planet"></span>
       <span id="hq-bd-op" class="hq-bd-caption-op"></span>
     </div>
   </div>
 
   <!-- First-load "click to connect" screen: the browser keeps audio muted until the first click /
-       key press, so the sortie select (and its BGM) waits for one (js/areaSelect.js).
+       key press, so the sortie select (and its BGM) waits for one (js/sortieSelect.js).
        Shown from the first paint so the page starts on a black screen; hidden by JS if not needed. -->
   <div id="audio-gate" class="audio-gate" role="status">
     <div class="audio-gate-panel">
@@ -296,8 +299,8 @@
     <p class="rotate-notice-hint">このゲームは横向き専用です。横にすると再開します。</p>
   </div>
 
-  <!-- Sortie select: area → operation, then the briefing (contents built by js/areaSelect.js) -->
-  <dialog id="area-dialog" class="game-dialog area-dialog has-hud-frame" aria-labelledby="area-title">
+  <!-- Sortie select ①: planet select (cards built by js/planetSelect.js, flow in js/sortieSelect.js) -->
+  <dialog id="planet-dialog" class="game-dialog sortie-dialog has-hud-frame" aria-labelledby="planet-title">
     <div class="hud-frame" aria-hidden="true">
       <span class="bf-scan"></span>
       <span class="bf-edge bf-top"></span>
@@ -309,27 +312,21 @@
       <span class="bf-corner bf-br"></span>
       <span class="bf-corner bf-bl"></span>
     </div>
-    <div class="dialog-shell area-shell">
-      <header class="area-header hud-boot" style="--boot-i: 0">
+    <div class="dialog-shell sortie-shell">
+      <header class="sortie-header hud-boot" style="--boot-i: 0">
         <div>
-          <div class="dialog-badge">OPERATIONS HQ — SORTIE SELECT</div>
-          <h2 id="area-title" class="briefing-title">作戦選択</h2>
+          <div class="dialog-badge">OPERATIONS HQ — PLANET SELECT</div>
+          <h2 id="planet-title" class="briefing-title">惑星選択</h2>
         </div>
-        <ol class="area-flow" aria-label="出撃までの手順">
-          <li class="area-flow-step is-active" aria-current="step">① エリア選択</li>
-          <li class="area-flow-step">② 作戦選択</li>
-          <li class="area-flow-step">③ ブリーフィング</li>
+        <ol class="sortie-flow" aria-label="出撃までの手順">
+          <li class="sortie-flow-step is-active" aria-current="step">① 惑星選択</li>
+          <li class="sortie-flow-step">② 作戦選択</li>
+          <li class="sortie-flow-step">③ ブリーフィング</li>
         </ol>
       </header>
 
-      <div class="area-body hud-boot" style="--boot-i: 1">
-        <section id="area-phase-area" class="area-phase" aria-label="エリア選択">
-          <div id="area-list" class="area-list"></div>
-        </section>
-        <section id="area-phase-op" class="area-phase" aria-label="作戦選択" hidden>
-          <p id="area-op-context" class="area-op-context"></p>
-          <div id="op-list" class="op-list"></div>
-        </section>
+      <div class="sortie-body hud-boot" style="--boot-i: 1">
+        <div id="planet-list" class="planet-list" aria-label="惑星一覧"></div>
       </div>
 
       <div class="briefing-mio hud-boot" style="--boot-i: 2">
@@ -348,13 +345,67 @@
             <span class="radio-callsign">HQ</span>
             <span class="radio-name">オペレーター ミオ</span>
           </div>
-          <p id="area-mio-text" class="briefing-mio-text" aria-hidden="true"></p>
-          <span id="area-mio-sr" class="sr-only" aria-live="polite"></span>
+          <p class="briefing-mio-text" aria-hidden="true"></p>
+          <span class="briefing-mio-sr sr-only" aria-live="polite"></span>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Sortie select ②: operations on the picked planet (js/operationSelect.js), then the briefing -->
+  <dialog id="operation-dialog" class="game-dialog sortie-dialog has-hud-frame" aria-labelledby="operation-title">
+    <div class="hud-frame" aria-hidden="true">
+      <span class="bf-scan"></span>
+      <span class="bf-edge bf-top"></span>
+      <span class="bf-edge bf-right"></span>
+      <span class="bf-edge bf-bottom"></span>
+      <span class="bf-edge bf-left"></span>
+      <span class="bf-corner bf-tl"></span>
+      <span class="bf-corner bf-tr"></span>
+      <span class="bf-corner bf-br"></span>
+      <span class="bf-corner bf-bl"></span>
+    </div>
+    <div class="dialog-shell sortie-shell">
+      <header class="sortie-header hud-boot" style="--boot-i: 0">
+        <div>
+          <div class="dialog-badge">OPERATIONS HQ — SORTIE SELECT</div>
+          <h2 id="operation-title" class="briefing-title">作戦選択</h2>
+        </div>
+        <ol class="sortie-flow" aria-label="出撃までの手順">
+          <li class="sortie-flow-step is-done">① 惑星選択</li>
+          <li class="sortie-flow-step is-active" aria-current="step">② 作戦選択</li>
+          <li class="sortie-flow-step">③ ブリーフィング</li>
+        </ol>
+      </header>
+
+      <div class="sortie-body hud-boot" style="--boot-i: 1">
+        <div id="operation-planet" class="operation-planet"></div>
+        <div id="op-list" class="op-list" aria-label="作戦一覧"></div>
+      </div>
+
+      <div class="briefing-mio hud-boot" style="--boot-i: 2">
+        <div class="radio-avatar" aria-hidden="true">
+          <svg viewBox="0 0 40 40">
+            <circle cx="20" cy="17" r="8" fill="currentColor"/>
+            <path d="M7 39c1-8 6-12 13-12s12 4 13 12Z" fill="currentColor"/>
+            <path d="M10 18a10 10 0 0 1 20 0" fill="none" stroke="#fde68a" stroke-width="2.4"/>
+            <rect x="8" y="16" width="4" height="7" rx="1.5" fill="#fde68a"/>
+            <rect x="28" y="16" width="4" height="7" rx="1.5" fill="#fde68a"/>
+            <path d="M30 22c0 4-3 6-7 6" fill="none" stroke="#fde68a" stroke-width="1.8"/>
+          </svg>
+        </div>
+        <div class="briefing-mio-body">
+          <div class="radio-header">
+            <span class="radio-callsign">HQ</span>
+            <span class="radio-name">オペレーター ミオ</span>
+          </div>
+          <p class="briefing-mio-text" aria-hidden="true"></p>
+          <span class="briefing-mio-sr sr-only" aria-live="polite"></span>
         </div>
       </div>
 
-      <div class="dialog-footer-actions area-footer hud-boot" style="--boot-i: 3">
-        <button type="button" id="area-back" class="btn-hud" hidden>◀ エリア選択に戻る <kbd>ESC</kbd></button>
+      <div class="dialog-footer-actions sortie-footer hud-boot" style="--boot-i: 3">
+        <button type="button" id="operation-back" class="btn-hud">◀ 惑星選択に戻る <kbd>ESC</kbd></button>
       </div>
     </div>
   </dialog>
@@ -377,7 +428,7 @@
       <header class="briefing-header hud-boot" style="--boot-i: 0">
         <div>
           <div class="dialog-badge">OPERATIONS HQ — BRIEFING</div>
-          <h2 id="briefing-title" class="briefing-title">作戦本部 ブリーフィング — エリア1</h2>
+          <h2 id="briefing-title" class="briefing-title">作戦本部 ブリーフィング</h2>
         </div>
         <nav class="briefing-steps" aria-label="ブリーフィング項目">
           <button type="button" class="briefing-step" aria-selected="true">① 司令書</button>

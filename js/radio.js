@@ -132,9 +132,9 @@
 
   // Report scripts (original lines for this game's HQ operator, Mio)
   RadioComms.script = {
-    missionStart(firstDistrict, districtCount) {
+    missionStart(firstDistrict, districtCount, planetName) {
       if (!firstDistrict) return 'こちら作戦本部、オペレーターのミオです。周辺に敵影はありません。自由に走行してください。';
-      return `こちら作戦本部、オペレーターのミオです。作戦を開始します。まずは${firstDistrict}の敵拠点を制圧してください。エリア1は全${districtCount}地区です。`;
+      return `こちら作戦本部、オペレーターのミオです。作戦を開始します。まずは${firstDistrict}の敵拠点を制圧してください。${planetName}の作戦区域は全${districtCount}地区です。`;
     },
 
     controlMode(isDirect) {
@@ -158,11 +158,11 @@
     // District secured: a short "◯は△です" line first, then the follow-up details as separate
     // transmissions, in order. Returns an array of lines. After the last district the platoon is
     // ordered back to the operations HQ.
-    districtSecured(districtName, next, nextDir) {
+    districtSecured(districtName, next, nextDir, planetName) {
       if (!next) {
         return [
           `${districtName}は確保完了です。`,
-          'エリア1は全地区制圧です。現刻をもって作戦行動完了です。',
+          `${planetName}は全地区制圧です。現刻をもって作戦行動完了です。`,
           '作戦本部へ帰還してください、隊長。本部の位置を送ります。'
         ];
       }
@@ -173,7 +173,7 @@
       ];
     },
 
-    // The player has driven back onto the HQ pad after securing the area
+    // The player has driven back onto the HQ pad after securing the planet
     hqReturned() {
       return '作戦本部への帰還を確認しました。お疲れさまでした、隊長。';
     },

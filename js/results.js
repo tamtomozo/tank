@@ -1,8 +1,8 @@
 (function (global) {
   'use strict';
 
-  // After-action report shown once the whole area has been secured and the platoon is back at the
-  // operations HQ (and Mio's final report ended). Mission time runs until the moment the area was
+  // After-action report shown once the whole planet has been secured and the platoon is back at the
+  // operations HQ (and Mio's final report ended). Mission time runs until the moment the planet was
   // secured; the drive back isn't counted.
   // Overall rank, mission time, per-district times, kills, accuracy, damage, platoon losses,
   // scrap and items, plus a closing comment from Mio typed out one character at a time.
@@ -12,11 +12,12 @@
   const OPEN_DELAY_MS = 700; // pause after Mio's final report before the window starts drawing
   const BOOT_INTRO_MS = 1900; // frame + contents reveal (css/hudframe.css) before Mio comments
 
+  // Mio's closing comment per rank (planet: name of the planet the sortie was fought on)
   const MIO_COMMENTS = {
-    S: '見事な指揮でした、隊長。損害を最小限に抑えた、完璧な作戦です。',
-    A: '作戦成功です。小隊の連携も上々でした。お疲れさまでした、隊長。',
-    B: 'エリア1の制圧を確認しました。課題は残りますが、任務は完遂です。',
-    C: 'なんとか制圧できましたね……次は損害をもっと抑えましょう、隊長。'
+    S: () => '見事な指揮でした、隊長。損害を最小限に抑えた、完璧な作戦です。',
+    A: () => '作戦成功です。小隊の連携も上々でした。お疲れさまでした、隊長。',
+    B: (planet) => `${planet}の制圧を確認しました。課題は残りますが、任務は完遂です。`,
+    C: () => 'なんとか制圧できましたね……次は損害をもっと抑えましょう、隊長。'
   };
 
   // Tactical play time (real seconds) expressed as in-game time: one in-game day lasts
@@ -75,7 +76,7 @@
       return this.dialog.open || this._openTimer != null;
     }
 
-    // data: { stats, combat, squad, player, world, audio }
+    // data: { stats, combat, squad, player, world, audio, planetName }
     open(data, onRestart) {
       this.onRestart = onRestart;
       const { stats, combat, squad, player, world } = data;
@@ -99,7 +100,7 @@
       const capturedBases = combat.bases.filter((b) => b.cleared).length;
       // In-game clock time at which each district was secured
       const districtLines = combat.districts.map((d) => `${d.name}　${stampText(stats.districtClock[d.id])}`);
-      const endStamp = stats.endClock || { day: t.day, clock: t.clockText }; // moment the area was secured
+      const endStamp = stats.endClock || { day: t.day, clock: t.clockText }; // moment the planet was secured
       const accuracyPct = Math.round(r.accuracy * 100);
       const aliveAllies = combat.allies.filter((a) => a.alive).length;
 
@@ -125,7 +126,7 @@
 
       this.mioText.textContent = '';
       if (this.dialog.open) {
-        this._say(MIO_COMMENTS[r.rank], data.audio);
+        this._say(MIO_COMMENTS[r.rank](data.planetName), data.audio);
         return;
       }
       // Hold a moment, then draw the HUD frame first and reveal the contents (see css/hudframe.css)
@@ -134,7 +135,7 @@
         this._openTimer = null;
         global.HudFrame.boot(this.dialog);
         this.dialog.showModal();
-        this._say(MIO_COMMENTS[r.rank], data.audio, BOOT_INTRO_MS);
+        this._say(MIO_COMMENTS[r.rank](data.planetName), data.audio, BOOT_INTRO_MS);
       }, OPEN_DELAY_MS);
     }
 

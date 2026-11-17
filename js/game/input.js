@@ -10,7 +10,7 @@
   //   input.release()   forget every held key / button (menus opening, restarts, window blur)
 
   function create(game) {
-    const { canvas, audio, radio, areaSelect, briefing, results } = game;
+    const { canvas, audio, radio, sortieSelect, briefing, results } = game;
     const { start: startDialog, garage: garageDialog, gameover: gameoverDialog } = game.dialogs;
 
     const keys = new Set();
@@ -76,7 +76,7 @@
     const toggleControlMode = () => {
       input.controlMode = input.controlMode === 'tank' ? 'direct' : 'tank';
       syncControlModeUI();
-      if (game.started && !startDialog.open && !areaSelect.isOpen && !briefing.isOpen && !garageDialog.open && !gameoverDialog.open) {
+      if (game.started && !startDialog.open && !sortieSelect.isOpen && !briefing.isOpen && !garageDialog.open && !gameoverDialog.open) {
         radio.say(global.RadioComms.script.controlMode(input.controlMode === 'direct'), { key: 'control-mode', priority: 'high' });
       }
     };
@@ -106,7 +106,7 @@
     });
 
     window.addEventListener('keydown', (e) => {
-      if (areaSelect.isOpen || briefing.isOpen || results.isOpen) return; // these screens handle their own keys
+      if (sortieSelect.isOpen || briefing.isOpen || results.isOpen) return; // these screens handle their own keys
       const code = e.code;
       // Tab would move the focus onto a HUD button, which Space would then press
       if (code === 'Tab') {

@@ -1,6 +1,6 @@
 /* Backdrop of the pre-sortie windows — js/hqBackdrop.js.
    Covers the battlefield (and the in-game HUD) with the operations room during the sortie select,
-   and with the area's tactical map during the briefing. The "click to connect" screen
+   and with the planet's tactical map during the briefing. The "click to connect" screen
    (#audio-gate, z-index 50) and the modal dialogs (top layer) sit above it. */
 
 .hq-backdrop {
@@ -53,7 +53,7 @@
   opacity: 1;
 }
 
-.hq-bd-caption-area {
+.hq-bd-caption-planet {
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--accent-bright);
@@ -65,7 +65,7 @@
 }
 
 /* Lighter dimming behind the sortie select and the briefing, so the room / map stay visible */
-dialog.area-dialog::backdrop,
+dialog.sortie-dialog::backdrop,
 dialog.briefing-dialog::backdrop {
   background: rgb(3 7 15 / 0.35);
   backdrop-filter: blur(1.5px);
@@ -73,7 +73,7 @@ dialog.briefing-dialog::backdrop {
 
 /* Phones / small windows: no full-screen blur over the animated room / map (see dialogs.css) */
 @media (pointer: coarse), (max-width: 960px), (max-height: 560px) {
-  dialog.area-dialog::backdrop,
+  dialog.sortie-dialog::backdrop,
   dialog.briefing-dialog::backdrop {
     backdrop-filter: none;
     background: rgb(3 7 15 / 0.42);

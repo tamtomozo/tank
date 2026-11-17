@@ -1,0 +1,63 @@
+(function (global) {
+  'use strict';
+
+  // ① Planet select (#planet-dialog): one card per planet with its turning globe
+  // (js/planetGlobe.js). Locked planets are shown but can't be picked. Picking a planet closes this
+  // screen; js/sortieSelect.js then opens that planet's operation list (js/operationSelect.js).
+  // Esc does nothing here: there is no sortie without a planet.
+
+  const { PLANETS } = global.GameData; // js/data/operations.js
+  const { el } = global.TankUtil;
+
+  class PlanetSelectScene extends global.SortieScreen {
+    constructor(dialog, audio) {
+      super(dialog, audio);
+      this.list = dialog.querySelector('#planet-list');
+      this.focusId = null; // planet whose card gets the keyboard focus
+    }
+
+    // focusId: planet the player just came back from (keeps the focus on its card)
+    open(focusId, delayMs) {
+      this.focusId = focusId != null ? focusId : (PLANETS.find((p) => p.available) || {}).id;
+      this.list.replaceChildren(...PLANETS.map((planet) => this._card(planet)));
+      this.show(delayMs, (sayDelayMs) => {
+        const focus = this.list.querySelector(`[data-planet-id="${this.focusId}"]`);
+        if (focus) focus.focus();
+        const ready = PLANETS.filter((p) => p.available).map((p) => p.name).join('、');
+        this.say(`隊長、出撃する惑星を選択してください。現在、出撃可能なのは${ready}です。`, sayDelayMs);
+      });
+    }
+
+    _card(planet) {
+      const card = el('button', `planet-card${planet.available ? '' : ' is-locked'}`);
+      card.type = 'button';
+      card.dataset.planetId = String(planet.id);
+      card.disabled = !planet.available;
+
+      const head = el('div', 'planet-card-head');
+      head.append(
+        el('span', 'sortie-code', planet.code),
+        el('span', `planet-card-state${planet.available ? '' : ' is-locked'}`, planet.available ? '出撃可能' : '未解放')
+      );
+      const info = el('div', 'planet-card-info');
+      info.append(
+        head,
+        el('strong', 'planet-card-name', planet.name),
+        el('span', 'planet-card-terrain', `地形: ${planet.terrain}`),
+        el('p', 'planet-card-summary', planet.summary),
+        el('p', 'planet-card-ops', planet.available ? `作戦 ${planet.operations.length} 件` : '作戦なし')
+      );
+      card.append(global.PlanetGlobe.create(planet), info);
+
+      if (planet.available) {
+        card.addEventListener('click', () => {
+          this.focusId = planet.id;
+          this.finish({ planet });
+        });
+      }
+      return card;
+    }
+  }
+
+  global.PlanetSelectScene = PlanetSelectScene;
+})(window);

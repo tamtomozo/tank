@@ -4,7 +4,7 @@
   // Pre-operation briefing scene, shown before the tactical phase of every sortie.
   // Five steps: strategic situation, operation (start time, districts & compounds), tank tuning
   // (radar charts, js/tuningPanel.js), enemy intel, terrain.
-  // Left: a tactical map of the whole area (highlighting what the current step talks about).
+  // Left: a tactical map of the whole battlefield (highlighting what the current step talks about).
   // Right: the details for the step. Bottom: Mio narrates each step.
 
   // 'tactical' = start time followed by districts & compounds (in that order)
@@ -52,8 +52,8 @@
       this.onStart = null;
       this.onBack = null;
       this._openTimer = null;
-      // Area + operation picked on the sortie-select screen (js/areaSelect.js, js/data/operations.js)
-      this.area = null;
+      // Planet + operation picked on the sortie-select screens (js/sortieSelect.js, js/data/operations.js)
+      this.planet = null;
       this.operation = null;
 
       this.tabs.forEach((tab, i) => tab.addEventListener('click', () => this.goTo(i)));
@@ -80,14 +80,14 @@
       return this.dialog.open || this._openTimer != null;
     }
 
-    // selection = { area, operation } from the sortie-select screen.
+    // selection = { planet, operation } from the sortie-select screens.
     // onStart: 作戦開始 (or Esc) / onBack: 作戦選択へ
     open(selection, { onStart = null, onBack = null, delayMs = OPEN_DELAY_MS } = {}) {
-      this.area = selection.area;
+      this.planet = selection.planet;
       this.operation = selection.operation;
       this.onStart = onStart;
       this.onBack = onBack;
-      this.titleEl.textContent = `作戦本部 ブリーフィング — ${this.area.name}「${this.operation.name}」`;
+      this.titleEl.textContent = `作戦本部 ブリーフィング — ${this.planet.name}「${this.operation.name}」`;
       this._buildPanels();
       this.tuningPanel.render();
       if (this.dialog.open) {
@@ -188,9 +188,9 @@
           const t = this.world.getTimeInfo();
           const target = st.objective || d0;
           const names = target ? target.baseIds.map((id) => this.combat.bases[id].name).join('と') : '';
-          return `作戦名は「${this.operation.name}」、目標は${this.area.name}の${this.combat.districts.length}地区の制圧です。`
+          return `作戦名は「${this.operation.name}」、目標は${this.planet.name}の${this.combat.districts.length}地区の制圧です。`
             + `戦術行動の開始はDAY ${t.day}の${t.clockText}、${t.phaseName}です。`
-            + `作戦区域は${this.area.name}、${this.combat.districts.length}つの地区に分かれています。${target ? `${target.name}の拠点${names}を制圧してください。` : ''}`
+            + `作戦区域は${this.planet.name}、${this.combat.districts.length}つの地区に分かれています。${target ? `${target.name}の拠点${names}を制圧してください。` : ''}`
             + '後続の地区は、前の地区を確保すると解放されます。'
             + '全地区を制圧した時点で作戦時間が確定します。その後は、この作戦本部まで帰還してください。';
         }
@@ -221,7 +221,7 @@
       const target = st.objective || combat.districts[0];
       const statusBox = this.dialog.querySelector('#briefing-status');
       statusBox.replaceChildren(
-        el('p', 'scenario-prehead', `${this.area.name}奪還作戦に臨む、第1機甲小隊の全戦車兵へ`),
+        el('p', 'scenario-prehead', `${this.planet.name}奪還作戦に臨む、第1機甲小隊の全戦車兵へ`),
         el('h4', 'scenario-catch', 'この荒野を取り戻すのは、君たちの履帯だ。'),
         el('p', 'scenario-deck',
           `敵は${st.districtCount}つの地区に${st.baseCount}つの拠点を築き、勝利を確信している。`
@@ -229,7 +229,7 @@
         el('p', 'scenario-lead',
           'この作戦は、最前線で砲火をくぐる諸君のためにある。'
           + `まず${target ? target.name : '第1地区'}の敵拠点を叩け。確保した地区は諸君の補給線となり、失った僚機を補う。`
-          + `拠点を落とすたびに前線は押し上がり、${st.districtCount}地区すべてを制圧したとき、${this.area.name}は再び我々の大地となる。`
+          + `拠点を落とすたびに前線は押し上がり、${st.districtCount}地区すべてを制圧したとき、${this.planet.name}は再び我々の大地となる。`
           + `作戦名「${this.operation.name}」――その鉄槌を振るうのは、諸君だ。`)
       );
 
@@ -272,7 +272,7 @@
           ['強み', '機動力と連携。確保した地区での補給と僚機補充'],
           ['弱み', '数で劣る。補給は地区を確保するまで受けられない']
         ]),
-        side('is-enemy', `敵軍　${this.area.name}守備隊`, [
+        side('is-enemy', `敵軍　${this.planet.name}守備隊`, [
           ['兵力', `戦車 約${pb.enemyTanks} 両・トーチカ 約${pb.enemyBunkers} 基（推定）`],
           ['強み', '数と、トーチカに守られた拠点の防御'],
           ['弱み', `${pb.districts}地区・${pb.enemyBases}拠点に分散。待機中は動かない`]
@@ -444,7 +444,7 @@
         g.fillText(label, px + 10, py + 4);
       }
 
-      // Operations HQ: where the sortie starts and where the platoon returns once the area is secured
+      // Operations HQ: where the sortie starts and where the platoon returns once the planet is secured
       const hq = world.hq;
       const hx = hq.x * k;
       const hy = hq.y * k;

@@ -4,7 +4,7 @@
   // Full-screen backdrop behind the pre-sortie windows, hiding the battlefield until the operation
   // starts (driven by js/game/mission.js):
   //   'room'  the operations-meeting room — "click to connect" screen and the sortie select
-  //   'map'   full-screen tactical map of the picked area — the briefing
+  //   'map'   full-screen tactical map of the picked planet — the briefing
   // show() crossfades between the two; hide() fades out to the battlefield (作戦開始).
   // Each scene is one canvas: the still parts are pre-rendered once per size, the moving parts
   // (holo table, wall screens, radar sweep, compound pulses) are drawn every frame while visible.
@@ -39,7 +39,7 @@
 
       this.roomCanvas = root.querySelector('.hq-bd-room');
       this.mapCanvas = root.querySelector('.hq-bd-map');
-      this.captionArea = root.querySelector('#hq-bd-area');
+      this.captionPlanet = root.querySelector('#hq-bd-planet');
       this.captionOp = root.querySelector('#hq-bd-op');
 
       this.mode = null; // 'room' | 'map' | null (hidden)
@@ -65,7 +65,7 @@
       return this.mode != null && performance.now() - this.shownAt > FADE_MS;
     }
 
-    // selection = { area, operation } for the map caption
+    // selection = { planet, operation } for the map caption
     show(mode, selection = null) {
       const now = performance.now();
       if (this.mode == null) this.shownAt = now;
@@ -74,8 +74,8 @@
       if (mode === 'map') {
         this.map = null; // the districts / compounds may have changed since the last briefing
         if (selection) {
-          const { area, operation } = selection;
-          this.captionArea.textContent = `${area.code} — ${area.name}（${area.terrain}）`;
+          const { planet, operation } = selection;
+          this.captionPlanet.textContent = `${planet.code} — ${planet.name}（${planet.terrain}）`;
           this.captionOp.textContent = `作戦「${operation.name}」 TACTICAL MAP`;
         }
       }
@@ -476,7 +476,7 @@
         g.fill();
       }
 
-      // Holo table: light column and the area's terrain turning above it
+      // Holo table: light column and the planet's terrain turning above it
       const { cx: tx, cy: ty, rx, ry } = table;
       const hs = Math.min(rx * 0.8, H * 0.2); // half-size of the holo terrain
       const baseY = ty - ry * 0.2;
@@ -543,7 +543,7 @@
     }
 
     // ================================================================ tactical map (briefing)
-    // The whole area scaled to cover the screen: districts, terrain, compounds, the HQ and the
+    // The whole battlefield scaled to cover the screen: districts, terrain, compounds, the HQ and the
     // platoon, under a coordinate grid; a radar sweep crosses it and the enemy compounds pulse.
     _buildMap() {
       const W = this.w;

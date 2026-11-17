@@ -400,7 +400,7 @@
     border-radius: 0.6rem;
   }
 
-  dialog.area-dialog,
+  dialog.sortie-dialog,
   dialog.briefing-dialog,
   dialog.results-dialog {
     inline-size: calc(100dvw - 1rem - var(--safe-l) - var(--safe-r));
@@ -416,7 +416,7 @@
   }
 
   .briefing-shell,
-  .area-shell,
+  .sortie-shell,
   .results-shell {
     gap: 0.65rem;
   }
@@ -436,7 +436,7 @@
   }
 
   .briefing-header,
-  .area-header {
+  .sortie-header {
     gap: 0.45rem;
   }
 
@@ -446,7 +446,7 @@
   }
 
   .briefing-step,
-  .area-flow-step {
+  .sortie-flow-step {
     font-size: 0.74rem;
     padding-block: 0.3rem;
     padding-inline: 0.55rem;
@@ -523,12 +523,36 @@
     border-block-start: 1px solid rgb(148 180 218 / 0.2);
   }
 
-  .area-body {
-    min-block-size: 0;
+  /* (not 0: the grid row would then shrink under the cards and the Mio panel would overlap them;
+     the window scrolls instead) */
+  .sortie-body {
+    min-block-size: auto;
   }
 
-  .area-card {
+  .planet-card {
+    gap: 0.55rem;
     padding: 0.7rem 0.8rem;
+  }
+
+  .planet-card .planet-globe {
+    --globe-size: 4.6rem;
+  }
+
+  .planet-card-name {
+    font-size: 1.05rem;
+  }
+
+  .planet-card-summary {
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+
+  .operation-planet {
+    margin-block-end: 0.55rem;
+  }
+
+  .planet-globe.is-small {
+    --globe-size: 2.6rem;
   }
 
   .op-card {
@@ -575,7 +599,7 @@
   }
 
   .briefing-header > div,
-  .area-header > div {
+  .sortie-header > div {
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
@@ -585,7 +609,7 @@
 
 /* Upright phone: everything in one column */
 @media (max-width: 640px) {
-  .area-list,
+  .planet-list,
   .tuning-grid {
     grid-template-columns: minmax(0, 1fr);
   }
