@@ -14,6 +14,9 @@
      Both sides keep the same small margin instead. */
   --safe-r: 0px;
   --safe-l: 0px;
+  /* Menu windows: the cutout side's width on both sides, so the window stays centred
+     and clear of the camera whichever way the phone is turned */
+  --safe-x: max(env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
 }
 
 /* Texts that differ between mouse / keyboard and touch screens */
@@ -395,7 +398,7 @@
 /* ================================================================ 4. menu windows on small screens */
 @media (max-width: 640px), (max-height: 560px) {
   dialog.game-dialog {
-    max-inline-size: calc(100dvw - 1rem - var(--safe-l) - var(--safe-r));
+    max-inline-size: calc(100dvw - 1rem - 2 * var(--safe-x));
     max-block-size: calc(100dvb - 1rem - var(--safe-t) - var(--safe-b));
     border-radius: 0.6rem;
   }
@@ -403,11 +406,11 @@
   dialog.sortie-dialog,
   dialog.briefing-dialog,
   dialog.results-dialog {
-    inline-size: calc(100dvw - 1rem - var(--safe-l) - var(--safe-r));
+    inline-size: calc(100dvw - 1rem - 2 * var(--safe-x));
   }
 
   dialog.garage-dialog {
-    inline-size: min(calc(100dvw - 1rem - var(--safe-l) - var(--safe-r)), 42rem);
+    inline-size: min(calc(100dvw - 1rem - 2 * var(--safe-x)), 42rem);
   }
 
   .dialog-shell {
