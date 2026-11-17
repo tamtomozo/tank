@@ -17,7 +17,8 @@
 
     init() {
       if (this.ctx) {
-        if (this.ctx.state === 'suspended') {
+        // 'interrupted' = iOS Safari after a call / other app took the audio session
+        if (this.ctx.state === 'suspended' || this.ctx.state === 'interrupted') {
           this.ctx.resume().catch(() => {});
         }
         return;
@@ -65,7 +66,27 @@
       this.clatterGain.connect(this.master);
       this.clatterOsc.start();
 
+      // Silence everything while the tab / app is in the background: the engine drone keeps its
+      // last level once requestAnimationFrame stops, and the BGM scheduler runs on setInterval.
+      // Suspending the whole context stops both; it is resumed when the page is shown again.
+      if (global.document) {
+        global.document.addEventListener('visibilitychange', () => this._onVisibilityChange());
+      }
+
       if (this._bgmWanted) this.startBriefingBgm();
+    }
+
+    _onVisibilityChange() {
+      if (!this.ctx) return;
+      if (global.document.hidden) {
+        if (this.ctx.state === 'running') {
+          this._suspendedByHide = true;
+          this.ctx.suspend().catch(() => {});
+        }
+      } else if (this._suspendedByHide) {
+        this._suspendedByHide = false;
+        this.ctx.resume().catch(() => {});
+      }
     }
 
     // True once the AudioContext is actually producing sound. Browsers keep a context created
