@@ -190,7 +190,7 @@
     // garrison notices the player, ALERT_RADIUS = 650 in combat/bases.js), then linearly smaller
     // outwards, down to FORT_SIZE_FAR at FORT_FAR (about the farthest an on-screen fort can be)
     // and on until the floor FORT_SIZE_MIN
-    const FORT_PEAK = 800;
+    const FORT_PEAK = 1000;
     const FORT_SIZE_MAX = 1.8;
     const FORT_FAR = 1300;
     const FORT_SIZE_FAR = 0.6;
