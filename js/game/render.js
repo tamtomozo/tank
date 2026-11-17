@@ -77,7 +77,7 @@
     // Icon glyphs and name labels are painted once into small sprites and stamped from there.
     // They bob and throb, i.e. are drawn at a slightly different size every frame, and outlined
     // text in particular is expensive to rasterise afresh at each size.
-    const SPRITE_RES = 5; // sprite pixels per icon unit (fort icons show at up to ~2.4x on 2x screens)
+    const SPRITE_RES = 6; // sprite pixels per icon unit (fort icons show at up to ~3x on 2x screens)
     const ICON_BOX = { x: -20, y: -24, w: 40, h: 44 }; // glyph bounds incl. outline (icon units)
     const LABEL_FONT = '800 11px system-ui, "Segoe UI", sans-serif';
     const sprites = new Map();
@@ -185,19 +185,24 @@
       return centreScaleCache.scale;
     }
 
-    // Fort icon size: linear in the player's distance to the compound, with no plateau, so two
-    // forts can be compared at a glance (FORT_SIZE_AT_0 on top of the player, FORT_SIZE_SLOPE less
-    // per world unit; on-screen forts are at most ~1300 away, the floor only guards odd cases)
-    const FORT_SIZE_AT_0 = 1.5;
-    const FORT_SIZE_SLOPE = 1 / 1500;
-    const FORT_SIZE_MIN = 0.3;
+    // Fort icon size by the player's distance to the compound, so two forts can be compared at a
+    // glance: largest (FORT_SIZE_MAX) from the line where the garrison notices the player
+    // (ALERT_RADIUS) inwards, then linearly smaller outwards, down to FORT_SIZE_FAR at FORT_FAR
+    // (about the farthest an on-screen fort can be) and on until the floor FORT_SIZE_MIN
+    const FORT_ALERT_LINE = global.CombatManager.ALERT_RADIUS;
+    const FORT_SIZE_MAX = 1.8;
+    const FORT_FAR = 1300;
+    const FORT_SIZE_FAR = 0.6;
+    const FORT_SIZE_SLOPE = (FORT_SIZE_MAX - FORT_SIZE_FAR) / (FORT_FAR - FORT_ALERT_LINE);
+    const FORT_SIZE_MIN = 0.45;
 
     // Fort icon above a compound centre; the closer the player, the bigger.
     // Red while the garrison waits; pulses red/orange once the compound is on alert.
     function drawBaseFortIcon(base, p, timeSec) {
       const pulse = base.alerted ? 0.5 + 0.5 * Math.sin(timeSec * 9) : 0;
       const dist = Math.hypot(world.deltaX(player.x, base.x), world.deltaY(player.y, base.y));
-      const size = Math.max(FORT_SIZE_MIN, FORT_SIZE_AT_0 - dist * FORT_SIZE_SLOPE);
+      const beyond = Math.max(0, dist - FORT_ALERT_LINE);
+      const size = Math.max(FORT_SIZE_MIN, FORT_SIZE_MAX - beyond * FORT_SIZE_SLOPE);
       drawFloatingIcon(p, timeSec, {
         icon: FortIcon,
         fill: '#ef4444',
