@@ -77,7 +77,7 @@
     // Icon glyphs and name labels are painted once into small sprites and stamped from there.
     // They bob and throb, i.e. are drawn at a slightly different size every frame, and outlined
     // text in particular is expensive to rasterise afresh at each size.
-    const SPRITE_RES = 3; // sprite pixels per icon unit (icons show at up to ~1.7x on 2x screens)
+    const SPRITE_RES = 5; // sprite pixels per icon unit (fort icons show at up to ~2.4x on 2x screens)
     const ICON_BOX = { x: -20, y: -24, w: 40, h: 44 }; // glyph bounds incl. outline (icon units)
     const LABEL_FONT = '800 11px system-ui, "Segoe UI", sans-serif';
     const sprites = new Map();
@@ -130,11 +130,16 @@
     // Icon hovering above a ground point (projection p), tethered to it by a dashed line, with a
     // name to its right. o: { icon (FortIcon / HqIcon), fill, label, lift (world units above the
     // ground), phase (bob offset), pulse (0..1 size throb), fill2 (optional second colour the
-    // icon fades to and from with the pulse) }
+    // icon fades to and from with the pulse), size (optional: a size factor that replaces the
+    // perspective size, so the icon's size follows only that factor) }
     function drawFloatingIcon(p, timeSec, o) {
-      const s = Math.max(1.1, Math.min(1.55, p.scale * 1.5));
+      const size = o.size ?? 1;
+      // perspective size: at the icon's own point, or (with o.size) at the screen centre, which
+      // only depends on the screen size
+      const refScale = o.size == null ? p.scale : centreScale();
+      const s = Math.max(1.1, Math.min(1.55, refScale * 1.5)) * size;
       const bob = Math.sin(timeSec * 2.2 + o.phase) * 2.5;
-      const iconY = p.sy - (o.lift * p.scale + 26) + bob;
+      const iconY = p.sy - (o.lift * p.scale + 26 * size) + bob;
       if (p.sx < -40 || p.sx > viewW + 40 || iconY < -40 || p.sy > viewH + 60) return;
       const { pulse, fill } = o;
 
@@ -170,10 +175,29 @@
       ctx.restore();
     }
 
-    // Fort icon above a compound centre.
+    // Projection scale at the screen centre (changes only with the screen size)
+    let centreScaleCache = { h: -1, scale: 1 };
+    function centreScale() {
+      if (centreScaleCache.h !== viewH) {
+        const c = world.projectDelta(0, 0, 0, viewW, viewH);
+        centreScaleCache = { h: viewH, scale: c ? c.scale : 1 };
+      }
+      return centreScaleCache.scale;
+    }
+
+    // Fort icon size: linear in the player's distance to the compound, with no plateau, so two
+    // forts can be compared at a glance (FORT_SIZE_AT_0 on top of the player, FORT_SIZE_SLOPE less
+    // per world unit; on-screen forts are at most ~1300 away, the floor only guards odd cases)
+    const FORT_SIZE_AT_0 = 1.5;
+    const FORT_SIZE_SLOPE = 1 / 1500;
+    const FORT_SIZE_MIN = 0.3;
+
+    // Fort icon above a compound centre; the closer the player, the bigger.
     // Red while the garrison waits; pulses red/orange once the compound is on alert.
     function drawBaseFortIcon(base, p, timeSec) {
       const pulse = base.alerted ? 0.5 + 0.5 * Math.sin(timeSec * 9) : 0;
+      const dist = Math.hypot(world.deltaX(player.x, base.x), world.deltaY(player.y, base.y));
+      const size = Math.max(FORT_SIZE_MIN, FORT_SIZE_AT_0 - dist * FORT_SIZE_SLOPE);
       drawFloatingIcon(p, timeSec, {
         icon: FortIcon,
         fill: '#ef4444',
@@ -181,7 +205,8 @@
         label: base.name,
         lift: 84,
         phase: base.id * 1.3,
-        pulse
+        pulse,
+        size
       });
     }
 
