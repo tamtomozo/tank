@@ -105,8 +105,8 @@
       backdrop,
       operation: null, // { area, operation } picked on the sortie-select screen (js/data/operations.js)
       player, // replaced on every (re)start
-      // Camera locked to player center so the tank sits at exact screen center
-      cam: { x: player.x, y: player.y, starOffsetX: 0 },
+      // Camera follows the player, leading it by (lookX, lookY) along its facing (js/game/controls.js)
+      cam: { x: player.x, y: player.y, lookX: 0, lookY: 0, starOffsetX: 0 },
       activeTarget: null, // enemy / prop the turret is locked onto (null = aiming straight ahead)
       started: false,
       overShown: false, // after-action report or game-over window already shown for this sortie

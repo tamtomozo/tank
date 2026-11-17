@@ -2,8 +2,16 @@
   'use strict';
 
   // Player tank control, once per frame while the game runs: drive (tank or direct mode),
-  // keep the camera on the tank, lock onto the nearest target inside the headlight cone
+  // keep the camera on the tank (leading it along its facing), lock onto the nearest target inside the headlight cone
   // (the turret swings back to straight ahead otherwise) and fire.
+
+  // Camera lead (world units the camera sits ahead of the tank along its facing). The view looks
+  // north over a curved horizon: northwards ~700 is visible ahead of a centered tank but only ~200
+  // to the south, so heading south gets the biggest lead and heading north only a little.
+  const CAM_LEAD_SIDE = 200; // facing east / west
+  const CAM_LEAD_SOUTH = 210; // facing south (towards the bottom of the screen)
+  const CAM_LEAD_NORTH = 50; // facing north (towards the horizon)
+  const CAM_LEAD_RATE = 2.4; // how quickly the lead follows the hull turning (1/s)
 
   function create(game) {
     const { world, combat } = game;
@@ -90,11 +98,19 @@
         player.stepPhysics(throttle, steer, wantBoost, dt, dustCb);
       }
 
-      // Keep camera centered on player tank
+      // Camera leads the tank: it slides ahead along the hull's facing so the screen opens up in
+      // the direction the tank drives and fires (the tank itself shifts towards the opposite edge)
       const cam = game.cam;
       const prevCamX = cam.x;
-      cam.x = player.x;
-      cam.y = player.y;
+      const fx = Math.cos(player.hullAngle);
+      const fy = Math.sin(player.hullAngle);
+      const wantLookX = fx * CAM_LEAD_SIDE;
+      const wantLookY = fy * (fy > 0 ? CAM_LEAD_SOUTH : CAM_LEAD_NORTH);
+      const ease = 1 - Math.exp(-CAM_LEAD_RATE * dt);
+      cam.lookX += (wantLookX - cam.lookX) * ease;
+      cam.lookY += (wantLookY - cam.lookY) * ease;
+      cam.x = world.wrapX(player.x + cam.lookX);
+      cam.y = world.wrapY(player.y + cam.lookY);
       cam.starOffsetX += world.deltaX(prevCamX, cam.x) * 0.04;
 
       // Keep tracking the target while reloading (previously the turret snapped back to center

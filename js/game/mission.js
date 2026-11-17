@@ -49,6 +49,8 @@
       world.dayCount = 1;
       game.cam.x = player.x;
       game.cam.y = player.y;
+      game.cam.lookX = 0;
+      game.cam.lookY = 0;
       game.cam.starOffsetX = 0;
       game.started = true;
       game.overShown = false;
