@@ -8,9 +8,12 @@
 
 :root {
   --safe-t: env(safe-area-inset-top, 0px);
-  --safe-r: env(safe-area-inset-right, 0px);
   --safe-b: env(safe-area-inset-bottom, 0px);
-  --safe-l: env(safe-area-inset-left, 0px);
+  /* Left / right are deliberately not inset: a landscape phone reports the camera cutout's
+     width on that side only, which pushed the left-hand UI further in than the right-hand UI.
+     Both sides keep the same small margin instead. */
+  --safe-r: 0px;
+  --safe-l: 0px;
 }
 
 /* Texts that differ between mouse / keyboard and touch screens */
