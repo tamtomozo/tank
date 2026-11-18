@@ -191,11 +191,21 @@
         if (b.garrison.bunkers) kinds.add('bunker');
         for (const k of b.garrison.tanks || []) kinds.add(k);
       }
-      const hold = this.operation.hold;
+      const op = this.operation;
+      // Compounds that only appear later (site.after) are not in combat.bases yet
+      for (const s of op.sites || []) {
+        if (s.after == null) continue;
+        if (s.garrison.bunkers) kinds.add('bunker');
+        for (const k of s.garrison.tanks || []) kinds.add(k);
+      }
+      const hold = op.hold;
       if (hold) {
         hold.kinds.forEach((k) => kinds.add(k));
         if (hold.boss) kinds.add(hold.boss.kind);
       }
+      if (op.turrets && op.turrets.length) kinds.add('turret');
+      if (op.tunnels && op.tunnels.length) kinds.add('infantry');
+      if (op.finale) kinds.add(op.finale.kind);
       return ENEMY_KIND_ORDER.filter((k) => kinds.has(k));
     }
 
@@ -213,6 +223,7 @@
           const parts = [`装備と整備です。この星での装備を${global.GameData.EQUIP_SLOTS}つ選んでください。推奨の印は、この星の環境に合わせた装備です。`];
           if (c.wear > 0) parts.push(`自機の損耗が${Math.round(c.wear * 100)}%残っています。スクラップで修理できます。`);
           if (c.allies < c.maxAllies) parts.push(`僚機が${c.maxAllies - c.allies}両足りません。スクラップで補充できます。`);
+          if (this.planet.hazards && this.planet.hazards.civilians) parts.push(`住民の協力度は${c.support}%です。`);
           return parts.join('');
         }
         case 'tuning':
@@ -377,6 +388,9 @@
       if (op.weather && op.weather.blizzard) {
         items.push(['blizzard', '吹雪', '止むことなく、強まったり弱まったりを繰り返す。強いときは視界がほぼゼロ。']);
       }
+      if (op.weather && op.weather.smog) {
+        items.push(['smog', 'スモッグと酸性雨', '茶色いもやが濃くなったり薄くなったりを繰り返す。濃いときは視界が大きく落ちる。']);
+      }
       if (op.polarNight) items.push(['night', '極夜', '太陽が昇らず、ずっと夜。敵拠点は撃たれるまでこちらに気づかない。']);
       if (rules.thermal) items.push(['thermal', '熱源センサー', `吹雪や暗闇の中でも、約${global.CombatManager.THERMAL_RANGE}以内の敵を熱源として映し、照準できる。`]);
       if (rules.cold) items.push(['cold', '低温', '長く止まると車体が冷え、砲塔の旋回とエンジンが鈍る。走れば暖まる。']);
@@ -386,16 +400,46 @@
       if (op.longRange) items.push(['range', '遠距離戦', `自機の照準距離 +${op.longRange.player}。敵の射程も長い。`]);
       for (const z of world.zones) {
         if (z.kind === 'saltflat') items.push(['salt', '塩の平原', '岩ひとつない真っ白な平原。遮蔽物がまったくない。']);
-        if (z.kind === 'city') {
+        if (z.kind === 'city' && z.style === 'industrial') {
+          const civil = world.structures.filter((s) => s.civil).length;
+          const fuel = world.structures.filter((s) => s.fuel).length;
+          items.push(['civil', `民間の建物 ×${civil}`, '明るい壁と赤茶色の屋根の住宅・商店。味方の砲弾で崩れ、1棟壊すごとに住民の協力度が4%下がる。']);
+          items.push(['industry', '工場・倉庫', '灰色の建物。壊れない。通行不可で、砲弾も通さない。']);
+          if (fuel > 0) items.push(['fuel', `燃料タンク ×${fuel}`, '赤い屋根の丸いタンク。撃つと大爆発し、敵味方と周りの建物を巻き込む。']);
+        } else if (z.kind === 'city') {
           const name = z.style === 'snow' ? '首都' : '旧市街';
           items.push(['city', `${name} 建物×${world.structures.length}`, '建物は通行不可で、砲弾も通さない。狭い路地と行き止まりに注意。']);
+        }
+        if (z.kind === 'highway') {
+          items.push(['highway', '高架道路', '通れない壁で、砲弾も止める。切れ目から反対側へ抜けられる。上の砲台は下から撃てる。']);
+        }
+        if (z.kind === 'factory') {
+          items.push(['factory', '工場の内部', '壁の扉から出入りする。中には生産ラインが並び、間を縫って戦う。']);
         }
         if (z.kind === 'lake') {
           items.push(['lake', '凍った湖', '止まると氷が割れて沈む。走り続ければ渡れる。']);
           items.push(['thin', `薄い氷 ×${z.thin.length}`, '色の濃いところ。重い戦車（重戦車・指揮官車）は踏み抜いて沈む。敵を誘い込める。']);
         }
       }
-      if (op.survey) items.push(['survey', `観測点 ×${op.survey.length}`, '水色の円に乗ると、その地点の氷の厚さを計測する。']);
+      if (op.survey && op.surveyKind === 'patrol') {
+        items.push(['survey', `巡回点 ×${op.survey.length}`, '水色の円に乗ると、その地点の巡回が済む。']);
+      } else if (op.survey) {
+        items.push(['survey', `観測点 ×${op.survey.length}`, '水色の円に乗ると、その地点の氷の厚さを計測する。']);
+      }
+      if (op.escort) {
+        items.push(['escort', '協力者の護衛', `${op.escort.meet.name}で合流し、${op.escort.to.name}まで送り届ける。歩きで、撃たれると倒れる。`]);
+      }
+      if (op.turrets && op.turrets.length) {
+        const powered = op.turrets.some((t) => t.powered);
+        items.push(['turret', `高架砲台 ×${op.turrets.length}`, powered ? '高架の上から撃ち下ろしてくる。発電所を制圧すると止まる。' : '高架の上から撃ち下ろしてくる。']);
+      }
+      if (op.tunnels && op.tunnels.length) {
+        const known = global.Campaign && global.Campaign.collaborator === true && !op.escort;
+        items.push(['tunnel', `マンホール ×${op.tunnels.length}`, `近くを通ると歩兵が出てくる。${known ? '協力者の地図で、位置がレーダーに映る。' : '協力者の地図があれば、位置がレーダーに映る。'}`]);
+      }
+      if (op.guerrilla) {
+        items.push(['ied', '即席爆弾', '道路に隠されている。近づくと赤く光る。撃てば処理でき、踏むと大きな被害。数は住民の協力度しだい。']);
+      }
       if (op.feint) items.push(['feint', '陽動', `${op.sites[op.feint.site].name}に発見されたあと、${op.feint.distance}以上引き離す。攻め落とす必要はない。`]);
       if (op.hold) {
         const label = op.hold.label || '封鎖';
@@ -453,6 +497,11 @@
       const spec = ENEMY_SPECS[kind];
       const tank = new global.Tank2D(this.world, { ...spec, kind, hullAngle: -Math.PI / 2 });
       g.scale(1.05, 1.05);
+      if (tank.isInfantry) {
+        g.scale(1.4, 1.4);
+        tank._paintInfantry(g);
+        return c;
+      }
       if (tank.isBunker) tank._drawBunkerBase(g);
       else tank._drawHullAndTracks(g, 0);
       tank._drawTurret(g);

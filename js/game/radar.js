@@ -168,6 +168,55 @@
         placeArrow(pt.x, pt.y, 'target-arrow is-survey', '\u25c6');
       }
 
+      // Escort (js/combat/city.js): the meeting point / tunnel entrance as a blue diamond with an
+      // off-screen marker, the collaborator as a blue dot
+      const esc = combat.escort;
+      const escPt = esc ? (esc.stage === 'meet' ? esc.meet : esc.stage === 'follow' ? esc.to : null) : null;
+      if (escPt) {
+        const pos = toRadar(escPt.x, escPt.y);
+        const at = pos.inRange ? pos : toRadarEdge(pos.dx, pos.dy);
+        radarCtx.fillStyle = '#93c5fd';
+        radarCtx.beginPath();
+        radarCtx.moveTo(at.rx, at.ry - 4.5);
+        radarCtx.lineTo(at.rx + 4.5, at.ry);
+        radarCtx.lineTo(at.rx, at.ry + 4.5);
+        radarCtx.lineTo(at.rx - 4.5, at.ry);
+        radarCtx.closePath();
+        radarCtx.fill();
+        placeArrow(escPt.x, escPt.y, 'target-arrow is-escort', '\u25c6');
+      }
+      const escortee = combat.escortUnit();
+      if (escortee) {
+        const pos = toRadar(escortee.x, escortee.y);
+        if (pos.inRange) {
+          radarCtx.fillStyle = '#60a5fa';
+          radarCtx.beginPath();
+          radarCtx.arc(pos.rx, pos.ry, 3, 0, Math.PI * 2);
+          radarCtx.fill();
+        }
+      }
+      // Tunnels from the collaborator's map: grey squares; IEDs spotted: red crosses
+      if (combat.tunnelsKnown) {
+        radarCtx.fillStyle = 'rgba(203, 213, 225, 0.8)';
+        for (const t of combat.tunnels || []) {
+          const pos = toRadar(t.x, t.y);
+          if (pos.inRange) radarCtx.fillRect(pos.rx - 2.5, pos.ry - 2.5, 5, 5);
+        }
+      }
+      radarCtx.strokeStyle = '#f87171';
+      radarCtx.lineWidth = 1.6;
+      for (const b of combat.ieds || []) {
+        if (!b.alive || !b.seen) continue;
+        const pos = toRadar(b.x, b.y);
+        if (!pos.inRange) continue;
+        radarCtx.beginPath();
+        radarCtx.moveTo(pos.rx - 3, pos.ry - 3);
+        radarCtx.lineTo(pos.rx + 3, pos.ry + 3);
+        radarCtx.moveTo(pos.rx + 3, pos.ry - 3);
+        radarCtx.lineTo(pos.rx - 3, pos.ry + 3);
+        radarCtx.stroke();
+      }
+
       // Area to hold (operation `hold`): amber ring
       const hold = combat.hold;
       if (hold && hold.active && !hold.done) {
@@ -203,7 +252,7 @@
         const d = Math.hypot(world.deltaX(player.x, e.x), world.deltaY(player.y, e.y));
         if (d > sight) continue;
         if (e.camo && !thermal && d > CAMO_RADAR) continue;
-        const idle = e.state === 'idle';
+        const idle = e.state === 'idle' || e.state === 'off'; // parked, or a turret without power
         if (!idle && e.state !== 'retreat') placeArrow(ap.x, ap.y, 'target-arrow', '\u25b2');
         const pos = toRadar(ap.x, ap.y);
         if (!pos.inRange) continue;

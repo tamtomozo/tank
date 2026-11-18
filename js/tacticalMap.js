@@ -32,12 +32,17 @@
       saltflat: 'rgba(236, 232, 220, 0.55)',
       lake: 'rgba(125, 190, 230, 0.6)',
       city: 'rgba(196, 168, 124, 0.45)',
-      snowCity: 'rgba(160, 172, 190, 0.5)'
+      snowCity: 'rgba(160, 172, 190, 0.5)',
+      industrialCity: 'rgba(90, 88, 86, 0.55)',
+      factory: 'rgba(70, 68, 66, 0.8)'
     };
     for (const z of world.zones) {
+      if (z.kind === 'highway') continue; // the deck itself is drawn with the buildings
       g.beginPath();
-      g.arc(z.x * k, z.y * k, z.radius * k, 0, Math.PI * 2);
-      g.fillStyle = ZONE_FILL[z.kind === 'city' && z.style === 'snow' ? 'snowCity' : z.kind];
+      if (z.kind === 'factory') g.rect((z.x - z.hx) * k, (z.y - z.hy) * k, z.hx * 2 * k, z.hy * 2 * k);
+      else g.arc(z.x * k, z.y * k, z.radius * k, 0, Math.PI * 2);
+      const city = z.kind === 'city' && (z.style === 'snow' ? 'snowCity' : z.style === 'industrial' ? 'industrialCity' : null);
+      g.fillStyle = ZONE_FILL[city || z.kind];
       g.fill();
       for (const t of z.thin || []) {
         g.fillStyle = 'rgba(30, 70, 110, 0.75)';
@@ -52,10 +57,18 @@
         g.fill();
       }
     }
-    g.fillStyle = '#a88a5e';
+    // Buildings: civilian ones warm-coloured, industry / highway / factory dark, fuel tanks red
     g.strokeStyle = '#4a3a26';
     g.lineWidth = 0.8;
     for (const st of world.structures) {
+      if (!st.box) {
+        g.fillStyle = '#dc2626';
+        g.beginPath();
+        g.arc(st.x * k, st.y * k, Math.max(1.6, st.radius * k), 0, Math.PI * 2);
+        g.fill();
+        continue;
+      }
+      g.fillStyle = st.civil ? '#d6b48a' : st.deck ? '#3f3d3c' : st.industry || st.kind === 'factory' || st.kind === 'machine' ? '#6b6560' : '#a88a5e';
       const x = (st.x - st.box.hx) * k;
       const y = (st.y - st.box.hy) * k;
       g.fillRect(x, y, st.box.hx * 2 * k, st.box.hy * 2 * k);

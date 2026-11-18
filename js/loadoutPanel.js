@@ -91,6 +91,12 @@
 
       const scrap = row('保有スクラップ', `⚙ ${c.scrap}`, '残りは出撃に持っていき、補給拠点での僚機補充にも使える');
       card.append(crew, wear, allies, scrap);
+      // Industrial planet: the people's cooperation and the collaborator (js/campaign.js)
+      if (this.planet.hazards && this.planet.hazards.civilians) {
+        const who = c.collaborator === true ? '協力者は無事（トンネルの地図あり）'
+          : c.collaborator === false ? '協力者を失った（トンネルの地図なし）' : '協力者とはまだ接触していない';
+        card.append(row('住民の協力度', `${c.support}%`, `民間の建物を壊すと下がる。最後の段階のゲリラの数が変わる。${who}`));
+      }
       return card;
     }
 

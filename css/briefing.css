@@ -119,6 +119,16 @@ dialog.briefing-dialog {
 .briefing-swatch.is-gully { background: #2a1d12; block-size: 0.3rem; }
 .briefing-swatch.is-hardpan { background: rgb(214 190 150 / 0.6); border-radius: 50%; }
 .briefing-swatch.is-wrap { border: 2px dashed #fde68a; }
+.briefing-swatch.is-smog { background: linear-gradient(180deg, #70664e, #b0c480); }
+.briefing-swatch.is-civil { background: #d6b48a; border: 2px solid #c69a6c; }
+.briefing-swatch.is-industry { background: #6b6560; }
+.briefing-swatch.is-fuel { background: #dc2626; border-radius: 50%; }
+.briefing-swatch.is-highway { background: #3f3d3c; block-size: 0.45rem; }
+.briefing-swatch.is-factory { background: #464442; border: 2px dashed #eab308; }
+.briefing-swatch.is-escort { background: #93c5fd; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+.briefing-swatch.is-turret { background: #52525b; border: 2px solid #facc15; border-radius: 50%; }
+.briefing-swatch.is-tunnel { background: #4b4743; border: 2px solid #1c1917; border-radius: 50%; }
+.briefing-swatch.is-ied { background: radial-gradient(circle, #fecaca 0 25%, #ef4444 45%, transparent 70%); }
 .briefing-swatch.is-storm { background: linear-gradient(135deg, #ba8c58, #e8c896); }
 .briefing-swatch.is-heat { background: linear-gradient(90deg, #f59e0b, #ef4444); }
 .briefing-swatch.is-dust { background: rgb(168 162 158 / 0.8); border-radius: 50%; }

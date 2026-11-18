@@ -97,6 +97,34 @@
       };
       cap(0, TEX_H * 0.24);
       cap(TEX_H, TEX_H * 0.78);
+    } else if (look.style === 'industrial') {
+      // City-covered planet: a grid of grey districts, smog bands and the orange lights of the
+      // cities strung along the roads
+      for (let i = 0; i < 30; i++) blotch(g, rand() * TEX_W, rand() * TEX_H, 8 + rand() * 22, rand() < 0.6 ? dark : base, 0.45 + rand() * 0.35);
+      g.strokeStyle = `rgba(${dark}, 0.55)`;
+      g.lineWidth = 0.8;
+      for (let x = 0; x < TEX_W; x += 8 + Math.floor(rand() * 6)) {
+        g.beginPath();
+        g.moveTo(x, 10);
+        g.lineTo(x, TEX_H - 10);
+        g.stroke();
+      }
+      for (let y = 12; y < TEX_H - 10; y += 7 + Math.floor(rand() * 6)) {
+        g.beginPath();
+        g.moveTo(0, y);
+        g.lineTo(TEX_W, y);
+        g.stroke();
+      }
+      for (let i = 0; i < 140; i++) {
+        const x = Math.floor(rand() * TEX_W);
+        const y = 12 + Math.floor(rand() * (TEX_H - 24));
+        g.fillStyle = `rgba(${light}, ${0.45 + rand() * 0.5})`;
+        g.fillRect(x, y, 1 + rand() * 1.6, 1);
+      }
+      for (let y = 0; y < TEX_H; y += 10 + rand() * 14) {
+        g.fillStyle = `rgba(150, 140, 96, ${0.08 + rand() * 0.12})`;
+        g.fillRect(0, y, TEX_W, 4 + rand() * 8);
+      }
     } else if (look.style === 'volcanic') {
       // Dark crust, ash plains, glowing lava cracks
       for (let i = 0; i < 26; i++) blotch(g, rand() * TEX_W, rand() * TEX_H, 8 + rand() * 24, rand() < 0.7 ? dark : base, 0.5 + rand() * 0.4);

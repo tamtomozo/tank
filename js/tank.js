@@ -11,6 +11,11 @@
       this.isBunker = Boolean(options.isBunker);
       this.isBoss = Boolean(options.boss); // boss health bar, bigger shells (js/data/enemies.js)
       this.camo = Boolean(options.camo); // snow camouflage: faint from afar (js/game/render.js)
+      // A fire team on foot (anti-tank infantry, or the collaborator on an escort): drawn as
+      // soldiers, leaves no tread marks, run over by friendly tanks (js/combat/city.js)
+      this.isInfantry = Boolean(options.isInfantry);
+      this.perched = false; // turret standing on a highway deck (z = deck height)
+      this.powerOff = false; // turret whose power plant has fallen
       this.kind = options.kind || (this.isPlayer ? 'player' : 'medium');
       this.scale = options.scale || 1.0;
 
@@ -405,7 +410,7 @@
       this.antennaLag += (this.speed * 0.018 - this.antennaLag) * Math.min(1, dt * 8);
 
       // Leave dual caterpillar tread marks on terrain
-      if (this.grounded && (Math.abs(this.speed) > 12 || Math.abs(this.turnRate) > 0.35)) {
+      if (this.grounded && !this.isInfantry && (Math.abs(this.speed) > 12 || Math.abs(this.turnRate) > 0.35)) {
         this.treadMarkAccum += (Math.abs(this.speed) + Math.abs(this.turnRate) * 28) * dt;
         if (this.treadMarkAccum > 13) {
           this.treadMarkAccum = 0;
@@ -424,8 +429,13 @@
       const bodyProj = this.world.project(this.x, this.y, this.z, camX, camY, viewW, viewH);
       if (!groundProj || !bodyProj) return;
       if (bodyProj.sx < -90 || bodyProj.sx > viewW + 90) return;
+      if (this.isInfantry) {
+        this._drawInfantry(ctx, bodyProj);
+        return;
+      }
 
-      // 1. Ground Shadow (stays on terrain even when jumping!)
+      // 1. Ground Shadow (stays on terrain even when jumping!; a turret on a deck has none there)
+      if (!this.perched) {
       ctx.save();
       ctx.translate(groundProj.sx, groundProj.sy);
       ctx.scale(groundProj.scale * this.scale, groundProj.scale * this.scale * groundProj.tiltCos);
@@ -435,6 +445,7 @@
       ctx.ellipse(2, 4, 29, 22, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
+      }
 
       // 1b. Ground-projected forward headlight beam (player: shows auto lock-on range up to
       //     cannonRange; wingmen at 80%). Dimmed with the time of day, off in daylight.
@@ -504,6 +515,13 @@
         this._paintAntenna(ctx);
       }
       ctx.restore();
+      if (this.powerOff) {
+        // No power: the turret is dark
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.beginPath();
+        ctx.arc(0, 0, 27, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
       ctx.restore();
 
@@ -532,6 +550,86 @@
         ctx.closePath();
         ctx.fill();
       }
+    }
+
+    // A fire team on foot at its projected position (enemy infantry, or the collaborator)
+    _drawInfantry(ctx, bodyProj) {
+      const s = bodyProj.scale * this.scale;
+      ctx.save();
+      ctx.translate(bodyProj.sx, bodyProj.sy);
+      ctx.scale(s, s);
+      this._paintInfantry(ctx);
+      ctx.restore();
+      if (this.isEscort) {
+        // Collaborator: armour bar and a blue chevron, like a wingman
+        const k = bodyProj.scale;
+        const barW = 30 * k;
+        const bx = bodyProj.sx - barW * 0.5;
+        const by = bodyProj.sy - 26 * k;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+        ctx.fillRect(bx - 1, by - 1, barW + 2, 6);
+        ctx.fillStyle = '#60a5fa';
+        ctx.fillRect(bx, by, barW * Math.max(0, this.hp / this.maxHp), 4);
+        const my = by - 8 * k;
+        const ms = 5 * k;
+        ctx.fillStyle = 'rgba(96, 165, 250, 0.95)';
+        ctx.beginPath();
+        ctx.moveTo(bodyProj.sx - ms, my - ms * 0.6);
+        ctx.lineTo(bodyProj.sx + ms, my - ms * 0.6);
+        ctx.lineTo(bodyProj.sx, my + ms * 0.6);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+
+    // Three soldiers in a wedge facing the aim direction (local units, origin = team centre).
+    // Enemy infantry carry rocket tubes; a back-blast shows right after a shot.
+    _paintInfantry(ctx) {
+      const moving = Math.abs(this.speed) > 6;
+      const bob = moving ? Math.sin(this.vibPhase * 11) * 1.6 : 0;
+      ctx.save();
+      ctx.rotate(this.turretAngle);
+      const team = [[10, 0, 0], [-8, -17, 1], [-8, 17, 2]];
+      for (const [px, py, i] of team) {
+        const b = i === 0 ? bob : -bob;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+        ctx.beginPath();
+        ctx.ellipse(px + 2, py + 3, 9, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = this.hullColor;
+        ctx.strokeStyle = this.hullDark;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(px + b * 0.4, py, 6.5, 8.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        if (!this.isEscort && i !== 2) {
+          // Rocket launcher over the shoulder
+          ctx.strokeStyle = '#27272a';
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(px - 10, py + 4);
+          ctx.lineTo(px + 15, py + 4);
+          ctx.stroke();
+          ctx.fillStyle = this.accentColor;
+          ctx.fillRect(px + 13, py + 2, 4, 4);
+        }
+        ctx.fillStyle = this.turretColor;
+        ctx.beginPath();
+        ctx.arc(px + 1 + b * 0.4, py, 4.6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (this.muzzleFlashTimer > 0 && !this.isEscort) {
+        ctx.fillStyle = 'rgba(253, 186, 116, 0.9)';
+        ctx.beginPath();
+        ctx.arc(28, 4, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(214, 211, 209, 0.7)';
+        ctx.beginPath();
+        ctx.arc(-6, 4, 9, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
     }
 
     _drawBunkerBase(ctx) {

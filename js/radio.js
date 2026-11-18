@@ -201,11 +201,69 @@
       if (kind === 'ace') {
         return '大型の熱源が接近……雪原迷彩のエース機です！ 遠くからは見えにくい、熱源とレーダーで捉えてください！';
       }
+      if (kind === 'proto') {
+        return '工場のシャッターが開きます……試作超重戦車です！ 正面から撃ち合わないで、僚機と囲んでください！';
+      }
       return '敵の指揮官車が出てきました！ 気をつけて、隊長！';
     },
 
+    // ---- industrial planet (js/combat/city.js) ----
+    ambush() {
+      return pick([
+        'マンホールから歩兵です！ ロケットを持っています、気をつけて！',
+        '地下から敵歩兵が出てきました！ 轢くか、撃って倒してください！'
+      ]);
+    },
+
+    iedSpotted() {
+      return '道路に即席爆弾を発見！ 赤く光っているものです。踏まないで、撃って処理してください。';
+    },
+
+    iedBlast() {
+      return '即席爆弾です！ 被害を確認してください……道路の赤い光に注意を！';
+    },
+
+    iedCleared() {
+      return '即席爆弾を処理しました。';
+    },
+
+    escortMet(escort) {
+      return `${escort.name}と合流しました！ ${escort.to.name}まで送り届けてください。歩きなので、離れすぎないように。`;
+    },
+
+    escortDone(escort) {
+      return `${escort.name}が${escort.to.name}に入りました。地下トンネルの地図を受け取りました！ マンホールの位置がレーダーに映ります。`;
+    },
+
+    escortLost(escort) {
+      return `${escort.name}が……やられました。トンネルの地図は手に入りません。住民に知られたら……いえ、先へ進みましょう。`;
+    },
+
+    powerDown(count) {
+      return count > 0
+        ? `発電所を制圧、電源が落ちました！ 高架の砲台${count}基、沈黙です。`
+        : '発電所を制圧、電源が落ちました！';
+    },
+
+    siteAppears(name) {
+      return `政府は降伏しました……ですが、一部の部隊が降伏を拒否しています！ ${name}を確認、レーダーに送ります！`;
+    },
+
+    civilLost(count, support) {
+      if (count === 1) return `民間の建物が崩れました……住民の協力度が下がっています（${support}%）。撃つ方向に気をつけてください。`;
+      return `また民間の建物が……住民の協力度、${support}%です。`;
+    },
+
+    fuelBlast() {
+      return '燃料タンクが爆発！ 周りの建物と車両を巻き込んでいます！';
+    },
+
     // ---- survey / feint ----
-    surveyed(name, left) {
+    surveyed(name, left, kind) {
+      if (kind === 'patrol') {
+        if (left > 0) return `${name}、異常なし。残る巡回点は${left}か所です。`;
+        return `${name}も異常なし。巡回、完了です。`;
+      }
       if (left > 0) return `${name}の氷厚を計測しました。戦車の重さに耐えられます。残る観測点は${left}か所です。`;
       return `${name}の計測完了。湖を渡れるルートが確定しました！ 止まらなければ、戦車でも渡れます。`;
     },
@@ -238,6 +296,14 @@
       return thermal
         ? '吹雪が強まっています。視界がほぼありません。熱源センサーを頼りにしてください。'
         : '吹雪が強まっています。視界がほぼありません。';
+    },
+
+    smogRising() {
+      return 'スモッグが濃くなっています。視界が落ちます。敵からも見えにくいはずです。';
+    },
+
+    smogEasing() {
+      return 'スモッグが少し晴れました。視界が戻ります。';
     },
 
     blizzardEasing() {

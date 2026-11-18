@@ -10,14 +10,16 @@
   //   planet.terrain   one-word terrain type shown on the card
   //   planet.globe     look of the turning globe on the cards (js/planetGlobe.js)
   //                      base / dark / light: surface colours, glow: atmosphere,
-  //                      style: 'desert' | 'ice' | 'volcanic', seed: surface pattern
-  //   planet.theme     look of the battlefield: 'desert' | 'ice' (js/planet/planet.js THEMES)
+  //                      style: 'desert' | 'ice' | 'industrial' | 'volcanic', seed: surface pattern
+  //   planet.theme     look of the battlefield: 'desert' | 'ice' | 'city' (js/planet/planet.js THEMES)
   //   planet.gear      recommended equipment for the planet (js/data/equipment.js), fitted by default
   //   planet.hazards   environment rules shared by every operation on the planet (js/game/hazards.js)
   //                      heat: the engine overheats on a long run at full speed
   //                      dust: the dust a moving tank kicks up lets compounds spot it from farther away
   //                      cold: a tank left standing chills (slow turret, sluggish engine)
   //                      thermal: a heat sensor shows enemies through storms and darkness
+  //                      civilians: civilian buildings: destroying them costs the people's cooperation,
+  //                        which decides how many guerrillas the last stage meets (js/campaign.js)
   //
   // An operation is one stage of the planet's campaign; a stage is unlocked once the one named in
   // `requires` has been completed (js/campaign.js).
@@ -30,15 +32,28 @@
   //                               or x / y / rot: a fixed position (the rocks around it are cleared)
   //                               garrison: { tier, bunkers, tanks: [kinds] } (js/data/enemies.js)
   //                               optional: need not be captured (the target of a feint)
+  //                               power: capturing it shuts down the `powered` turrets
+  //                               after: i — appears (garrisoned) only once sites[i] has been captured;
+  //                               such sites must come last in the list
   //   operation.zones           areas laid over the map for this operation (js/planet/zones.js):
   //                               saltflat: a flat white plain with no rocks; city: a town of buildings
-  //                               (style 'oasis' | 'snow'); lake: a frozen lake with thin-ice patches
+  //                               (style 'oasis' | 'snow' | 'industrial'; ring: keep clear of a highway
+  //                               ring of that half-size); lake: a frozen lake with thin-ice patches;
+  //                               highway: elevated roads (legs: from / to, gaps along them);
+  //                               factory: a walled hall (hx, hy, doors) with production lines inside
   //   operation.weather         sandstorm: { firstCalm, calm, ramp, peak } seconds, or
-  //                             blizzard: { firstCalm, base, amp, period } (js/game/hazards.js)
+  //                             blizzard / smog: { firstCalm, base, amp, period } (js/game/hazards.js)
   //   operation.polarNight      the clock stands still at startTime (darkness all along)
   //   operation.mirage          distant enemies shimmer and show off their real position (daytime)
   //   operation.longRange       { enemy: range scale, player: lock-on range bonus }
-  //   operation.survey          points to visit: [{ x, y, name }]
+  //   operation.survey          points to visit: [{ x, y, name }]; surveyKind 'patrol': patrol points
+  //   operation.turrets         gun turrets on an elevated highway: [{ x, y, powered }]
+  //   operation.escort          { meet, to, name }: meet the collaborator at `meet`, bring them to `to`
+  //   operation.tunnels         manholes / subway exits [{ x, y }]: infantry climb out when the platoon
+  //                             passes (ambush: { size, uses }); guerrilla: { ieds, ambush } [min, max]
+  //                             scaled by how much the people are on our side (js/combat/city.js)
+  //   operation.finale          { kind, at, angle }: after the other objectives a boss appears there;
+  //                             destroying it completes the operation
   //   operation.feint           { site, distance }: be spotted by sites[site], then get `distance` away
   //   operation.hold            after the other objectives: hold the area around sites[site] (or the
   //                             point `at`) for `duration` s while enemy reinforcements arrive in waves;
@@ -380,12 +395,209 @@
       id: 3,
       code: 'PLANET 03',
       name: '惑星カストラ',
-      terrain: '未踏査',
-      summary: '偵察情報なし。',
-      available: false,
-      globe: { style: 'volcanic', base: '#45403c', dark: '#1f1c1a', light: '#fb923c', glow: '#f97316', seed: 37 },
+      terrain: '工業都市',
+      summary: '星全体を工場と巨大都市が覆う、敵の本星。スモッグと酸性雨の下、本国の正規軍と民兵が待ち構える。',
+      available: true,
+      globe: { style: 'industrial', base: '#4a4640', dark: '#26231f', light: '#fdba74', glow: '#a3a35c', seed: 37 },
+      theme: 'city',
       gear: ['addArmor', 'cage'],
-      operations: []
+      hazards: { civilians: true },
+      operations: [
+        {
+          id: 'castra-1',
+          stage: 1,
+          phase: '準備',
+          name: '灯の消える街',
+          goal: '発電所と鉄道ターミナルの制圧、協力者の護衛',
+          summary: '発電所を止めて都市の防衛砲台を黙らせ、反体制派の協力者を地下トンネルまで送り届ける。',
+          requires: 'verg-3',
+          startTime: 0.70,
+          weather: { smog: { firstCalm: 10, base: 0.2, amp: 0.35, period: 40 } },
+          zones: [
+            { kind: 'highway', x: 2400, y: 1000, radius: 960, legs: [{ from: [-900, 0], to: [900, 0], gaps: [[-380, -230], [250, 400]] }] },
+            { kind: 'city', style: 'industrial', x: 2400, y: 1380, radius: 760, plaza: 200, seed: 91 }
+          ],
+          sites: [
+            { x: 1350, y: 1520, rot: 0.4, name: '発電所', power: true, garrison: { tier: 1, bunkers: 2, tanks: ['infantry', 'infantry', 'medium', 'modern'] } },
+            { x: 3460, y: 1380, rot: 2.0, name: '鉄道ターミナル', garrison: { tier: 1, bunkers: 1, tanks: ['infantry', 'medium', 'modern', 'heavy'] } }
+          ],
+          turrets: [
+            { x: 1800, y: 1000, powered: true },
+            { x: 2400, y: 1000, powered: true },
+            { x: 3080, y: 1000, powered: true }
+          ],
+          escort: {
+            meet: { x: 2150, y: 1840, name: '接触地点' },
+            to: { x: 2930, y: 1760, name: 'トンネル入口' },
+            name: '協力者'
+          },
+          tunnels: [
+            { x: 2420, y: 1640 },
+            { x: 2700, y: 1900 },
+            { x: 2560, y: 1380 },
+            { x: 1900, y: 1300 }
+          ],
+          ambush: { size: 2, uses: 2 },
+          scenario: {
+            prehead: '惑星カストラ攻略の第一段階に臨む、第1機甲小隊の全戦車兵へ',
+            catch: '敵の本星は、明かりから消していく。',
+            deck: 'ついに敵の本星に降り立った。星全体が工場と都市で埋め尽くされ、空はスモッグで濁っている。ここには戦車だけでなく、武器を取った民兵もいる。',
+            lead: 'まず発電所を止めよ。都市を守る高架の砲台は、発電所の電力で動いている。'
+              + 'そして反体制派の協力者と接触し、地下トンネルの入口まで送り届けよ。彼らが持つトンネルの地図は、この先の戦いで必ず役に立つ。'
+              + '鉄道ターミナルを押さえれば、我々の補給拠点になる。'
+              + '忘れるな。この街には住民がいる。むやみに建物を壊せば、彼らは敵に回る。'
+              + '作戦名「灯の消える街」――この星の夜を、我々の味方にする。'
+          },
+          mio: {
+            tactical: '目標は三つです。西の発電所と東の鉄道ターミナルの制圧、それに協力者の護衛です。'
+              + '北の高架道路の上に砲台が3基あります。発電所を制圧すれば、電源が落ちて止まります。'
+              + '協力者とは、作戦本部の北西の接触地点で落ち合います。合流したら、トンネル入口まで一緒に移動してください。',
+            enemies: '本国の正規軍です。新型の主力戦車がいます。それに対戦車ロケットを持った歩兵。'
+              + '歩兵は脆いですが、建物の陰やマンホールから突然出てきます。戦車で轢くこともできます。',
+            terrain: '工業都市の中は、明るい色の住宅や商店が民間の建物です。撃って壊すと、住民の協力度が下がります。'
+              + '協力度が低いと、最後の段階でゲリラが増えます。灰色の工場や倉庫は壊れません。'
+              + '丸い燃料タンクは撃つと爆発して、周りを巻き込みます。スモッグで視界も悪いので、気をつけてください。'
+          },
+          radio: {
+            start: [
+              'ミオです。作戦「灯の消える街」を開始します。目標は発電所、鉄道ターミナル、そして協力者の護衛です。',
+              '民間の建物は撃たないでください。住民を敵に回したくありません。'
+            ],
+            complete: [
+              '発電所、鉄道ターミナル、協力者の護衛……すべて完了です。',
+              '作戦本部へ帰還してください、隊長。次は、敵の工場です。'
+            ]
+          }
+        },
+        {
+          id: 'castra-2',
+          stage: 2,
+          phase: '決戦',
+          name: '鋼の環',
+          goal: '環状高速道路のインターチェンジ2か所と工場の制圧、試作超重戦車の撃破',
+          summary: '高架が囲む工場地帯に踏み込み、生産ラインの間を抜けて、開発中の超重戦車を叩く。',
+          requires: 'castra-1',
+          startTime: 0.36,
+          weather: { smog: { firstCalm: 6, base: 0.3, amp: 0.4, period: 34 } },
+          zones: [
+            {
+              kind: 'highway', x: 2400, y: 1250, radius: 760,
+              legs: [
+                { from: [-640, -640], to: [640, -640], gaps: [[-90, 90]] },
+                { from: [640, -640], to: [640, 640], gaps: [[-90, 90]] },
+                { from: [640, 640], to: [-640, 640], gaps: [[-90, 90]] },
+                { from: [-640, 640], to: [-640, -640], gaps: [[-90, 90]] }
+              ]
+            },
+            { kind: 'factory', x: 2400, y: 1250, hx: 400, hy: 270, radius: 480, doors: ['n', 's', 'w', 'e'] },
+            { kind: 'city', style: 'industrial', x: 2400, y: 1250, radius: 1300, plaza: 0, seed: 57, ring: 640 }
+          ],
+          sites: [
+            { x: 1520, y: 1250, rot: 0.2, name: '西インターチェンジ', garrison: { tier: 1, bunkers: 1, tanks: ['infantry', 'modern', 'modern', 'medium'] } },
+            { x: 3280, y: 1250, rot: 2.6, name: '東インターチェンジ', garrison: { tier: 1, bunkers: 1, tanks: ['infantry', 'infantry', 'modern', 'heavy'] } },
+            { x: 2400, y: 1250, rot: 0, name: '第七工場', garrison: { tier: 2, bunkers: 2, tanks: ['infantry', 'infantry', 'modern', 'modern', 'heavy'] } }
+          ],
+          turrets: [
+            { x: 1760, y: 790 }, { x: 3040, y: 790 },
+            { x: 2040, y: 1890 }, { x: 2760, y: 1890 },
+            { x: 1760, y: 1570 }, { x: 3040, y: 930 }
+          ],
+          tunnels: [
+            { x: 1600, y: 1700 },
+            { x: 3200, y: 1700 },
+            { x: 2400, y: 2000 }
+          ],
+          ambush: { size: 2, uses: 2 },
+          finale: { kind: 'proto', at: { x: 2400, y: 1250 }, angle: Math.PI * 0.5 },
+          bossName: '⚠ 試作超重戦車',
+          scenario: {
+            prehead: '惑星カストラ攻略の第二段階に臨む、第1機甲小隊の全戦車兵へ',
+            catch: '環の中心で、怪物が目を覚ます。',
+            deck: 'ヴェルグで捕らえた将校は、ひとつの名を口にした。第七工場――敵が試作中の超重戦車の生産拠点だ。工場は環状高速道路に囲まれている。',
+            lead: '高架の上には砲台が並び、上と下の両方から撃たれる。高架には登れない。切れ目から内側へ抜けよ。'
+              + '東西のインターチェンジを押さえ、工場の守備隊を倒せ。試作車が完成する前に。'
+              + '作戦名「鋼の環」――この環を断ち切れば、敵の心臓が見える。'
+          },
+          mio: {
+            tactical: '目標は東西のインターチェンジと、中心の第七工場です。工場は環状の高架道路に囲まれています。'
+              + '高架の四辺の真ん中に切れ目があり、そこから内側に入れます。工場の守備隊を倒すと、試作車が出てくるはずです。',
+            enemies: '新型戦車と歩兵、高架の上の砲台です。砲台は高い位置から撃ってきます。下から撃ち返せます。'
+              + 'そして試作超重戦車。装甲も主砲も、司令官車より上です。',
+            terrain: '高架道路は通れない壁です。砲弾も止めます。工場の中は生産ラインが並んでいて、間を縫って戦うことになります。'
+              + '燃料タンクの爆発と、民間の建物には引き続き注意してください。'
+          },
+          radio: {
+            start: [
+              'ミオです。作戦「鋼の環」を開始します。目標は東西のインターチェンジと、第七工場です。',
+              '高架の上の砲台に注意。高架の切れ目から内側に入ってください。'
+            ],
+            complete: [
+              '試作超重戦車の撃破を確認……敵の切り札は潰れました！',
+              '作戦本部へ帰還してください。あとは、首都だけです。'
+            ]
+          }
+        },
+        {
+          id: 'castra-3',
+          stage: 3,
+          phase: '安定化',
+          name: '最後の灯',
+          goal: '政府庁舎の制圧、市街の巡回、降伏を拒む親衛隊の撃破',
+          summary: '首都中枢を押さえて敵政府を降伏させる。だが戦いは終わらない。即席爆弾と地下からの待ち伏せの中を巡回し、最後の抵抗拠点を落とす。',
+          requires: 'castra-2',
+          startTime: 0.30,
+          weather: { smog: { firstCalm: 20, base: 0.15, amp: 0.3, period: 44 } },
+          zones: [
+            { kind: 'city', style: 'industrial', x: 2400, y: 1350, radius: 860, plaza: 260, seed: 113 }
+          ],
+          sites: [
+            { x: 2400, y: 1350, rot: 0.3, name: '政府庁舎', garrison: { tier: 2, bunkers: 2, tanks: ['infantry', 'infantry', 'modern', 'modern', 'heavy'] } },
+            { x: 3600, y: 640, rot: 1.9, name: '親衛隊の最後の拠点', after: 0, garrison: { tier: 2, bunkers: 2, tanks: ['infantry', 'modern', 'modern', 'heavy', 'boss'] } }
+          ],
+          survey: [
+            { x: 1840, y: 1700, name: '巡回点A' },
+            { x: 2960, y: 1080, name: '巡回点B' },
+            { x: 2160, y: 900, name: '巡回点C' }
+          ],
+          surveyKind: 'patrol',
+          tunnels: [
+            { x: 1700, y: 1350 }, { x: 2100, y: 1650 }, { x: 2700, y: 1650 },
+            { x: 3050, y: 1350 }, { x: 2700, y: 900 }, { x: 2000, y: 1050 }
+          ],
+          ambush: { size: 2, uses: 2 },
+          // Guerrillas: how many IEDs and how many fighters per tunnel ambush, from `min` (the people
+          // on our side, the collaborator saved) to `max` (cooperation gone, collaborator lost)
+          guerrilla: { ieds: [3, 11], ambush: [2, 5] },
+          endInPlace: true,
+          bossName: '⚠ 親衛隊長車',
+          scenario: {
+            prehead: '惑星カストラ攻略の最終段階に臨む、第1機甲小隊の全戦車兵へ',
+            catch: '戦争は、降伏の署名では終わらない。',
+            deck: '工場を失った敵政府は、首都中枢の政府庁舎にこもっている。庁舎が落ちれば、政府は降伏するだろう。だがそれで全員が銃を置くとは限らない。',
+            lead: '政府庁舎を制圧し、降伏させよ。そのあとは市街を巡回し、治安を確保する。'
+              + '道には即席爆弾が仕掛けられ、地下からは待ち伏せが来る。住民がどれだけ我々の側にいるか――それがここで効いてくる。'
+              + '降伏を拒む者たちがいれば、それが最後の敵だ。'
+              + '作戦名「最後の灯」――この星に、もう一度明かりを灯す。'
+          },
+          mio: {
+            tactical: '目標は首都中枢の政府庁舎です。制圧すれば、敵政府は降伏するはずです。'
+              + 'そのあと、市街の巡回点3か所を回ってください。……降伏しない部隊が出てくるかもしれません。',
+            enemies: '庁舎の守備隊と、市街にひそむゲリラです。ゲリラの数は、住民の協力度と、協力者を守れたかどうかで変わります。',
+            terrain: '道路には即席爆弾が仕掛けられています。近づくと赤く光るので、見えたら撃って処理してください。踏むと大きな被害が出ます。'
+              + 'マンホールや地下鉄の出入口から歩兵が出てきます。最後まで民間の建物には気をつけて。'
+          },
+          radio: {
+            start: [
+              'ミオです。作戦「最後の灯」を開始します。目標は政府庁舎です。',
+              '道路の即席爆弾に注意してください。赤く光ったら、撃って処理を。'
+            ],
+            complete: [
+              '親衛隊の降伏を確認……カストラの全土で、戦闘が止まりました。',
+              '隊長。三つの星を越えて、ここまで来ました。……この戦いは、私たちの勝ちです。本当に、お疲れさまでした。'
+            ]
+          }
+        }
+      ]
     }
   ];
 

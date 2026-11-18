@@ -157,8 +157,32 @@
       gFar: [42, 50, 64], gMid: [58, 68, 84], gNear: [48, 56, 70], star: 1.0, night: 1.0 }
   ];
 
+  // Industrial planet: a smog-brown sky with a dim ochre sun, ash-grey concrete ground; the
+  // nights glow faintly orange from the city. Same key times and night strengths as the desert.
+  const CITY_KEYFRAMES = [
+    { t: 0.00, skyTop: [10, 8, 10], skyMid: [30, 22, 22], skyHor: [74, 46, 34], rim: [251, 146, 60],
+      gFar: [34, 32, 32], gMid: [46, 43, 42], gNear: [38, 36, 35], star: 0.25, night: 1.0 },
+    { t: 0.17, skyTop: [12, 10, 12], skyMid: [34, 26, 24], skyHor: [80, 52, 38], rim: [251, 146, 60],
+      gFar: [36, 34, 33], gMid: [48, 45, 44], gNear: [40, 38, 37], star: 0.2, night: 0.95 },
+    { t: 0.25, skyTop: [46, 38, 40], skyMid: [112, 82, 64], skyHor: [196, 132, 82], rim: [253, 186, 116],
+      gFar: [90, 84, 78], gMid: [112, 104, 96], gNear: [98, 91, 84], star: 0.05, night: 0.30 },
+    { t: 0.32, skyTop: [70, 64, 58], skyMid: [134, 120, 96], skyHor: [190, 170, 128], rim: [250, 214, 150],
+      gFar: [112, 106, 98], gMid: [136, 128, 118], gNear: [120, 113, 104], star: 0.0, night: 0.0 },
+    { t: 0.48, skyTop: [78, 72, 62], skyMid: [144, 132, 104], skyHor: [198, 182, 138], rim: [250, 220, 160],
+      gFar: [118, 112, 104], gMid: [142, 134, 124], gNear: [126, 119, 110], star: 0.0, night: 0.0 },
+    { t: 0.68, skyTop: [74, 64, 56], skyMid: [140, 118, 92], skyHor: [200, 168, 120], rim: [250, 204, 140],
+      gFar: [112, 104, 96], gMid: [136, 126, 116], gNear: [120, 112, 103], star: 0.0, night: 0.0 },
+    { t: 0.75, skyTop: [40, 26, 30], skyMid: [124, 64, 50], skyHor: [222, 112, 52], rim: [249, 115, 22],
+      gFar: [80, 66, 58], gMid: [104, 88, 76], gNear: [90, 76, 66], star: 0.1, night: 0.40 },
+    { t: 0.82, skyTop: [12, 10, 12], skyMid: [32, 24, 24], skyHor: [78, 50, 36], rim: [251, 146, 60],
+      gFar: [36, 34, 33], gMid: [48, 45, 44], gNear: [40, 38, 37], star: 0.2, night: 0.95 },
+    { t: 1.00, skyTop: [10, 8, 10], skyMid: [30, 22, 22], skyHor: [74, 46, 34], rim: [251, 146, 60],
+      gFar: [34, 32, 32], gMid: [46, 43, 42], gNear: [38, 36, 35], star: 0.25, night: 1.0 }
+  ];
+
   // Look of a planet (planet.theme in js/data/operations.js), applied by applyOperation:
   //   sky          day/night palette keyframes        snow     ground texture drawn as snow
+  //   ground       'earth' | 'snow' | 'ash' (concrete and ash: oil stains, drains, no brush)
   //   rock         boulder colours (null = as generated: desert rock / sandstone; else base + snow caps)
   //   dust         blast / track dust colours          storm    storm overlay colour (rgb) + streaks
   //   treadDecay   how fast tread marks fade (snow keeps them for long: tracks can be followed)
@@ -167,6 +191,7 @@
       id: 'desert',
       sky: SKY_KEYFRAMES,
       snow: false,
+      ground: 'earth',
       rock: null,
       dust: ['#c9b38c', '#b59d78', '#a88f6a', '#d4c29c'],
       treadDecay: 1,
@@ -179,6 +204,7 @@
       id: 'ice',
       sky: ICE_KEYFRAMES,
       snow: true,
+      ground: 'snow',
       rock: { base: [92, 102, 118], snow: [232, 240, 248] },
       dust: ['#eef3f8', '#dbe5ef', '#f8fafc', '#cbd8e6'],
       treadDecay: 0.25,
@@ -186,6 +212,20 @@
       maxTreadMarks: 760,
       storm: { rgb: '220, 230, 242', streak: '255, 255, 255' },
       mapBg: '#2a3442'
+    },
+    // Industrial planet: the rocks are heaps of broken concrete
+    city: {
+      id: 'city',
+      sky: CITY_KEYFRAMES,
+      snow: false,
+      ground: 'ash',
+      rock: { base: [120, 116, 110], snow: [96, 90, 84] },
+      dust: ['#8a8580', '#77726c', '#9a948c', '#6b6660'],
+      treadDecay: 0.8,
+      treadRgb: 'rgb(20, 19, 18)',
+      maxTreadMarks: 360,
+      storm: { rgb: '128, 118, 92', streak: '190, 210, 140' },
+      mapBg: '#2c2a28'
     }
   };
 

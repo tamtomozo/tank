@@ -147,7 +147,7 @@
       let nearest = Infinity;
       for (const e of this.combat.enemies) {
         // Parked units at an un-alerted compound don't pull the platoon out of formation
-        if (!e.alive || e.state === 'idle') continue;
+        if (!e.alive || e.state === 'idle' || e.state === 'off') continue;
         nearest = Math.min(nearest, Math.hypot(w.deltaX(player.x, e.x), w.deltaY(player.y, e.y)));
       }
       if (this.mode === 'formation' && nearest < ENGAGE_RADIUS) this.mode = 'engage';
@@ -165,7 +165,7 @@
       let bestD = Infinity;
       for (const e of this.combat.enemies) {
         // Never pick a parked unit: wingmen must not start fights at other compounds on their own
-        if (!e.alive || e.state === 'idle') continue;
+        if (!e.alive || e.state === 'idle' || e.state === 'off') continue;
         const fromLeader = Math.hypot(w.deltaX(player.x, e.x), w.deltaY(player.y, e.y));
         if (fromLeader > DISENGAGE_RADIUS) continue;
         const d = Math.hypot(w.deltaX(a.x, e.x), w.deltaY(a.y, e.y));
@@ -282,7 +282,7 @@
       const leadY = w.wrapY(target.y + target._velY * leadT);
       a.aimAtWorldPoint(leadX, leadY, dt);
       if (d < FIRE_RANGE && a.reloadTimer <= 0 && a.isAimedAt(leadX, leadY, 0.12)) {
-        this.combat.fireMainCannon(a, leadX, leadY);
+        this.combat.fireMainCannon(a, leadX, leadY, target.z > 0 ? target.z + 10 : 0); // (turret on a deck)
       }
     }
 

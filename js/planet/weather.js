@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  // Storm overlay (world.storm 0..1 and world.stormKind 'sand' | 'snow', set by js/game/hazards.js):
+  // Storm overlay (world.storm 0..1 and world.stormKind 'sand' | 'snow' | 'smog', set by js/game/hazards.js):
   // a wall of blowing sand or snow that closes in around the player's tank — a clear pocket around
   // it, everything beyond fades into the storm — plus streaks of sand / snow racing across the
   // screen. Painted at half resolution like the night darkness (js/planet/night.js).
@@ -10,7 +10,9 @@
   const STORM_RES = 0.5; // overlay pixels per CSS pixel
   const LOOK = {
     sand: { rgb: '186, 140, 88', streak: '232, 200, 150', len: 1, slope: 0.12 },
-    snow: { rgb: '214, 226, 240', streak: '255, 255, 255', len: 0.45, slope: 0.45 }
+    snow: { rgb: '214, 226, 240', streak: '255, 255, 255', len: 0.45, slope: 0.45 },
+    // Smog: a brown haze with acid rain falling almost straight down
+    smog: { rgb: '112, 102, 78', streak: '176, 196, 128', len: 0.5, slope: 0, rain: true }
   };
   const CLEAR_FAR = 760; // radius of the clear pocket (world units) as a storm begins…
   const CLEAR_NEAR = 170; // …and at full strength
@@ -80,6 +82,24 @@
       const n = Math.round(STREAKS * s);
       ctx.save();
       ctx.lineCap = 'round';
+      if (look.rain) {
+        // Acid rain: thin streaks falling fast, always some even when the haze is thin
+        const drops = Math.round(STREAKS * Math.min(1, 0.35 + s));
+        ctx.lineWidth = 1;
+        for (let i = 0; i < drops; i++) {
+          const k = streakSeeds[i];
+          const x = ((k.x + timeSec * 0.03) % 1) * (cw + 40) - 20;
+          const y = ((k.y + timeSec * k.speed * 1.6) % 1) * (ch + 80) - 40;
+          const len = k.len * look.len;
+          ctx.strokeStyle = `rgba(${look.streak}, ${(k.a * 0.8).toFixed(3)})`;
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x - len * 0.12, y - len);
+          ctx.stroke();
+        }
+        ctx.restore();
+        return;
+      }
       for (let i = 0; i < n; i++) {
         const k = streakSeeds[i];
         const x = ((k.x + timeSec * k.speed) % 1) * (cw + 200) - 100;

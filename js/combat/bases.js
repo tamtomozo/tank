@@ -37,24 +37,15 @@
       this.hold = null;
       this.survey = null;
       this.feint = null;
-      if (!this.enemiesEnabled || !this.operation) return;
+      this.pendingSites = []; // compounds that appear later (site.after)
+      if (!this.enemiesEnabled || !this.operation) {
+        this._setupCity();
+        return;
+      }
       const defs = this.operation.sites || [];
       for (const site of this.world.sites) {
-        const base = {
-          id: site.id,
-          name: site.name,
-          x: site.x,
-          y: site.y,
-          radius: site.radius,
-          garrison: defs[site.id].garrison,
-          optional: !!defs[site.id].optional, // need not be captured (e.g. the target of a feint)
-          alerted: false,
-          cleared: false,
-          total: 0
-        };
-        this.bases.push(base);
-        this._garrisonBase(base, site);
-        if (this.world.revealBase) this.world.revealBase(site.id);
+        if (defs[site.id].after != null) this.pendingSites.push(site);
+        else this._addBase(site);
       }
       const op = this.operation;
       if (op.survey) {
@@ -74,6 +65,28 @@
           bossSpawned: false
         };
       }
+      this._setupCity(); // turrets, tunnels, IEDs, escort, finale (js/combat/city.js)
+    }
+
+    // Runtime state of one compound, garrisoned and drawn on the ground (index == compound id)
+    _addBase(site) {
+      const def = this.operation.sites[site.id];
+      const base = {
+        id: site.id,
+        name: site.name,
+        x: site.x,
+        y: site.y,
+        radius: site.radius,
+        garrison: def.garrison,
+        optional: !!def.optional, // need not be captured (e.g. the target of a feint)
+        alerted: false,
+        cleared: false,
+        total: 0
+      };
+      this.bases.push(base);
+      this._garrisonBase(base, site);
+      if (this.world.revealBase) this.world.revealBase(site.id);
+      return base;
     }
 
     // Parked (idle) tanks and manned bunkers for one compound, scaled by its garrison tier
@@ -184,7 +197,17 @@
           const collected = this._vacuumAllPickups();
           this.audio.playWaveClear();
           this.events.push({ type: 'cleared', base, bonus: BASE_CLEAR_BONUS, collected });
+          // The power plant: the turrets on its grid go dark (js/combat/city.js)
+          if (this.operation && this.operation.sites[base.id].power) this._powerDown();
         }
+      }
+
+      // A compound that holds out after another has fallen (site.after) shows up now
+      for (const site of this.pendingSites.slice()) {
+        const after = this.bases[this.operation.sites[site.id].after];
+        if (!after || !after.cleared) continue;
+        this.pendingSites.splice(this.pendingSites.indexOf(site), 1);
+        this.events.push({ type: 'siteAppears', base: this._addBase(site) });
       }
 
       if (!this.operation || this.missionComplete) return;
@@ -193,6 +216,10 @@
       if (!this.bases.every((b) => b.cleared || b.optional)) return;
       if (this.survey && !this.survey.every((p) => p.done)) return;
       if (this.feint && !this.feint.done) return;
+      if (this.pendingSites.length > 0) return;
+      const esc = this.escort;
+      if (esc && esc.stage !== 'done' && esc.stage !== 'lost') return;
+      if (this._updateFinale()) return; // the boss of the finale is still out there
       const hold = this.hold;
       if (hold && !hold.done) {
         if (!hold.active) {

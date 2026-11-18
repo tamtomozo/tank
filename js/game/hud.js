@@ -158,10 +158,24 @@
       }
       if (combat.survey) {
         const n = combat.survey.filter((p) => p.done).length;
-        tick(n === combat.survey.length, `氷上偵察 ${n}/${combat.survey.length}`);
+        const label = combat.operation.surveyKind === 'patrol' ? '市街の巡回' : '氷上偵察';
+        tick(n === combat.survey.length, `${label} ${n}/${combat.survey.length}`);
       }
+      const esc = combat.escort;
+      if (esc) {
+        if (esc.stage === 'lost') lines.push(`✖ ${esc.name}を失った`);
+        else if (esc.stage === 'meet') tick(false, `${esc.name}と合流（${esc.meet.name}）`);
+        else tick(esc.stage === 'done', `${esc.name}を${esc.to.name}へ護衛`);
+      }
+      const fin = combat.finale;
+      if (fin) tick(fin.done, `${global.GameData.ENEMY_INFO[fin.kind].name}の撃破`);
       const hold = combat.hold;
       if (hold) tick(hold.done, `${hold.label || '周囲の封鎖'} ${hold.duration}秒`);
+      // Industrial planet: the people's cooperation, live (js/campaign.js)
+      const planet = game.operation && game.operation.planet;
+      if (planet && planet.hazards && planet.hazards.civilians) {
+        lines.push(`住民の協力度 ${global.Campaign.supportAfter(combat.civilLost || 0)}%`);
+      }
       return lines.join('\n');
     }
 

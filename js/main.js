@@ -115,7 +115,7 @@
       // Camera follows the player, leading it by (lookX, lookY) along its facing (js/game/controls.js)
       cam: { x: player.x, y: player.y, lookX: 0, lookY: 0, starOffsetX: 0 },
       activeTarget: null, // enemy / prop the turret is locked onto (null = aiming straight ahead)
-      activeTargetPoint: { x: 0, y: 0 }, // where the locked target appears to be (mirage) = the aim point
+      activeTargetPoint: { x: 0, y: 0, z: 0 }, // where the locked target appears to be (mirage) = the aim point
       started: false,
       overShown: false, // after-action report or game-over window already shown for this sortie
       returnedToHq: false, // planet secured AND the player has driven back to the operations HQ

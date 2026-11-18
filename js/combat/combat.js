@@ -5,6 +5,8 @@
   // order and the event queue; the rest of the class is mixed in from the other files in js/combat/:
   //   bases.js    enemy compounds                 weapons.js  firing, shells, explosions, damage
   //   enemyAI.js  enemy tank behaviour            effects.js  particles, pickups, resupply
+  //   ice.js      frozen lakes                    city.js     turrets, tunnels, IEDs, escort,
+  //                                                           finale boss, destructible buildings
 
   const { ENEMY_SPECS } = global.GameData; // js/data/enemies.js
 
@@ -28,7 +30,7 @@
     static freshStats() {
       return {
         elapsed: 0, // mission time: seconds of tactical play until the area is secured (pauses excluded)
-        killsByKind: { light: 0, medium: 0, heavy: 0, bunker: 0, boss: 0, ace: 0 },
+        killsByKind: { infantry: 0, light: 0, medium: 0, modern: 0, heavy: 0, bunker: 0, turret: 0, boss: 0, ace: 0, proto: 0 },
         killsBy: { player: 0, ally: 0, other: 0 },
         shotsFired: 0, // player's shells / rounds / missiles
         shotsHit: 0, // player's projectiles that damaged at least one enemy
@@ -50,10 +52,11 @@
     }
 
     // Shared ballistic solution used by both actual firing and the aim-preview arc
-    static computeShellLaunch(muzzleZ, rawDist, shellSpeed, gScale) {
+    // targetZ: height of the target (a turret on a highway deck), 0 = on the ground
+    static computeShellLaunch(muzzleZ, rawDist, shellSpeed, gScale, targetZ = 0) {
       const dist = Math.max(MIN_SHELL_DIST, Math.min(MAX_SHELL_DIST, rawDist));
       const flightT = dist / shellSpeed;
-      const vz = (0.5 * SHELL_GRAVITY * gScale * flightT * flightT - muzzleZ) / Math.max(0.15, flightT);
+      const vz = (0.5 * SHELL_GRAVITY * gScale * flightT * flightT - muzzleZ + targetZ) / Math.max(0.15, flightT);
       return { dist, flightT, vz: Math.min(260, Math.max(-40, vz)) };
     }
 
@@ -140,6 +143,7 @@
       this.damageFlash = Math.max(0, this.damageFlash - dt * 2.8);
 
       this._updateEnemies(dt, player);
+      this._updateCity(dt, player);
       this._updateIce(dt, player);
       this._updateProjectiles(dt, player);
       this._emitTrackDust(player, dt, player);

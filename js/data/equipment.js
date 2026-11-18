@@ -10,7 +10,8 @@
   //   heater      a standing tank chills at a quarter of the rate (player's tank: hazards.js)
   //   wideTracks  half the load on the ice of a frozen lake (js/combat/ice.js)
   //   addArmor    +25% armour (max HP), -8% top speed
-  //   cage        -35% damage from near misses (blasts that are not a direct hit)
+  //   cage        -35% damage from near misses (blasts that are not a direct hit); the rockets of
+//               anti-tank infantry do 55% less, direct hits included
   // How they are applied: js/loadout.js.
 
   const EQUIPMENT = [
@@ -19,7 +20,7 @@
     { id: 'heater', name: 'エンジンヒーター', icon: '♨', desc: '止まっていても車体が冷えにくい（低温の進み方が1/4）。' },
     { id: 'wideTracks', name: '幅広の履帯', icon: '≡', desc: '氷にかかる重さが半分になり、止まっても割れにくい（小隊全車）。' },
     { id: 'addArmor', name: '増加装甲', icon: '▣', desc: '最大装甲+25%（小隊全車）。重くなるため最高速度−8%。' },
-    { id: 'cage', name: 'ケージ装甲', icon: '#', desc: '至近弾の爆風ダメージ−35%（小隊全車）。直撃には効かない。' }
+    { id: 'cage', name: 'ケージ装甲', icon: '#', desc: '至近弾の爆風ダメージ−35%、歩兵のロケットは直撃でも−55%（小隊全車）。戦車砲の直撃には効かない。' }
   ];
 
   const EQUIP_SLOTS = 2;

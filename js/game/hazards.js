@@ -6,6 +6,7 @@
   //              up → full storm → dying down → calm
   //   blizzard   (operation.weather.blizzard) never stops on its own: it swells and eases on a slow
   //              wave between `base` and base + `amp`
+  //   smog       (operation.weather.smog) the same slow wave, as a brown haze with acid rain
   //              Either sets world.storm (0..1): it closes in the view (js/planet/weather.js), how
   //              far compounds spot the platoon (js/combat/bases.js), how far tanks see to fire
   //              (CombatManager.sightRange) and the radar. On a planet with a heat sensor
@@ -41,7 +42,7 @@
     const script = () => global.RadioComms.script;
 
     let stormCfg = null; // sandstorm { firstCalm, calm, ramp, peak } or blizzard { firstCalm, base, amp, period }
-    let stormKind = null; // 'sand' | 'snow'
+    let stormKind = null; // 'sand' | 'snow' | 'smog'
     let stormT = 0; // seconds into the storm timeline
     let stormRising = false; // last reported trend (for Mio's lines)
     let mirageOn = false;
@@ -56,8 +57,8 @@
       const op = selection ? selection.operation : null;
       const rules = (selection && selection.planet.hazards) || {};
       const weather = (op && op.weather) || {};
-      stormKind = weather.sandstorm ? 'sand' : weather.blizzard ? 'snow' : null;
-      stormCfg = weather.sandstorm || weather.blizzard || null;
+      stormKind = weather.sandstorm ? 'sand' : weather.blizzard ? 'snow' : weather.smog ? 'smog' : null;
+      stormCfg = weather.sandstorm || weather.blizzard || weather.smog || null;
       mirageOn = !!(op && op.mirage);
       heatOn = !!rules.heat;
       coldOn = !!rules.cold;
@@ -120,6 +121,14 @@
         } else if (now < before - 1e-4 && stormRising) {
           stormRising = false;
           radio.say(script().stormPassing(), { key: 'storm' });
+        }
+      } else if (stormKind === 'smog') {
+        if (!stormRising && now > 0.5) {
+          stormRising = true;
+          radio.say(script().smogRising(), { key: 'storm', priority: 'high' });
+        } else if (stormRising && now < 0.3) {
+          stormRising = false;
+          radio.say(script().smogEasing(), { key: 'storm' });
         }
       } else if (!stormRising && now > 0.72) {
         stormRising = true;

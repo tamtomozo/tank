@@ -12,6 +12,10 @@
   //   scrap      scrap banked from the last operation, spent on repairs / replacements and in the field
   //   equipment  fitted equipment ids per planet (js/data/equipment.js); a planet not set up yet
   //              starts with its recommended gear (planet.gear)
+  //   support    the people's cooperation on the industrial planet (0..100): every civilian
+  //              building the platoon destroys costs SUPPORT_PER_BUILDING
+  //   collaborator  whether the collaborator of the escort reached the tunnel (null = not yet)
+  //              Both decide how many guerrillas the last stage meets (guerrillaThreat)
   // Only a completed operation changes it (recordSuccess); a failed sortie is simply retried.
   // URL options: ?unlock opens every stage, ?reset starts a fresh campaign.
 
@@ -21,6 +25,7 @@
   const MAX_ALLIES = 4;
   const REPAIR_COST_PER_PCT = 6; // scrap per 1% of wear repaired
   const REINFORCE_COST = 70; // scrap per replacement wingman (same as at a field depot)
+  const SUPPORT_PER_BUILDING = 4; // cooperation lost per civilian building destroyed
 
   // XP for a completed operation
   const XP_OPERATION = 20;
@@ -28,7 +33,7 @@
   const XP_NO_LOSSES = 10;
 
   function fresh() {
-    return { cleared: [], xp: 0, wear: 0, allies: MAX_ALLIES, scrap: 0, equipment: {} };
+    return { cleared: [], xp: 0, wear: 0, allies: MAX_ALLIES, scrap: 0, equipment: {}, support: 100, collaborator: null };
   }
 
   class Campaign {
@@ -146,6 +151,26 @@
       return true;
     }
 
+    // ---- the people (industrial planet) ----
+    get support() {
+      return this.state.support;
+    }
+
+    get collaborator() {
+      return this.state.collaborator;
+    }
+
+    // Cooperation after `civilLost` more civilian buildings (live figure during a sortie)
+    supportAfter(civilLost) {
+      return Math.max(0, this.state.support - civilLost * SUPPORT_PER_BUILDING);
+    }
+
+    // How hard the last stage's guerrillas hit: 0 (people on our side, collaborator saved) .. 1
+    get guerrillaThreat() {
+      const lost = (100 - this.state.support) / 100;
+      return Math.max(0, Math.min(1, lost * 0.8 + (this.state.collaborator === false ? 0.35 : 0)));
+    }
+
     // ---- equipment ----
     // Ids fitted for the planet; one not set up yet starts with its recommended gear
     equipment(planet) {
@@ -162,10 +187,13 @@
 
     // ---- end of an operation ----
     // A completed operation: progress, experience, wear and what is left of the platoon carry over.
-    // r = { opId, kills, alliesLost, alliesLeft, damageRatio, scrap }. Returns the changes for the report.
+    // r = { opId, kills, alliesLost, alliesLeft, damageRatio, scrap, civilLost, collaborator }.
+    // Returns the changes for the report.
     recordSuccess(r) {
       const s = this.state;
-      const before = { level: this.crewLevel, wear: s.wear, xp: s.xp };
+      const before = { level: this.crewLevel, wear: s.wear, xp: s.xp, support: s.support };
+      s.support = this.supportAfter(r.civilLost || 0);
+      if (r.collaborator != null) s.collaborator = r.collaborator;
       const xpGain = XP_OPERATION + r.kills * XP_PER_KILL + (r.alliesLost === 0 ? XP_NO_LOSSES : 0);
       s.xp += xpGain;
       s.wear = Math.min(WEAR_MAX, s.wear + Math.min(0.15, 0.03 + r.damageRatio * 0.08));
@@ -182,7 +210,12 @@
         wearBefore: before.wear,
         wear: s.wear,
         allies: s.allies,
-        scrap: s.scrap
+        scrap: s.scrap,
+        civilLost: r.civilLost || 0,
+        supportBefore: before.support,
+        support: s.support,
+        collaborator: r.collaborator,
+        campaignDone: r.last === true
       };
     }
   }

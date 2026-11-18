@@ -150,7 +150,14 @@
         `経験値 +${c.xpGain}（${c.xp}${c.nextLevelXp ? ` / 次のLv ${c.nextLevelXp}` : '・最大'}）`
           + (up ? ` 車両調整ポイント +${c.level - c.levelBefore}` : ''),
         `自機の損耗 ${Math.round(c.wearBefore * 100)}% → ${Math.round(c.wear * 100)}%`,
-        `僚機 ${c.allies} 両 ／ スクラップ ⚙ ${c.scrap} を持ち越し`
+        `僚機 ${c.allies} 両 ／ スクラップ ⚙ ${c.scrap} を持ち越し`,
+        // Industrial planet: the people and the collaborator
+        ...(c.civilLost > 0 || c.support < 100
+          ? [`住民の協力度 ${c.supportBefore}% → ${c.support}%（民間の建物 ${c.civilLost} 棟を損壊）`]
+          : []),
+        ...(c.collaborator === true ? ['協力者を護衛 — 地下トンネルの地図を入手'] : []),
+        ...(c.collaborator === false ? ['協力者を失った — トンネルの地図なし'] : []),
+        ...(c.campaignDone ? ['★ 惑星カストラ解放 — 全作戦完了'] : [])
       ]);
       c2.classList.add('is-carry');
       return c2;

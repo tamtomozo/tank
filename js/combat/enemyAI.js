@@ -33,6 +33,12 @@
           this._returnHome(e, dt);
           continue;
         }
+        if (e.state === 'off') {
+          // Turret without power (js/combat/city.js): dark and silent
+          e.stepPhysics(0, 0, dt, null);
+          e.returnTurretStraight(dt);
+          continue;
+        }
         const idle = e.state === 'idle'; // parked at its compound until alerted
         // Just alerted: still reacting — turret swings onto the target but the tank neither moves nor fires
         const reacting = !idle && e.reactTimer > 0;
@@ -90,7 +96,8 @@
           const leadX = this.world.wrapX(tgt.x + tgt._velX * 0.25);
           const leadY = this.world.wrapY(tgt.y + tgt._velY * 0.25);
           e.aimAtWorldPoint(leadX, leadY, dt);
-          if (!reacting && e.reloadTimer <= 0 && dist < 620 * rangeScale) {
+          // Infantry rockets reach less far than a tank gun
+          if (!reacting && e.reloadTimer <= 0 && dist < (e.isInfantry ? 400 : 620) * rangeScale) {
             this.fireMainCannon(e, leadX, leadY);
           }
         } else {

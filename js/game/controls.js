@@ -24,7 +24,7 @@
       // In a storm nothing beyond sight range can be locked onto (the heat sensor reaches farther)
       const sight = combat.sensorRange();
       const consider = (obj) => {
-        if (!obj.alive) return;
+        if (!obj.alive || obj.powerOff) return; // (a turret without power is no threat)
         // Enemies: where they appear to be (a mirage shifts distant ones off their real position)
         const pos = obj instanceof global.Tank2D ? combat.apparentPos(obj) : obj;
         if (!world.isPointInHeadlightRange(
@@ -125,6 +125,8 @@
         const pt = lockCandidate instanceof global.Tank2D ? combat.apparentPos(lockCandidate) : lockCandidate;
         game.activeTargetPoint.x = pt.x;
         game.activeTargetPoint.y = pt.y;
+        // A turret on a highway deck: the shell is lobbed to the deck height
+        game.activeTargetPoint.z = lockCandidate.z > 0 ? lockCandidate.z + 10 : 0;
         player.aimAtWorldPoint(pt.x, pt.y, dt);
         game.activeTarget = player.isAimedAt(pt.x, pt.y) ? lockCandidate : null;
       } else {
@@ -137,7 +139,7 @@
       game.playerActing = moving || firing;
       if (firing) {
         const fireTarget = game.activeTarget ? game.activeTargetPoint : barrelForwardTarget(340);
-        combat.fireMainCannon(player, fireTarget.x, fireTarget.y);
+        combat.fireMainCannon(player, fireTarget.x, fireTarget.y, game.activeTarget ? fireTarget.z || 0 : 0);
       }
     }
 

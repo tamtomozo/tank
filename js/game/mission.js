@@ -199,7 +199,8 @@
         } else if (ev.type === 'bossArrived') {
           radio.say(global.RadioComms.script.bossArrived(ev.kind), { priority: 'high' });
         } else if (ev.type === 'surveyed') {
-          radio.say(global.RadioComms.script.surveyed(ev.point.name, ev.left), { key: 'survey' });
+          const kind = game.operation && game.operation.operation.surveyKind;
+          radio.say(global.RadioComms.script.surveyed(ev.point.name, ev.left, kind), { key: 'survey' });
         } else if (ev.type === 'feintSpotted') {
           radio.say(global.RadioComms.script.feintSpotted(ev.base.name, combat.feint.distance), { priority: 'high' });
         } else if (ev.type === 'feintDone') {
@@ -210,6 +211,29 @@
           radio.say(global.RadioComms.script.iceBreak(ev.tank.isAlly), { key: 'ice-break' });
         } else if (ev.type === 'outOfAmmo') {
           radio.say(global.RadioComms.script.outOfAmmo(), { key: 'ammo', priority: 'high' });
+        } else if (ev.type === 'ambush') {
+          radio.say(global.RadioComms.script.ambush(), { key: 'ambush', priority: 'high' });
+        } else if (ev.type === 'iedSpotted') {
+          radio.say(global.RadioComms.script.iedSpotted(), { key: 'ied' });
+        } else if (ev.type === 'iedBlast') {
+          radio.say(global.RadioComms.script.iedBlast(), { key: 'ied', priority: 'high' });
+        } else if (ev.type === 'iedCleared') {
+          radio.say(global.RadioComms.script.iedCleared(), { key: 'ied' });
+        } else if (ev.type === 'escortMet') {
+          radio.say(global.RadioComms.script.escortMet(ev.escort), { priority: 'high' });
+        } else if (ev.type === 'escortDone') {
+          radio.say(global.RadioComms.script.escortDone(ev.escort));
+        } else if (ev.type === 'escortLost') {
+          radio.say(global.RadioComms.script.escortLost(ev.escort), { priority: 'high' });
+        } else if (ev.type === 'powerDown') {
+          radio.say(global.RadioComms.script.powerDown(ev.count), { priority: 'high' });
+        } else if (ev.type === 'siteAppears') {
+          radio.say(global.RadioComms.script.siteAppears(ev.base.name), { priority: 'high' });
+        } else if (ev.type === 'civilLost') {
+          const support = global.Campaign.supportAfter(combat.civilLost);
+          radio.say(global.RadioComms.script.civilLost(ev.count, support), { key: 'civil' });
+        } else if (ev.type === 'fuelBlast') {
+          radio.say(global.RadioComms.script.fuelBlast(), { key: 'fuel' });
         }
       }
     }
@@ -254,7 +278,10 @@
           alliesLost: stats.alliesLost,
           alliesLeft: combat.allies.filter((a) => a.alive).length,
           damageRatio: stats.damageTaken / Math.max(1, player.maxHp),
-          scrap: combat.scrap
+          scrap: combat.scrap,
+          civilLost: combat.civilLost,
+          collaborator: combat.escort ? combat.escort.stage === 'done' : null,
+          last: game.operation.operation.id === 'castra-3'
         }) : null;
         results.open({ stats, combat, squad, player, world, audio, planetName: planetName(), carry }, () => start());
       }

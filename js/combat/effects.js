@@ -153,7 +153,7 @@
     // Sand thrown up behind both caterpillar tracks of a moving tank. Emission is distance-based
     // (faster tanks kick up more) and limited to tanks near the player to bound cost.
     _emitTrackDust(tank, dt, player) {
-      if (!tank || !tank.alive || tank.isBunker || !tank.grounded) return;
+      if (!tank || !tank.alive || tank.isBunker || tank.isInfantry || !tank.grounded) return;
       const motion = Math.abs(tank.speed) + Math.abs(tank.turnRate) * 28;
       if (motion < 18) return;
       if (player && tank !== player) {

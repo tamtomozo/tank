@@ -20,7 +20,8 @@
       if (!this.missionComplete) this.stats.shotsFired += 1;
     }
 
-    fireMainCannon(tank, targetX, targetY) {
+    // targetZ: height of the target (a turret on a highway deck)
+    fireMainCannon(tank, targetX, targetY, targetZ = 0) {
       if (tank.reloadTimer > 0 || !tank.alive) return false;
       // Limited ammunition (operation.ammo): the player's gun stays silent once it runs dry
       if (tank.isPlayer && this.ammo != null) {
@@ -38,8 +39,9 @@
       tank.triggerFireEffects();
 
       const muzzle = tank.getMuzzleWorld();
-      // Firing shock: the whole tank is shoved back opposite the barrel
-      tank.applyKnockback(-muzzle.dirX, -muzzle.dirY, CANNON_RECOIL_KNOCKBACK);
+      // Firing shock: the whole tank is shoved back opposite the barrel (not a soldier's rocket)
+      if (!tank.isInfantry) tank.applyKnockback(-muzzle.dirX, -muzzle.dirY, CANNON_RECOIL_KNOCKBACK);
+      else tank.muzzleFlashTimer = 0.22; // longer back-blast
       const isRail = tank.isPlayer && tank.cannonLevel >= 5;
 
       // Calculate exact parabolic vz to land at target distance
@@ -50,7 +52,7 @@
         rawDist = Math.hypot(dx, dy);
       }
       const gScale = isRail ? 0.3 : 1.0;
-      const launch = CombatManager.computeShellLaunch(muzzle.z, rawDist, tank.shellSpeed, gScale);
+      const launch = CombatManager.computeShellLaunch(muzzle.z, rawDist, tank.shellSpeed, gScale, targetZ);
 
       const friendly = tank.isPlayer || tank.isAlly;
       if (tank.isPlayer) this._countShot();
@@ -58,6 +60,7 @@
         kind: 'cannon',
         fromPlayer: friendly, // "player side": player and wingmen
         source: tank.isPlayer ? 'player' : tank.isAlly ? 'ally' : 'enemy',
+        rocket: !!tank.isInfantry, // anti-tank rocket (cage armour stops much of it)
 
         x: muzzle.x,
         y: muzzle.y,
@@ -68,8 +71,8 @@
         gScale,
         damage: tank.damage,
         splashRadius: tank.splashRadius,
-        color: tank.isPlayer ? (isRail ? '#38bdf8' : '#fbbf24') : tank.isAlly ? '#a3e635' : '#f87171',
-        radius: tank.isBoss ? 7 : 5,
+        color: tank.isPlayer ? (isRail ? '#38bdf8' : '#fbbf24') : tank.isAlly ? '#a3e635' : tank.isInfantry ? '#fb923c' : '#f87171',
+        radius: tank.isBoss ? 7 : tank.isInfantry ? 3.5 : 5,
         life: 2.6,
         trailTimer: 0
       });
@@ -85,7 +88,8 @@
       return true;
     }
 
-    // source: 'player' | 'ally' | 'enemy' | null (who caused the blast). Returns enemies damaged.
+    // source: 'player' | 'ally' | 'enemy' | 'rocket' (an infantry rocket) | null (who caused the
+    // blast). Returns enemies damaged.
     explodeAt(x, y, radius, damage, fromPlayer, player, isDirect = false, source = null) {
       const wx = this.world.wrapX(x);
       const wy = this.world.wrapY(y);
@@ -115,6 +119,17 @@
 
       // Purely cosmetic death blasts (damage 0) must not "hit" nearby tanks/props (avoids hit-sound spam)
       if (damage <= 0) return 0;
+
+      // The platoon's shells set off the IEDs they reach (js/combat/city.js)
+      if (fromPlayer && this.ieds && this.ieds.length > 0) this._blastIeds(wx, wy, radius);
+
+      // Cage armour (equipment): takes the edge off near misses (not direct hits) and stops much
+      // of an infantry rocket, direct hits included
+      const guardOf = (t) => {
+        if (!t.splashGuard) return 1;
+        if (source === 'rocket') return 0.45;
+        return isDirect ? 1 : 1 - t.splashGuard;
+      };
 
       let enemiesHit = 0;
       if (fromPlayer) {
@@ -147,9 +162,7 @@
         const d = Math.hypot(dx, dy);
         if (d < radius + player.radius) {
           const falloff = Math.max(0.35, 1 - d / (radius + player.radius + 8));
-          // Cage armour (equipment) takes the edge off near misses, not direct hits
-          const guard = isDirect ? 1 : 1 - (player.splashGuard || 0);
-          this.damagePlayer(player, damage * falloff * guard);
+          this.damagePlayer(player, damage * falloff * guardOf(player));
           this._blastKnockback(player, dx, dy, damage * falloff);
         }
       }
@@ -162,10 +175,15 @@
           const d = Math.hypot(adx, ady);
           if (d < radius + a.radius) {
             const falloff = Math.max(0.35, 1 - d / (radius + a.radius + 8));
-            const guard = isDirect ? 1 : 1 - (a.splashGuard || 0);
-            this.damageAlly(a, damage * falloff * guard);
+            this.damageAlly(a, damage * falloff * guardOf(a));
             this._blastKnockback(a, adx, ady, damage * falloff);
           }
+        }
+        // The collaborator on the way to the tunnel (js/combat/city.js)
+        const eu = this.escortUnit();
+        if (eu) {
+          const d = Math.hypot(this.world.deltaX(wx, eu.x), this.world.deltaY(wy, eu.y));
+          if (d < radius + eu.radius) this._damageEscort(damage * Math.max(0.35, 1 - d / (radius + eu.radius + 8)));
         }
       }
       return enemiesHit;
@@ -194,11 +212,12 @@
       }
     }
 
-    // Nearest living friendly (player or wingman) to (x, y)
+    // Nearest living friendly (player, wingman or the collaborator being escorted) to (x, y)
     nearestFriendly(x, y, player) {
       let best = player && player.alive ? player : null;
       let bestD = best ? Math.hypot(this.world.deltaX(x, best.x), this.world.deltaY(y, best.y)) : Infinity;
-      for (const a of this.allies) {
+      const eu = this.escortUnit();
+      for (const a of eu ? [...this.allies, eu] : this.allies) {
         if (!a.alive) continue;
         const d = Math.hypot(this.world.deltaX(x, a.x), this.world.deltaY(y, a.y));
         if (d < bestD) {
@@ -284,6 +303,7 @@
       for (const p of this.projectiles) {
         p.life -= dt;
         if (p.life <= 0) continue;
+        const src = p.rocket ? 'rocket' : p.source; // who the blast is from (cage armour vs rockets)
 
         p.vz -= SHELL_GRAVITY * p.gScale * dt;
         p.x = this.world.wrapX(p.x + p.vx * dt);
@@ -298,10 +318,12 @@
 
         let hit = false;
 
-        // Enemy collision
-        if (p.fromPlayer && p.z < 46) {
+        // Enemy collision (a turret on a highway deck stands at the deck height)
+        if (p.fromPlayer) {
           for (const e of this.enemies) {
             if (!e.alive) continue;
+            const ez = e.z || 0;
+            if (p.z > ez + 46 || p.z < ez - 30) continue;
             const dx = this.world.deltaX(p.x, e.x);
             const dy = this.world.deltaY(p.y, e.y);
             if (Math.hypot(dx, dy) < e.radius + 9) {
@@ -314,9 +336,10 @@
         } else if (!p.fromPlayer) {
           const struck = (t) => t.alive && p.z < t.z + 34 &&
             Math.hypot(this.world.deltaX(p.x, t.x), this.world.deltaY(p.y, t.y)) < t.radius + 8;
-          if (struck(player) || this.allies.some(struck)) {
+          const eu = this.escortUnit();
+          if (struck(player) || this.allies.some(struck) || (eu && struck(eu))) {
             hit = true;
-            this.explodeAt(p.x, p.y, p.splashRadius, p.damage, false, player, true);
+            this.explodeAt(p.x, p.y, p.splashRadius, p.damage, false, player, true, src);
           }
         }
 
@@ -348,7 +371,7 @@
             const surfaceZ = obs.height * (1 - dSq / rSq); // dome-shaped hit profile
             if (p.z < surfaceZ) {
               hit = true;
-              if (this.explodeAt(p.x, p.y, p.splashRadius, p.damage, p.fromPlayer, player, false, p.source) > 0 &&
+              if (this.explodeAt(p.x, p.y, p.splashRadius, p.damage, p.fromPlayer, player, false, src) > 0 &&
                   p.source === 'player') {
                 this.stats.shotsHit += 1;
               }
@@ -357,19 +380,25 @@
           }
         }
 
-        // Building impact (old town): walls stop shells below the roof line
-        if (!hit && this.world.structures.length > 0 && this.world.structureHit(p.x, p.y, p.z)) {
-          hit = true;
-          if (this.explodeAt(p.x, p.y, p.splashRadius, p.damage, p.fromPlayer, player, false, p.source) > 0 &&
-              p.source === 'player') {
-            this.stats.shotsHit += 1;
+        // Building impact (towns, highway, factory): walls stop shells below the roof line. The
+        // platoon's shells wear civilian buildings down; any shell can set off a fuel tank
+        // (js/combat/city.js)
+        if (!hit && this.world.structures.length > 0) {
+          const st = this.world.structureHit(p.x, p.y, p.z);
+          if (st) {
+            hit = true;
+            if (this.explodeAt(p.x, p.y, p.splashRadius, p.damage, p.fromPlayer, player, false, src) > 0 &&
+                p.source === 'player') {
+              this.stats.shotsHit += 1;
+            }
+            if (st.hp != null && (p.fromPlayer || st.fuel)) this._damageStructure(st, p.damage, p.source);
           }
         }
 
         // Ground impact
         if (!hit && p.z <= 0) {
           hit = true;
-          if (this.explodeAt(p.x, p.y, p.splashRadius, p.damage, p.fromPlayer, player, false, p.source) > 0 &&
+          if (this.explodeAt(p.x, p.y, p.splashRadius, p.damage, p.fromPlayer, player, false, src) > 0 &&
               p.source === 'player') {
             this.stats.shotsHit += 1; // near miss whose splash still caught an enemy
           }

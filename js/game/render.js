@@ -53,7 +53,7 @@
       const isRail = player.cannonLevel >= 5;
       const gScale = isRail ? 0.3 : 1.0;
       // Same ballistic solution as CombatManager.fireMainCannon so the preview matches the real shell
-      const launch = global.CombatManager.computeShellLaunch(muzzle.z, Math.hypot(dx, dy), player.shellSpeed, gScale);
+      const launch = global.CombatManager.computeShellLaunch(muzzle.z, Math.hypot(dx, dy), player.shellSpeed, gScale, activeTarget ? targetPos.z || 0 : 0);
       const T = launch.flightT;
       const vz0 = launch.vz;
       const gravity = global.CombatManager.SHELL_GRAVITY * gScale;
@@ -336,19 +336,112 @@
       }
     }
 
+    // Where the escort goes next (js/combat/city.js): the meeting point, then the tunnel entrance
+    function escortPoint() {
+      const esc = combat.escort;
+      if (!esc) return null;
+      if (esc.stage === 'meet') return esc.meet;
+      if (esc.stage === 'follow') return esc.to;
+      return null;
+    }
+
+    // Escort point: a blue ring like the survey rings
+    function drawEscortRing(timeSec, drawCamX, drawCamY, offView) {
+      const pt = escortPoint();
+      if (!pt) return;
+      const p = world.project(pt.x, pt.y, 0, drawCamX, drawCamY, viewW, viewH);
+      if (!p || offView(p, 120 * p.scale + 20)) return;
+      const pulse = 0.5 + 0.5 * Math.sin(timeSec * 3);
+      ctx.save();
+      ctx.translate(p.sx, p.sy);
+      ctx.scale(p.scale, p.scale * p.tiltCos);
+      ctx.fillStyle = `rgba(59, 130, 246, ${0.1 + 0.07 * pulse})`;
+      ctx.strokeStyle = `rgba(147, 197, 253, ${0.55 + 0.35 * pulse})`;
+      ctx.lineWidth = 3;
+      ctx.setLineDash([10, 7]);
+      ctx.lineDashOffset = -timeSec * 14;
+      ctx.beginPath();
+      ctx.arc(0, 0, 90, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Manholes / subway exits (js/combat/city.js): a cover on the ground; one that has just let
+    // infantry out lies open
+    function drawManholes(drawCamX, drawCamY, offView) {
+      for (const t of combat.tunnels || []) {
+        const p = world.project(t.x, t.y, 0, drawCamX, drawCamY, viewW, viewH);
+        if (!p || offView(p, 40)) continue;
+        ctx.save();
+        ctx.translate(p.sx, p.sy);
+        ctx.scale(p.scale, p.scale * p.tiltCos);
+        ctx.fillStyle = 'rgba(10, 10, 10, 0.75)';
+        ctx.beginPath();
+        ctx.arc(0, 0, 17, 0, Math.PI * 2);
+        ctx.fill();
+        const open = t.open > 0;
+        ctx.fillStyle = '#4b4743';
+        ctx.strokeStyle = '#2a2724';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(open ? 20 : 0, open ? 8 : 0, 14, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(30, 28, 26, 0.8)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        for (const off of [-6, 0, 6]) {
+          ctx.moveTo((open ? 20 : 0) - 9, (open ? 8 : 0) + off);
+          ctx.lineTo((open ? 20 : 0) + 9, (open ? 8 : 0) + off);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    // IEDs the player has spotted: a buried charge with a blinking red light (UI layer, so it
+    // shows in the dark and through smog)
+    function drawIeds(timeSec, drawCamX, drawCamY) {
+      if (!combat.ieds || combat.ieds.length === 0) return;
+      ctx.save();
+      for (const b of combat.ieds) {
+        if (!b.alive || !b.seen) continue;
+        const p = world.project(b.x, b.y, 0, drawCamX, drawCamY, viewW, viewH);
+        if (!p || p.sx < -30 || p.sx > viewW + 30 || p.sy < -30 || p.sy > viewH + 30) continue;
+        ctx.fillStyle = 'rgba(41, 37, 36, 0.85)';
+        ctx.beginPath();
+        ctx.ellipse(p.sx, p.sy, 12 * p.scale, 7 * p.scale, 0, 0, Math.PI * 2);
+        ctx.fill();
+        const blink = 0.5 + 0.5 * Math.sin(timeSec * 9);
+        const r = (4 + 5 * blink) * p.scale;
+        const grad = ctx.createRadialGradient(p.sx, p.sy - 3 * p.scale, 0, p.sx, p.sy - 3 * p.scale, r * 2.4);
+        grad.addColorStop(0, `rgba(254, 202, 202, ${0.95})`);
+        grad.addColorStop(0.35, `rgba(239, 68, 68, ${0.6 + 0.3 * blink})`);
+        grad.addColorStop(1, 'rgba(239, 68, 68, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(p.sx, p.sy - 3 * p.scale, r * 2.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
     // Survey point labels: a beacon line and the point's name (UI layer, above darkness and storms)
     function drawSurveyLabels(drawCamX, drawCamY) {
-      if (!combat.survey) return;
+      const pts = (combat.survey || []).filter((pt) => !pt.done).map((pt) => ({ pt, escort: false }));
+      const ep = escortPoint();
+      if (ep) pts.push({ pt: ep, escort: true });
+      if (pts.length === 0) return;
       ctx.save();
       ctx.font = '800 12px system-ui, "Segoe UI", sans-serif';
       ctx.textAlign = 'center';
       ctx.lineJoin = 'round';
-      for (const pt of combat.survey) {
-        if (pt.done) continue;
+      for (const { pt, escort } of pts) {
         const p = world.project(pt.x, pt.y, 0, drawCamX, drawCamY, viewW, viewH);
         if (!p || p.sx < -40 || p.sx > viewW + 40 || p.sy < -40 || p.sy > viewH + 40) continue;
         const top = p.sy - 60 * p.scale - 10;
-        ctx.strokeStyle = 'rgba(103, 232, 249, 0.8)';
+        ctx.strokeStyle = escort ? 'rgba(147, 197, 253, 0.85)' : 'rgba(103, 232, 249, 0.8)';
         ctx.lineWidth = 2;
         ctx.setLineDash([4, 4]);
         ctx.beginPath();
@@ -359,7 +452,7 @@
         ctx.lineWidth = 4;
         ctx.strokeStyle = 'rgba(15, 23, 42, 0.9)';
         ctx.strokeText(`◆ ${pt.name}`, p.sx, top - 4);
-        ctx.fillStyle = '#a5f3fc';
+        ctx.fillStyle = escort ? '#bfdbfe' : '#a5f3fc';
         ctx.fillText(`◆ ${pt.name}`, p.sx, top - 4);
       }
       ctx.restore();
@@ -451,11 +544,20 @@
         renderQueue.push({ dy: p.dy, draw: () => a.draw(ctx, drawCamX, drawCamY, viewW, viewH, timeInfo.nightFactor) });
       }
 
+      // The collaborator on the way to the tunnel (escort)
+      const escortee = combat.escortUnit();
+      if (escortee) {
+        const p = world.project(escortee.x, escortee.y, 0, drawCamX, drawCamY, viewW, viewH);
+        if (p && !offView(p, 80)) renderQueue.push({ dy: p.dy, draw: () => escortee.draw(ctx, drawCamX, drawCamY, viewW, viewH, timeInfo.nightFactor) });
+      }
+
       // Operations HQ: tent, crates, flag and radio mast (its pad is part of the ground texture);
       // the return circle is drawn now so it lies under everything in the depth-sorted queue
       if (isReturning()) drawHqReturnZone(timeSec, drawCamX, drawCamY, offView);
       drawHoldZone(timeSec, drawCamX, drawCamY, offView);
       drawSurveyRings(timeSec, drawCamX, drawCamY, offView);
+      drawEscortRing(timeSec, drawCamX, drawCamY, offView);
+      drawManholes(drawCamX, drawCamY, offView);
       for (const part of world.hq.parts) {
         const p = world.project(part.x, part.y, 0, drawCamX, drawCamY, viewW, viewH);
         if (!p || offView(p, 150 * p.scale + 20)) continue;
@@ -513,6 +615,7 @@
       world.drawSandstorm(ctx, playerGroundProj, viewW, viewH, timeSec);
       drawHeatSignatures(timeSec, drawCamX, drawCamY);
       if (player.alive) game.hazards.drawGauges(ctx, playerGroundProj, timeSec);
+      drawIeds(timeSec, drawCamX, drawCamY);
       drawSurveyLabels(drawCamX, drawCamY);
 
       // Fort icons floating over enemy-held compounds (UI layer: above the night darkness)
