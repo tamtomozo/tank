@@ -12,6 +12,7 @@
   //                      base / dark / light: surface colours, glow: atmosphere,
   //                      style: 'desert' | 'ice' | 'volcanic', seed: surface pattern
   //   planet.theme     look of the battlefield: 'desert' | 'ice' (js/planet/planet.js THEMES)
+  //   planet.gear      recommended equipment for the planet (js/data/equipment.js), fitted by default
   //   planet.hazards   environment rules shared by every operation on the planet (js/game/hazards.js)
   //                      heat: the engine overheats on a long run at full speed
   //                      dust: the dust a moving tank kicks up lets compounds spot it from farther away
@@ -60,6 +61,7 @@
       available: true,
       globe: { style: 'desert', base: '#c08a4a', dark: '#7a4d26', light: '#ecc58c', glow: '#f59e0b', seed: 11 },
       theme: 'desert',
+      gear: ['cooler', 'filter'],
       hazards: { heat: true, dust: true },
       operations: [
         {
@@ -213,6 +215,7 @@
       available: true,
       globe: { style: 'ice', base: '#8db4cc', dark: '#4b7390', light: '#eef7fc', glow: '#7dd3fc', seed: 23 },
       theme: 'ice',
+      gear: ['heater', 'wideTracks'],
       hazards: { cold: true, thermal: true },
       operations: [
         {
@@ -381,6 +384,7 @@
       summary: '偵察情報なし。',
       available: false,
       globe: { style: 'volcanic', base: '#45403c', dark: '#1f1c1a', light: '#fb923c', glow: '#f97316', seed: 37 },
+      gear: ['addArmor', 'cage'],
       operations: []
     }
   ];

@@ -13,10 +13,20 @@
         player: { ...TUNING_RULES.standard },
         ally: { ...TUNING_RULES.standard }
       };
+      this.bonus = 0;
     }
 
+    // Points per unit: the base budget plus the crew-level bonus (js/campaign.js)
     get budget() {
-      return TUNING_RULES.budget;
+      return TUNING_RULES.budget + this.bonus;
+    }
+
+    // Crew-level bonus points; a unit spread over more points than allowed goes back to standard
+    setBonus(bonus) {
+      this.bonus = Math.max(0, bonus);
+      for (const unit of Object.keys(this.levels)) {
+        if (this.used(unit) > this.budget) this.reset(unit);
+      }
     }
 
     used(unit) {
@@ -25,7 +35,7 @@
     }
 
     remaining(unit) {
-      return TUNING_RULES.budget - this.used(unit);
+      return this.budget - this.used(unit);
     }
 
     // Highest level `axis` can be raised to with the points left

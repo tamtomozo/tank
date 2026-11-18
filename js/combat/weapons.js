@@ -147,7 +147,9 @@
         const d = Math.hypot(dx, dy);
         if (d < radius + player.radius) {
           const falloff = Math.max(0.35, 1 - d / (radius + player.radius + 8));
-          this.damagePlayer(player, damage * falloff);
+          // Cage armour (equipment) takes the edge off near misses, not direct hits
+          const guard = isDirect ? 1 : 1 - (player.splashGuard || 0);
+          this.damagePlayer(player, damage * falloff * guard);
           this._blastKnockback(player, dx, dy, damage * falloff);
         }
       }
@@ -160,7 +162,8 @@
           const d = Math.hypot(adx, ady);
           if (d < radius + a.radius) {
             const falloff = Math.max(0.35, 1 - d / (radius + a.radius + 8));
-            this.damageAlly(a, damage * falloff);
+            const guard = isDirect ? 1 : 1 - (a.splashGuard || 0);
+            this.damageAlly(a, damage * falloff * guard);
             this._blastKnockback(a, adx, ady, damage * falloff);
           }
         }

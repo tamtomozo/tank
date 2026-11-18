@@ -2,13 +2,14 @@
   'use strict';
 
   // Pre-operation briefing scene, shown before the tactical phase of every sortie.
-  // Five steps: strategic situation, operation (start time, compounds), tank tuning
-  // (radar charts, js/tuningPanel.js), enemy intel, terrain.
+  // Six steps: strategic situation, operation (start time, compounds), tank tuning
+  // (radar charts, js/tuningPanel.js), equipment & maintenance (js/loadoutPanel.js), enemy intel,
+  // terrain.
   // ⑤ 地理情報 only: a tactical map of the whole battlefield on the left, the details on the right.
   // Other steps: the details take the whole width. Bottom: Mio narrates each step.
 
   // 'tactical' = start time followed by the compounds (in that order)
-  const STEP_IDS = ['status', 'tactical', 'tuning', 'enemies', 'terrain'];
+  const STEP_IDS = ['status', 'tactical', 'tuning', 'loadout', 'enemies', 'terrain'];
 
   const { ENEMY_INFO, ENEMY_SPECS, ENEMY_KIND_ORDER } = global.GameData; // js/data/enemies.js
   const { el } = global.TankUtil;
@@ -34,6 +35,16 @@
       this.tuningPanel = new global.TuningPanel(dialog.querySelector('#briefing-tuning'), this.tuning, {
         audio: this.audio,
         onChange: (unit) => { if (deps.onTune) deps.onTune(unit); }
+      });
+
+      // ④ 装備・整備: campaign carry-over (crew, wear, wingmen, scrap) and the fitted equipment;
+      // every change refits the platoon on the HQ pad (deps.onRefit)
+      this.loadoutPanel = new global.LoadoutPanel(dialog.querySelector('#briefing-loadout'), {
+        audio: this.audio,
+        onChange: () => {
+          if (deps.onRefit) deps.onRefit();
+          this.tuningPanel.render();
+        }
       });
 
       this.mapCanvas = dialog.querySelector('#briefing-map');
@@ -93,6 +104,7 @@
       this.titleEl.textContent = `作戦本部 ブリーフィング — ${this.planet.name}「${this.operation.name}」`;
       this._buildPanels();
       this.tuningPanel.render();
+      this.loadoutPanel.open(this.planet);
       if (this.dialog.open) {
         this.goTo(0);
         return;
@@ -196,8 +208,16 @@
           const pb = this._powerBalance();
           return `ハヤセ将軍より、全車への戦況概要です。戦力差は約${pb.ratio.toFixed(1)}倍……ですが、勝機はあります。目を通しておいてください、隊長。`;
         }
+        case 'loadout': {
+          const c = global.Campaign;
+          const parts = [`装備と整備です。この星での装備を${global.GameData.EQUIP_SLOTS}つ選んでください。推奨の印は、この星の環境に合わせた装備です。`];
+          if (c.wear > 0) parts.push(`自機の損耗が${Math.round(c.wear * 100)}%残っています。スクラップで修理できます。`);
+          if (c.allies < c.maxAllies) parts.push(`僚機が${c.maxAllies - c.allies}両足りません。スクラップで補充できます。`);
+          return parts.join('');
+        }
         case 'tuning':
           return `車両調整です。主砲・装填・機動・装甲の4項目に、自機と僚機それぞれ${this.tuning.budget}ポイントを配分してください。`
+            + (this.tuning.bonus > 0 ? `小隊の練度が上がったので、${this.tuning.bonus}ポイント多く使えます。` : '')
             + 'どこかを上げるなら、ほかを下げる必要があります。出撃後は調整できません。作戦に合わせて決めてください、隊長。';
         case 'tactical': {
           // Same order as the panel: operation name, objective, start time, then the compounds

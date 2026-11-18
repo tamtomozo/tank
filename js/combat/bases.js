@@ -144,6 +144,7 @@
       if (this.rules.dust) {
         const r = Math.max(0, Math.min(1, Math.abs(f.speed) / Math.max(1, f.maxSpeed)));
         k *= DUST_SPOT_STILL + (DUST_SPOT_FULL - DUST_SPOT_STILL) * r;
+        if (global.GameLoadout.has('filter')) k *= 0.85; // equipment: less dust thrown up
       }
       k *= 1 - STORM_SPOT_CUT * this.world.storm;
       return k;

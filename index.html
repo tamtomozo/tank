@@ -36,6 +36,7 @@
   <script src="js/data/enemies.js" defer></script>
   <script src="js/data/tuning.js" defer></script>
   <script src="js/data/operations.js" defer></script>
+  <script src="js/data/equipment.js" defer></script>
   <script src="js/audio.js" defer></script>
   <script src="js/bgm.js" defer></script>
   <script src="js/planet/planet.js" defer></script>
@@ -59,6 +60,8 @@
   <script src="js/radio.js" defer></script>
   <script src="js/tuning.js" defer></script>
   <script src="js/tuningPanel.js" defer></script>
+  <script src="js/loadout.js" defer></script>
+  <script src="js/loadoutPanel.js" defer></script>
   <script src="js/depot.js" defer></script>
   <script src="js/tacticalMap.js" defer></script>
   <script src="js/hqBackdrop.js" defer></script>
@@ -257,6 +260,7 @@
             <li>惑星ザハル＝3段階の作戦（侵食 → 決戦 → 斬首）。砂嵐・エンジン過熱・砂煙・蜃気楼に注意</li>
             <li>惑星ヴェルグ＝3段階の作戦（侵食 → 斬首 → 決戦）。吹雪・凍った湖・低温・極夜に注意。熱源センサーが頼り</li>
             <li>戦車はブリーフィングの「車両調整」で、レーダーチャートにポイントを配分して調整する（自機・僚機）</li>
+            <li>作戦を終えると、練度（車両調整ポイントが増える）・自機の損耗・残った僚機・スクラップが次の作戦へ持ち越される。ブリーフィングの「装備・整備」で修理・補充と、惑星ごとの装備（2枠）を選ぶ</li>
             <li>制圧した拠点の白旗まわりの円に入るたびに補給・僚機補充メニューが開く（補給はここでのみ）</li>
             <li>敵・クレート破壊でスクラップ＆修理キット回収</li>
             <li>最大5両の小隊で出撃：僚機は敵接近で自動散開・交戦し、平時は楔形隊列に戻る</li>
@@ -458,8 +462,9 @@
           <button type="button" class="briefing-step" aria-selected="true">① 司令書</button>
           <button type="button" class="briefing-step" aria-selected="false">② 司令内容</button>
           <button type="button" class="briefing-step" aria-selected="false">③ 車両調整</button>
-          <button type="button" class="briefing-step" aria-selected="false">④ 敵機情報</button>
-          <button type="button" class="briefing-step" aria-selected="false">⑤ 地理情報</button>
+          <button type="button" class="briefing-step" aria-selected="false">④ 装備・整備</button>
+          <button type="button" class="briefing-step" aria-selected="false">⑤ 敵機情報</button>
+          <button type="button" class="briefing-step" aria-selected="false">⑥ 地理情報</button>
         </nav>
       </header>
 
@@ -498,6 +503,10 @@
             <h3>車両調整</h3>
             <p class="briefing-note tuning-lead">チャートの軸をタップ（クリック）／ドラッグ、または −／＋ で調整。合計ポイントは固定（上げるなら他を下げる）。出撃後は変更不可。</p>
             <div id="briefing-tuning" class="tuning-grid"></div>
+          </section>
+          <section class="briefing-panel" hidden>
+            <h3>装備・整備</h3>
+            <div id="briefing-loadout" class="loadout-grid"></div>
           </section>
           <section class="briefing-panel" hidden>
             <h3>敵機情報</h3>

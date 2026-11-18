@@ -125,7 +125,8 @@
           `僚機の損失　${stats.alliesLost} 両`,
           `補充　${squad.reinforcements || 0} 両`
         ]),
-        card('スクラップ', `⚙ ${stats.scrapEarned}`, [`獲得合計 ／ 残高 ⚙ ${combat.scrap}`])
+        card('スクラップ', `⚙ ${stats.scrapEarned}`, [`獲得合計 ／ 残高 ⚙ ${combat.scrap}`]),
+        ...(data.carry ? [this._carryCard(card, data.carry)] : [])
       );
 
       if (this.dialog.open) {
@@ -140,6 +141,19 @@
         this.dialog.showModal();
         this._say(MIO_COMMENTS[r.rank](data.planetName), data.audio, BOOT_INTRO_MS);
       }, OPEN_DELAY_MS);
+    }
+
+    // What the platoon takes into the next operation (js/campaign.js recordSuccess)
+    _carryCard(card, c) {
+      const up = c.level > c.levelBefore;
+      const c2 = card('小隊の記録（次の作戦へ）', `練度 Lv${c.level}${up ? ' ▲' : ''}`, [
+        `経験値 +${c.xpGain}（${c.xp}${c.nextLevelXp ? ` / 次のLv ${c.nextLevelXp}` : '・最大'}）`
+          + (up ? ` 車両調整ポイント +${c.level - c.levelBefore}` : ''),
+        `自機の損耗 ${Math.round(c.wearBefore * 100)}% → ${Math.round(c.wear * 100)}%`,
+        `僚機 ${c.allies} 両 ／ スクラップ ⚙ ${c.scrap} を持ち越し`
+      ]);
+      c2.classList.add('is-carry');
+      return c2;
     }
 
     _say(text, audio, delayMs = 0) {

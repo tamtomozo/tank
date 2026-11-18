@@ -30,7 +30,8 @@
           this._breakIce(t, player);
           return;
         }
-        const load = (ice.thin ? 2 : 1) * (heavy ? 1.6 : 1);
+        // Wide tracks (equipment) spread a friendly tank's weight: half the load
+        const load = (ice.thin ? 2 : 1) * (heavy ? 1.6 : 1) * (t.iceLoadScale || 1);
         if (Math.abs(t.speed) < ICE_SLOW) t.iceStress = (t.iceStress || 0) + dt * load;
         else t.iceStress = Math.max(0, (t.iceStress || 0) - dt * ICE_RELIEF);
         if (t.iceStress >= ICE_CRACK && !t.iceCracked) {

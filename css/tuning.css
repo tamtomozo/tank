@@ -256,3 +256,168 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* Briefing ④ 装備・整備: campaign carry-over and equipment — js/loadoutPanel.js */
+.loadout-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17.5rem, 1fr));
+  gap: 0.75rem;
+}
+
+.loadout-card {
+  display: grid;
+  align-content: start;
+  gap: 0.55rem;
+  padding: 0.7rem;
+  border-radius: 0.55rem;
+  background: rgb(255 255 255 / 0.03);
+  border: 1px solid rgb(148 180 218 / 0.28);
+  border-block-start: 3px solid #a3e635;
+  min-inline-size: 0;
+}
+
+.loadout-card.is-gear {
+  border-block-start-color: #fbbf24;
+}
+
+.loadout-card h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  letter-spacing: 0.05em;
+  color: #d9f99d;
+}
+
+.loadout-card.is-gear h4 {
+  color: #fde68a;
+}
+
+.loadout-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.8rem;
+  padding-block: 0.4rem;
+  border-block-start: 1px solid rgb(148 180 218 / 0.14);
+}
+
+.loadout-row-text {
+  display: grid;
+  gap: 0.12rem;
+  min-inline-size: 0;
+  flex: 1;
+}
+
+.loadout-row-label {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.loadout-row-value {
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.loadout-row-note {
+  font-size: 0.74rem;
+  color: #cbd5e1;
+}
+
+.loadout-xp {
+  block-size: 0.4rem;
+  border-radius: 0.2rem;
+  background: rgb(148 163 184 / 0.25);
+  overflow: hidden;
+}
+
+.loadout-xp-fill {
+  block-size: 100%;
+  background: linear-gradient(90deg, #65a30d, #bef264);
+}
+
+.loadout-action {
+  flex: none;
+  white-space: nowrap;
+}
+
+.loadout-gear-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.loadout-gear-count {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.loadout-gear-note {
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.loadout-gear-list {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.loadout-gear {
+  appearance: none;
+  font: inherit;
+  text-align: start;
+  color: var(--text-main);
+  cursor: pointer;
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.45rem;
+  border: 1px solid rgb(148 180 218 / 0.25);
+  background: rgb(255 255 255 / 0.02);
+}
+
+.loadout-gear:hover,
+.loadout-gear:focus-visible {
+  border-color: rgb(251 191 36 / 0.7);
+  outline: none;
+}
+
+.loadout-gear.is-on {
+  border-color: #fbbf24;
+  background: rgb(251 191 36 / 0.12);
+}
+
+.loadout-gear-top {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.loadout-gear-icon {
+  inline-size: 1.3rem;
+  text-align: center;
+  color: #fde68a;
+}
+
+.loadout-gear-badge {
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding-inline: 0.35rem;
+  border-radius: 0.25rem;
+  background: rgb(56 189 248 / 0.2);
+  border: 1px solid rgb(125 211 252 / 0.6);
+  color: #bae6fd;
+}
+
+.loadout-gear-state {
+  margin-inline-start: auto;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #fbbf24;
+}
+
+.loadout-gear-desc {
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: #cbd5e1;
+}

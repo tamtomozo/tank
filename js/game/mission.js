@@ -22,6 +22,7 @@
     // waiting on the HQ pad (full armour). Re-run on every change on the briefing.
     function applyTuning(refill = true) {
       game.player.applyStats(tuning.playerStats(), refill);
+      global.GameLoadout.fit(game.player, refill); // equipment + wear (js/loadout.js)
       // Long-range operation: the lock-on (and headlight) reach is extended
       const op = game.operation ? game.operation.operation : null;
       if (op && op.longRange) game.player.cannonRange += op.longRange.player || 0;
@@ -44,11 +45,16 @@
         hullAngle: start.angle != null ? start.angle : -Math.PI * 0.5
       });
       game.player = player;
+      // What the campaign carries in: equipment, wear, crew level (tuning points), platoon, scrap
+      const campaign = global.Campaign;
+      global.GameLoadout.set(selection ? campaign.equipment(selection.planet) : [], campaign.wear);
+      tuning.setBonus(campaign.tuningBonus);
       // Respawn destroyed crates/barrels and clear old decals so a restart is a genuinely fresh run
       world.resetDynamic();
       combat.reset(player, selection);
+      combat.scrap = campaign.scrap;
       radio.clear();
-      squad.reset(player);
+      squad.reset(player, campaign.allies);
       hazards.reset(selection);
       applyTuning(true);
       world.dayTime = op && op.startTime != null ? op.startTime : 0.30;
@@ -239,9 +245,18 @@
       if (game.started && !game.overShown && player.alive && game.returnedToHq && radio.isIdle) {
         game.overShown = true;
         game.input.release();
-        // The next stage of the planet's campaign opens (js/campaign.js)
-        if (game.operation) global.Campaign.markCleared(game.operation.operation.id);
-        results.open({ stats: combat.stats, combat, squad, player, world, audio, planetName: planetName() }, () => start());
+        // Progress, experience, wear and what is left of the platoon carry over to the next
+        // operation; the next stage of the planet's campaign opens (js/campaign.js)
+        const stats = combat.stats;
+        const carry = game.operation ? global.Campaign.recordSuccess({
+          opId: game.operation.operation.id,
+          kills: stats.killsBy.player + stats.killsBy.ally,
+          alliesLost: stats.alliesLost,
+          alliesLeft: combat.allies.filter((a) => a.alive).length,
+          damageRatio: stats.damageTaken / Math.max(1, player.maxHp),
+          scrap: combat.scrap
+        }) : null;
+        results.open({ stats, combat, squad, player, world, audio, planetName: planetName(), carry }, () => start());
       }
 
       // Tank destroyed
@@ -262,7 +277,17 @@
       }
     }
 
-    return { start, applyTuning, handleCombatEvents, checkSupplyDepots, checkReturnToHq, checkEnd };
+    // Repairs / replacements / equipment changed on the briefing: refit the platoon on the HQ pad
+    function refitPlatoon() {
+      const selection = game.operation;
+      const campaign = global.Campaign;
+      global.GameLoadout.set(selection ? campaign.equipment(selection.planet) : [], campaign.wear);
+      combat.scrap = campaign.scrap;
+      if (squad.allies.length !== campaign.allies) squad.reset(game.player, campaign.allies);
+      applyTuning(true);
+    }
+
+    return { start, applyTuning, refitPlatoon, handleCombatEvents, checkSupplyDepots, checkReturnToHq, checkEnd };
   }
 
   global.GameMission = { create, SUPPLY_ZONE };

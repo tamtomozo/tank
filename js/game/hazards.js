@@ -144,11 +144,12 @@
       if (!heatOn) return 1;
       const ratio = Math.max(0, Math.min(1, Math.abs(player.speed) / Math.max(1, player.maxSpeed)));
       const night = world.getPalette().nightFactor;
+      const cooler = global.GameLoadout.has('cooler'); // equipment: half the heat, faster cooling
       let rate;
       if (ratio > HEAT_FROM && !heat.overheated) {
-        rate = ((ratio - HEAT_FROM) / (1 - HEAT_FROM)) * HEAT_RISE * (1 + (NIGHT_HEAT - 1) * night);
+        rate = ((ratio - HEAT_FROM) / (1 - HEAT_FROM)) * HEAT_RISE * (1 + (NIGHT_HEAT - 1) * night) * (cooler ? 0.5 : 1);
       } else {
-        rate = -HEAT_COOL * (1 - ratio * 0.6) * (1 + (NIGHT_COOL - 1) * night);
+        rate = -HEAT_COOL * (1 - ratio * 0.6) * (1 + (NIGHT_COOL - 1) * night) * (cooler ? 1.5 : 1);
       }
       heat.value = Math.max(0, Math.min(1, heat.value + rate * dt));
 
@@ -176,7 +177,8 @@
         cold.still += dt;
         if (cold.still > COLD_AFTER) {
           const night = world.getPalette().nightFactor;
-          cold.value = Math.min(1, cold.value + COLD_RISE * (1 + 0.5 * night) * dt);
+          const heater = global.GameLoadout.has('heater') ? 0.25 : 1; // equipment: engine heater
+          cold.value = Math.min(1, cold.value + COLD_RISE * (1 + 0.5 * night) * heater * dt);
         }
       } else {
         cold.still = 0;

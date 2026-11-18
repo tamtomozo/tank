@@ -177,7 +177,9 @@
 
     // How far the player's lock-on and radar reach: sight, or the heat sensor when that is farther
     sensorRange() {
-      const sight = this.sightRange();
+      let sight = this.sightRange();
+      // Equipment: a dust filter keeps the optics clear in a sandstorm
+      if (this.world.stormKind === 'sand' && global.GameLoadout.has('filter')) sight *= 1.6;
       return this.thermalActive() ? Math.max(sight, THERMAL_RANGE) : sight;
     }
 

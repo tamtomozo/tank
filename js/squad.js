@@ -61,12 +61,13 @@
       return this.allies.length < MAX_ALLIES;
     }
 
-    reset(player) {
+    // count: wingmen the platoon has (carried over by the campaign: lost ones stay lost)
+    reset(player, count = MAX_ALLIES) {
       this.allies.length = 0;
       this.mode = 'formation';
       this.formHeading = player.hullAngle;
       this._time = 0;
-      for (let i = 0; i < MAX_ALLIES; i++) this.spawnAlly(player);
+      for (let i = 0; i < Math.min(MAX_ALLIES, count); i++) this.spawnAlly(player);
       this.reinforcements = 0; // wingmen added later at supply depots (for the after-action report)
     }
 
@@ -99,8 +100,10 @@
       return this.tuning.allyStats();
     }
 
+    // Radar-chart stats, then the fitted equipment (js/loadout.js)
     _applyStats(a, refill) {
       a.applyStats(this.getAllyStats(), refill);
+      global.GameLoadout.fit(a, refill);
     }
 
     update(dt, player) {

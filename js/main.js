@@ -78,7 +78,8 @@
       tuning,
       audio,
       getPlayer: () => game.player,
-      onTune: () => game.mission.applyTuning(true) // tanks are still on the HQ pad: refit + refill
+      onTune: () => game.mission.applyTuning(true), // tanks are still on the HQ pad: refit + refill
+      onRefit: () => game.mission.refitPlatoon() // repairs / replacements / equipment (装備・整備)
     });
 
     // Placeholder tank until mission.start() builds the one for the sortie
