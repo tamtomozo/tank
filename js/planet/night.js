@@ -2,15 +2,29 @@
   'use strict';
 
   // Night visibility: darkness strength, the player's headlight cone (also used for target lock-on)
-  // and the darkness overlay with the lit cone cut out.
+  // and the darkness overlay with the lit cones (player + wingmen) cut out. Headlights dim with
+  // the time of day (getHeadlightLevel): off in daylight.
   // Part of HorizonWorld (js/planet/planet.js): the methods below are mixed into its prototype.
 
   const { lerp } = global.TankUtil;
   const { CYL_R, HORIZON_DY, HORIZON_THETA, WORLD_H, WORLD_W, wrapDelta } = global.HorizonWorld.shared;
 
   const NIGHT_RES = 0.5; // darkness overlay pixels per CSS pixel (see drawNightVisibility)
+  // Headlights dim with the time of day: off in daylight (nightFactor 0, ~07:40-16:20), fading in
+  // through dusk and fully on at night (and the other way round at dawn)
+  const HEADLIGHT_ON_FROM = 0.05; // nightFactor where the lights start to come on
+  const HEADLIGHT_FULL_AT = 0.6; // nightFactor where they reach full strength
+  const ALLY_HEADLIGHT_SCALE = 0.8; // wingmen's lights relative to the player's
 
   class WorldNight {
+    // Headlight strength 0..1 for `tank` right now (0 in daylight); wingmen run at 80% of the player
+    getHeadlightLevel(tank = null) {
+      const nf = this.getPalette().nightFactor;
+      const u = Math.max(0, Math.min(1, (nf - HEADLIGHT_ON_FROM) / (HEADLIGHT_FULL_AT - HEADLIGHT_ON_FROM)));
+      const level = u * u * (3 - 2 * u); // smoothstep
+      return tank && tank.isAlly ? level * ALLY_HEADLIGHT_SCALE : level;
+    }
+
     // At night, darken the distant terrain while keeping the player's surroundings and headlight beam clearly visible
     getNightDarkStrength() {
       const pal = this.getPalette();
@@ -112,7 +126,8 @@
       return !(targetProj.sy < horizonY + 28 || targetProj.sy > viewH - 20);
     }
 
-    drawNightVisibility(ctx, playerProj, hullAngle, beamRange, playerX, playerY, camX, camY, viewW, viewH) {
+    // allies: wingmen whose (dimmer) headlight beams are also cut out of the darkness
+    drawNightVisibility(ctx, playerProj, hullAngle, beamRange, playerX, playerY, camX, camY, viewW, viewH, allies = []) {
       const darkStrength = this.getNightDarkStrength();
       if (darkStrength <= 0.01 || typeof document === 'undefined') return;
 
@@ -151,8 +166,15 @@
       nCtx.fillStyle = darkGrad;
       nCtx.fillRect(0, topY, cw + 2, ch - topY + 2); // + 2: cover the overlay's rounded-up last pixel
 
+      nCtx.globalCompositeOperation = 'destination-out';
+
+      // Wingmen's headlight beams (80% of the player's)
+      for (const a of allies) {
+        if (!a.alive) continue;
+        this._cutHeadlightBeam(nCtx, a.x, a.y, a.hullAngle, a.cannonRange, this.getHeadlightLevel(a), camX, camY, viewW, viewH);
+      }
+
       if (playerProj) {
-        nCtx.globalCompositeOperation = 'destination-out';
         const px = playerProj.sx;
         const py = playerProj.sy;
         const s = playerProj.scale;
@@ -174,35 +196,41 @@
         nCtx.restore();
 
         // 2. Soft feathered ground-projected forward headlight cone up to firing range
-        for (let step = 0; step < 5; step++) {
-          const widthScale = 1.24 - step * 0.14;
-          const poly = this.getHeadlightConePolygon(
-            playerX, playerY, hullAngle, (beamRange || 460) * 1.04,
-            camX, camY, viewW, viewH, widthScale
-          );
-          if (!poly) break;
-          const beamGrad = nCtx.createLinearGradient(
-            poly.originPt.sx, poly.originPt.sy,
-            poly.tipPt.sx, poly.tipPt.sy
-          );
-          beamGrad.addColorStop(0.0, 'rgba(0, 0, 0, 0.34)');
-          beamGrad.addColorStop(0.68, 'rgba(0, 0, 0, 0.26)');
-          beamGrad.addColorStop(1.0, 'rgba(0, 0, 0, 0)');
-          nCtx.fillStyle = beamGrad;
-          nCtx.beginPath();
-          nCtx.moveTo(poly.leftPts[0].sx, poly.leftPts[0].sy);
-          for (let i = 1; i < poly.leftPts.length; i++) {
-            nCtx.lineTo(poly.leftPts[i].sx, poly.leftPts[i].sy);
-          }
-          for (let i = poly.rightPts.length - 1; i >= 0; i--) {
-            nCtx.lineTo(poly.rightPts[i].sx, poly.rightPts[i].sy);
-          }
-          nCtx.closePath();
-          nCtx.fill();
-        }
+        this._cutHeadlightBeam(nCtx, playerX, playerY, hullAngle, beamRange, this.getHeadlightLevel(), camX, camY, viewW, viewH);
       }
 
       ctx.drawImage(this._nightCanvas, 0, 0, pw / NIGHT_RES, ph / NIGHT_RES);
+    }
+
+    // Cut one headlight cone (feathered, 5 layers) out of the darkness overlay; level 0..1 dims it
+    _cutHeadlightBeam(nCtx, x, y, hullAngle, beamRange, level, camX, camY, viewW, viewH) {
+      if (level <= 0.01) return;
+      for (let step = 0; step < 5; step++) {
+        const widthScale = 1.24 - step * 0.14;
+        const poly = this.getHeadlightConePolygon(
+          x, y, hullAngle, (beamRange || 460) * 1.04,
+          camX, camY, viewW, viewH, widthScale
+        );
+        if (!poly) break;
+        const beamGrad = nCtx.createLinearGradient(
+          poly.originPt.sx, poly.originPt.sy,
+          poly.tipPt.sx, poly.tipPt.sy
+        );
+        beamGrad.addColorStop(0.0, `rgba(0, 0, 0, ${(0.34 * level).toFixed(3)})`);
+        beamGrad.addColorStop(0.68, `rgba(0, 0, 0, ${(0.26 * level).toFixed(3)})`);
+        beamGrad.addColorStop(1.0, 'rgba(0, 0, 0, 0)');
+        nCtx.fillStyle = beamGrad;
+        nCtx.beginPath();
+        nCtx.moveTo(poly.leftPts[0].sx, poly.leftPts[0].sy);
+        for (let i = 1; i < poly.leftPts.length; i++) {
+          nCtx.lineTo(poly.leftPts[i].sx, poly.leftPts[i].sy);
+        }
+        for (let i = poly.rightPts.length - 1; i >= 0; i--) {
+          nCtx.lineTo(poly.rightPts[i].sx, poly.rightPts[i].sy);
+        }
+        nCtx.closePath();
+        nCtx.fill();
+      }
     }
   }
 

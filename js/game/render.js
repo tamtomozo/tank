@@ -355,7 +355,7 @@
         : null;
       world.drawNightVisibility(
         ctx, playerGroundProj, player.hullAngle, player.cannonRange,
-        player.x, player.y, drawCamX, drawCamY, viewW, viewH
+        player.x, player.y, drawCamX, drawCamY, viewW, viewH, combat.allies
       );
 
       // Fort icons floating over enemy-held compounds (UI layer: above the night darkness)

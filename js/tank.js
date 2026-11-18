@@ -432,14 +432,16 @@
       ctx.fill();
       ctx.restore();
 
-      // 1b. Ground-projected forward headlight beam (shows auto lock-on range up to cannonRange)
-      if (this.isPlayer) {
+      // 1b. Ground-projected forward headlight beam (player: shows auto lock-on range up to
+      //     cannonRange; wingmen at 80%). Dimmed with the time of day, off in daylight.
+      const lightLevel = this.isPlayer || this.isAlly ? this.world.getHeadlightLevel(this) : 0;
+      if (lightLevel > 0.01) {
         const poly = this.world.getHeadlightConePolygon(
           this.x, this.y, this.hullAngle, this.cannonRange,
           camX, camY, viewW, viewH
         );
         if (poly) {
-          const beamAlpha = 0.14 + nightFactor * 0.34;
+          const beamAlpha = (0.14 + nightFactor * 0.34) * lightLevel;
           const beamGrad = ctx.createLinearGradient(
             poly.originPt.sx, poly.originPt.sy,
             poly.tipPt.sx, poly.tipPt.sy
