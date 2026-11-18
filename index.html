@@ -32,6 +32,7 @@
   <script src="js/util.js" defer></script>
   <script src="js/game/quality.js" defer></script>
   <script src="js/typewriter.js" defer></script>
+  <script src="js/mioCall.js" defer></script>
   <script src="js/data/enemies.js" defer></script>
   <script src="js/data/tuning.js" defer></script>
   <script src="js/data/operations.js" defer></script>
@@ -329,7 +330,10 @@
         <div id="planet-list" class="planet-list" aria-label="惑星一覧"></div>
       </div>
 
-      <div class="briefing-mio hud-boot" style="--boot-i: 2">
+      <!-- Mio's call floats at the centre of the screen until clicked (js/mioCall.js) -->
+      <span class="briefing-mio-sr sr-only" aria-live="polite"></span>
+      <div class="briefing-mio-layer" hidden>
+      <div class="briefing-mio briefing-mio-float" tabindex="-1" role="button" aria-label="ミオの連絡（クリックで閉じる）">
         <div class="radio-avatar" aria-hidden="true">
           <svg viewBox="0 0 40 40">
             <circle cx="20" cy="17" r="8" fill="currentColor"/>
@@ -346,8 +350,9 @@
             <span class="radio-name">オペレーター ミオ</span>
           </div>
           <p class="briefing-mio-text" aria-hidden="true"></p>
-          <span class="briefing-mio-sr sr-only" aria-live="polite"></span>
+          <p class="briefing-mio-hint" aria-hidden="true">クリックで閉じる ▼</p>
         </div>
+      </div>
       </div>
     </div>
   </dialog>
@@ -383,7 +388,10 @@
         <div id="op-list" class="op-list" aria-label="作戦一覧"></div>
       </div>
 
-      <div class="briefing-mio hud-boot" style="--boot-i: 2">
+      <!-- Mio's call floats at the centre of the screen until clicked (js/mioCall.js) -->
+      <span class="briefing-mio-sr sr-only" aria-live="polite"></span>
+      <div class="briefing-mio-layer" hidden>
+      <div class="briefing-mio briefing-mio-float" tabindex="-1" role="button" aria-label="ミオの連絡（クリックで閉じる）">
         <div class="radio-avatar" aria-hidden="true">
           <svg viewBox="0 0 40 40">
             <circle cx="20" cy="17" r="8" fill="currentColor"/>
@@ -400,8 +408,9 @@
             <span class="radio-name">オペレーター ミオ</span>
           </div>
           <p class="briefing-mio-text" aria-hidden="true"></p>
-          <span class="briefing-mio-sr sr-only" aria-live="polite"></span>
+          <p class="briefing-mio-hint" aria-hidden="true">クリックで閉じる ▼</p>
         </div>
+      </div>
       </div>
 
       <div class="dialog-footer-actions sortie-footer hud-boot" style="--boot-i: 3">
@@ -487,7 +496,11 @@
         </div>
       </div>
 
-      <div class="briefing-mio hud-boot" style="--boot-i: 3">
+      <!-- Mio's call floats at the centre of the screen; a click shows the rest of the line while it
+           is still typing, then dismisses it (js/mioCall.js) -->
+      <span class="briefing-mio-sr sr-only" aria-live="polite"></span>
+      <div class="briefing-mio-layer" hidden>
+      <div class="briefing-mio briefing-mio-float" tabindex="-1" role="button" aria-label="ミオの連絡（クリックで閉じる）">
         <div class="radio-avatar" aria-hidden="true">
           <svg viewBox="0 0 40 40">
             <circle cx="20" cy="17" r="8" fill="currentColor"/>
@@ -503,9 +516,10 @@
             <span class="radio-callsign">HQ</span>
             <span class="radio-name">オペレーター ミオ</span>
           </div>
-          <p id="briefing-mio-text" class="briefing-mio-text" aria-hidden="true"></p>
-          <span id="briefing-mio-sr" class="sr-only" aria-live="polite"></span>
+          <p class="briefing-mio-text" aria-hidden="true"></p>
+          <p class="briefing-mio-hint" aria-hidden="true">クリックで閉じる ▼</p>
         </div>
+      </div>
       </div>
 
       <form method="dialog" class="dialog-footer-actions hud-boot" style="--boot-i: 4">
@@ -582,7 +596,10 @@
 
       <div id="results-body" class="results-grid"></div>
 
-      <div class="briefing-mio hud-boot" style="--boot-i: 6">
+      <!-- Mio's call floats at the centre of the screen until clicked (js/mioCall.js) -->
+      <span class="briefing-mio-sr sr-only" aria-live="polite"></span>
+      <div class="briefing-mio-layer" hidden>
+      <div class="briefing-mio briefing-mio-float" tabindex="-1" role="button" aria-label="ミオの連絡（クリックで閉じる）">
         <div class="radio-avatar" aria-hidden="true">
           <svg viewBox="0 0 40 40">
             <circle cx="20" cy="17" r="8" fill="currentColor"/>
@@ -598,9 +615,10 @@
             <span class="radio-callsign">HQ</span>
             <span class="radio-name">オペレーター ミオ</span>
           </div>
-          <p id="results-mio-text" class="briefing-mio-text" aria-hidden="true"></p>
-          <span id="results-mio-sr" class="sr-only" aria-live="polite"></span>
+          <p class="briefing-mio-text" aria-hidden="true"></p>
+          <p class="briefing-mio-hint" aria-hidden="true">クリックで閉じる ▼</p>
         </div>
+      </div>
       </div>
 
       <form method="dialog" class="dialog-footer-actions hud-boot" style="--boot-i: 7">

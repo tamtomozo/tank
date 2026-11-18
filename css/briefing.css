@@ -72,6 +72,16 @@ dialog.briefing-dialog {
   gap: 0.4rem;
 }
 
+/* Steps other than ⑤ 地理情報: no map, the panel takes the whole width
+   (two classes so it also wins over the landscape-phone layout in css/touch.css) */
+.briefing-main.is-no-map {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.briefing-map-wrap[hidden] {
+  display: none;
+}
+
 #briefing-map {
   inline-size: 100%;
   aspect-ratio: 1;
@@ -490,4 +500,70 @@ dialog.briefing-dialog {
   margin-inline-start: 1px;
   color: var(--accent-cyan);
   animation: radio-caret 0.6s steps(1) infinite;
+}
+
+/* Planet select / operation select / briefing / after-action report: Mio's call floats at the centre of the screen over
+   a light scrim; a click anywhere shows the rest of the line, then dismisses the call (js/mioCall.js) */
+.briefing-mio-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(3 7 15 / 0.45);
+  cursor: pointer;
+  animation: briefing-mio-scrim-in 0.18s ease-out both;
+}
+
+.briefing-mio-layer[hidden] {
+  display: none;
+}
+
+.briefing-mio-float {
+  inline-size: min(40rem, 100%);
+  max-block-size: 100%;
+  overflow-y: auto;
+  box-shadow: 0 18px 48px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(56 189 248 / 0.15);
+  animation: briefing-mio-pop 0.22s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.briefing-mio-float:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 3px;
+}
+
+.briefing-mio-hint {
+  margin: 0;
+  justify-self: end;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  visibility: hidden;
+}
+
+/* The hint appears once the whole line is out */
+.briefing-mio-text:not(.is-typing) + .briefing-mio-hint {
+  visibility: visible;
+  animation: briefing-mio-hint-blink 1.2s ease-in-out infinite;
+}
+
+@keyframes briefing-mio-scrim-in {
+  from { opacity: 0; }
+}
+
+@keyframes briefing-mio-pop {
+  from { opacity: 0; transform: translateY(0.6rem) scale(0.97); }
+}
+
+@keyframes briefing-mio-hint-blink {
+  50% { opacity: 0.4; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .briefing-mio-layer,
+  .briefing-mio-float,
+  .briefing-mio-text:not(.is-typing) + .briefing-mio-hint {
+    animation: none;
+  }
 }

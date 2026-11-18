@@ -52,9 +52,9 @@
       this.body = dialog.querySelector('#results-body');
       this.rankEl = dialog.querySelector('#results-rank');
       this.scoreEl = dialog.querySelector('#results-score');
-      this.mioText = dialog.querySelector('#results-mio-text');
-      this.mioSr = dialog.querySelector('#results-mio-sr');
-      this.mio = new global.Typewriter(this.mioText, this.mioSr); // Mio's closing comment
+      // Mio's closing comment: a call floating at the screen centre until clicked (js/mioCall.js);
+      // the audio comes with each open()
+      this.mio = new global.MioCall(dialog, null);
       this.onRestart = null;
       this._openTimer = null;
 
@@ -124,7 +124,6 @@
         card('スクラップ', `⚙ ${stats.scrapEarned}`, [`獲得合計 ／ 残高 ⚙ ${combat.scrap}`])
       );
 
-      this.mioText.textContent = '';
       if (this.dialog.open) {
         this._say(MIO_COMMENTS[r.rank](data.planetName), data.audio);
         return;
@@ -140,7 +139,7 @@
     }
 
     _say(text, audio, delayMs = 0) {
-      this.mio.say(text, audio, delayMs);
+      this.mio.say(text, delayMs, audio);
     }
 
     _stopTyping() {

@@ -4,8 +4,8 @@
   // Pre-operation briefing scene, shown before the tactical phase of every sortie.
   // Five steps: strategic situation, operation (start time, districts & compounds), tank tuning
   // (radar charts, js/tuningPanel.js), enemy intel, terrain.
-  // Left: a tactical map of the whole battlefield (highlighting what the current step talks about).
-  // Right: the details for the step. Bottom: Mio narrates each step.
+  // ⑤ 地理情報 only: a tactical map of the whole battlefield on the left, the details on the right.
+  // Other steps: the details take the whole width. Bottom: Mio narrates each step.
 
   // 'tactical' = start time followed by districts & compounds (in that order)
   const STEP_IDS = ['status', 'tactical', 'tuning', 'enemies', 'terrain'];
@@ -37,14 +37,17 @@
       });
 
       this.mapCanvas = dialog.querySelector('#briefing-map');
-      this.mioText = dialog.querySelector('#briefing-mio-text');
-      this.mioSr = dialog.querySelector('#briefing-mio-sr');
+      this.mapWrap = dialog.querySelector('.briefing-map-wrap');
+      this.mainEl = dialog.querySelector('.briefing-main');
       this.tabs = [...dialog.querySelectorAll('.briefing-step')];
       this.panels = [...dialog.querySelectorAll('.briefing-panel')];
       this.btnPrev = dialog.querySelector('#briefing-prev');
       this.btnNext = dialog.querySelector('#briefing-next');
 
-      this.mio = new global.Typewriter(this.mioText, this.mioSr); // Mio's narration
+      // Mio's narration: a call floating at the screen centre until clicked (js/mioCall.js).
+      // Created before HudFrame's `cancel` handler, so Esc while it is up only dismisses it
+      // (instead of closing the briefing and starting the operation).
+      this.mio = new global.MioCall(dialog, this.audio);
 
       this.titleEl = dialog.querySelector('#briefing-title');
 
@@ -115,7 +118,11 @@
       this.panels.forEach((panel, i) => { panel.hidden = i !== this.step; });
       this.btnPrev.disabled = this.step === 0;
       this.btnNext.hidden = this.step === STEP_IDS.length - 1;
-      this._drawMap(STEP_IDS[this.step]);
+      // The map is shown only on ⑤ 地理情報; the other steps give the whole width to their panel
+      const showMap = STEP_IDS[this.step] === 'terrain';
+      this.mainEl.classList.toggle('is-no-map', !showMap);
+      this.mapWrap.hidden = !showMap;
+      if (showMap) this._drawMap(STEP_IDS[this.step]);
       this._say(this._mioLine(STEP_IDS[this.step]), sayDelayMs);
     }
 
@@ -513,9 +520,10 @@
     }
 
     // ------------------------------------------------------------------ Mio narration
-    // Mio narrates the current step (after `delayMs` while the window is still booting up)
+    // Mio narrates the current step (after `delayMs` while the window is still booting up);
+    // her call pops up at the screen centre when she starts talking
     _say(text, delayMs = 0) {
-      this.mio.say(text, this.audio, delayMs);
+      this.mio.say(text, delayMs);
     }
 
     _stopTyping() {

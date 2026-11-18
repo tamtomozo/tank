@@ -6,7 +6,7 @@
   //   ② operation select (#operation-dialog, js/operationSelect.js)
   // Picking a planet closes ① and opens ② for that planet; ◀ / Esc on ② goes back to ①.
   // Picking an operation closes ② and hands { planet, operation } to the caller, which opens the
-  // briefing (js/game/mission.js). Mio guides each screen at the bottom.
+  // briefing (js/game/mission.js). Mio guides each screen in a call floating at the centre.
   // The operations-meeting BGM (js/bgm.js) starts with the first screen and runs until the briefing
   // closes with 作戦開始. Until the first click / key press the browser keeps audio muted, so the
   // first opening waits behind the "click to connect" screen (#audio-gate) for that gesture.
@@ -25,10 +25,9 @@
     constructor(dialog, audio) {
       this.dialog = dialog;
       this.audio = audio;
-      this.mio = new global.Typewriter(
-        dialog.querySelector('.briefing-mio-text'),
-        dialog.querySelector('.briefing-mio-sr')
-      );
+      // Mio's call floats at the screen centre until clicked (js/mioCall.js). Created before any
+      // other `cancel` listener so Esc while it is up only dismisses it.
+      this.mio = new global.MioCall(dialog, audio);
       this.onClose = null;
       this._openTimer = null;
       this._closing = false; // closing sequence running: still counts as open (game stays paused)
@@ -71,7 +70,7 @@
     }
 
     say(text, delayMs = 0) {
-      this.mio.say(text, this.audio, delayMs);
+      this.mio.say(text, delayMs);
     }
   }
 

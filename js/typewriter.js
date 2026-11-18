@@ -22,6 +22,7 @@
     // Plays the radio blip from `audio` when typing starts.
     say(text, audio, delayMs = 0) {
       this.stop();
+      this._text = text;
       if (this.srEl) this.srEl.textContent = text;
       this.textEl.textContent = '';
       if (delayMs > 0) {
@@ -32,6 +33,18 @@
         return;
       }
       this._start(text, audio);
+    }
+
+    // True while a line is waiting to start or still being typed
+    get isBusy() {
+      return this._sayTimer != null || this._typer != null;
+    }
+
+    // Skip to the end: show the whole current line at once
+    finish() {
+      if (!this.isBusy) return;
+      this.stop();
+      this.textEl.textContent = this._text || '';
     }
 
     stop() {
