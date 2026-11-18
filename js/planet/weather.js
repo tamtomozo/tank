@@ -1,14 +1,17 @@
 (function (global) {
   'use strict';
 
-  // Sandstorm overlay (world.storm 0..1, set by js/game/hazards.js): a wall of blowing sand that
-  // closes in around the player's tank — a clear pocket around it, everything beyond fades into the
-  // dust — plus streaks of sand racing across the screen. Painted at half resolution like the
-  // night darkness (js/planet/night.js).
+  // Storm overlay (world.storm 0..1 and world.stormKind 'sand' | 'snow', set by js/game/hazards.js):
+  // a wall of blowing sand or snow that closes in around the player's tank — a clear pocket around
+  // it, everything beyond fades into the storm — plus streaks of sand / snow racing across the
+  // screen. Painted at half resolution like the night darkness (js/planet/night.js).
   // Part of HorizonWorld (js/planet/planet.js): the methods below are mixed into its prototype.
 
   const STORM_RES = 0.5; // overlay pixels per CSS pixel
-  const SAND = '186, 140, 88'; // dust colour (rgb)
+  const LOOK = {
+    sand: { rgb: '186, 140, 88', streak: '232, 200, 150', len: 1, slope: 0.12 },
+    snow: { rgb: '214, 226, 240', streak: '255, 255, 255', len: 0.45, slope: 0.45 }
+  };
   const CLEAR_FAR = 760; // radius of the clear pocket (world units) as a storm begins…
   const CLEAR_NEAR = 170; // …and at full strength
   const STREAKS = 90;
@@ -42,6 +45,7 @@
         this._stormCanvas.width = pw;
         this._stormCanvas.height = ph;
       }
+      const look = LOOK[this.stormKind] || LOOK.sand;
       const g = this._stormCtx;
       g.globalCompositeOperation = 'source-over';
       g.setTransform(1, 0, 0, 1, 0, 0);
@@ -49,7 +53,7 @@
       g.setTransform(STORM_RES, 0, 0, STORM_RES, 0, 0);
 
       // Dust everywhere, thickest at full storm; the sky turns the same colour
-      g.fillStyle = `rgba(${SAND}, ${(0.94 * s).toFixed(3)})`;
+      g.fillStyle = `rgba(${look.rgb}, ${(0.94 * s).toFixed(3)})`;
       g.fillRect(0, 0, cw + 2, ch + 2);
 
       // Clear pocket around the tank (it never clears completely inside a storm)
@@ -80,11 +84,11 @@
         const k = streakSeeds[i];
         const x = ((k.x + timeSec * k.speed) % 1) * (cw + 200) - 100;
         const y = ((k.y + timeSec * k.speed * 0.12) % 1) * ch;
-        ctx.strokeStyle = `rgba(232, 200, 150, ${(k.a * s).toFixed(3)})`;
-        ctx.lineWidth = k.w;
+        ctx.strokeStyle = `rgba(${look.streak}, ${(k.a * s * (look === LOOK.snow ? 1.6 : 1)).toFixed(3)})`;
+        ctx.lineWidth = k.w * (look === LOOK.snow ? 1.4 : 1);
         ctx.beginPath();
         ctx.moveTo(x, y);
-        ctx.lineTo(x - k.len, y - k.len * 0.12);
+        ctx.lineTo(x - k.len * look.len, y - k.len * look.len * look.slope);
         ctx.stroke();
       }
       ctx.restore();

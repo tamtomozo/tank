@@ -21,8 +21,8 @@
       let bestTarget = null;
       let bestDistSq = Infinity;
 
-      // In a sandstorm nothing beyond sight range can be locked onto
-      const sight = combat.sightRange();
+      // In a storm nothing beyond sight range can be locked onto (the heat sensor reaches farther)
+      const sight = combat.sensorRange();
       const consider = (obj) => {
         if (!obj.alive) return;
         // Enemies: where they appear to be (a mirage shifts distant ones off their real position)

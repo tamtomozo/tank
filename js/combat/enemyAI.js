@@ -29,6 +29,10 @@
           this._retreat(e, dx, dy, dist, dt);
           continue;
         }
+        if (e.state === 'return') {
+          this._returnHome(e, dt);
+          continue;
+        }
         const idle = e.state === 'idle'; // parked at its compound until alerted
         // Just alerted: still reacting — turret swings onto the target but the tank neither moves nor fires
         const reacting = !idle && e.reactTimer > 0;
@@ -115,8 +119,24 @@
       this._separateEnemies();
     }
 
+    // Garrison tank going back to its post after a feint; parked (idle) again once there
+    _returnHome(e, dt) {
+      const hx = this.world.deltaX(e.x, e.home.x);
+      const hy = this.world.deltaY(e.y, e.home.y);
+      const d = Math.hypot(hx, hy);
+      if (d < 40) {
+        e.state = 'idle';
+        e.hullAngle = e.home.angle;
+        e.speed = 0;
+        return;
+      }
+      // Same steering as a retreat, toward home instead of away from the platoon
+      this._retreat(e, -hx, -hy, d, dt);
+    }
+
     // Reinforcements falling back once the area has been held: drive away from the platoon
-    // (around obstacles), turret straight, no firing
+    // (around obstacles), turret straight, no firing. (dx, dy) points from the tank to what it
+    // flees from.
     _retreat(e, dx, dy, dist, dt) {
       let desiredX = -dx / Math.max(1, dist);
       let desiredY = -dy / Math.max(1, dist);

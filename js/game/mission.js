@@ -30,17 +30,18 @@
       game.hud.update();
     }
 
-    // Fresh tank on the HQ pad, platoon, compounds and clock for `selection` ({ planet, operation },
-    // or null before one is picked: no compounds). The map is set up for the operation first
-    // (its compounds, salt flat / old town areas: js/planet/zones.js).
+    // Fresh tank on the HQ pad (or at the operation's start point), platoon, compounds and clock
+    // for `selection` ({ planet, operation }, or null before one is picked: no compounds). The map
+    // is set up for the operation first (planet look, compounds, areas: js/planet/zones.js).
     function resetSortie(selection) {
       const op = selection ? selection.operation : null;
-      if (op) world.applyOperation(op);
+      if (op) world.applyOperation(op, selection.planet.theme);
+      const start = op && op.startAt ? op.startAt : { x: world.hq.x, y: world.hq.y, angle: -Math.PI * 0.5 };
       const player = new global.Tank2D(world, {
         isPlayer: true,
-        x: world.hq.x,
-        y: world.hq.y,
-        hullAngle: -Math.PI * 0.5
+        x: start.x,
+        y: start.y,
+        hullAngle: start.angle != null ? start.angle : -Math.PI * 0.5
       });
       game.player = player;
       // Respawn destroyed crates/barrels and clear old decals so a restart is a genuinely fresh run
@@ -119,6 +120,7 @@
 
     function checkSupplyDepots() {
       const player = game.player;
+      if (game.operation && game.operation.operation.noSupply) return; // cut off: no depots at all
       // In combat (same condition as the HUD's "散開・交戦": sortied enemies near the platoon)
       // no prompt is offered; the visit stays armed so it appears once the fight is over.
       const inCombat = squad.mode === 'engage';
@@ -188,6 +190,20 @@
         } else if (ev.type === 'holdWave' && !combat.hold.waveReported) {
           combat.hold.waveReported = true;
           radio.say(global.RadioComms.script.holdWave(), { key: 'hold-wave' });
+        } else if (ev.type === 'bossArrived') {
+          radio.say(global.RadioComms.script.bossArrived(ev.kind), { priority: 'high' });
+        } else if (ev.type === 'surveyed') {
+          radio.say(global.RadioComms.script.surveyed(ev.point.name, ev.left), { key: 'survey' });
+        } else if (ev.type === 'feintSpotted') {
+          radio.say(global.RadioComms.script.feintSpotted(ev.base.name, combat.feint.distance), { priority: 'high' });
+        } else if (ev.type === 'feintDone') {
+          radio.say(global.RadioComms.script.feintDone(ev.base.name));
+        } else if (ev.type === 'iceCrack') {
+          radio.say(global.RadioComms.script.iceCrack(), { key: 'ice', priority: 'high' });
+        } else if (ev.type === 'iceBreak' && !ev.isPlayer) {
+          radio.say(global.RadioComms.script.iceBreak(ev.tank.isAlly), { key: 'ice-break' });
+        } else if (ev.type === 'outOfAmmo') {
+          radio.say(global.RadioComms.script.outOfAmmo(), { key: 'ammo', priority: 'high' });
         }
       }
     }
@@ -200,6 +216,13 @@
       const player = game.player;
       if (!combat.missionComplete || game.returnedToHq || !player.alive) return;
       if (radio.controlsLocked) return; // Mio is still reporting the secured planet
+      // An operation that ends where it is fought (operation.endInPlace: e.g. holding a captured
+      // city until the main force arrives): no drive home, the report follows Mio's lines
+      if (game.operation && game.operation.operation.endInPlace) {
+        game.returnedToHq = true;
+        combat.stats.returnClock = combat.stats.endClock;
+        return;
+      }
       const hq = world.hq;
       const d = Math.hypot(world.deltaX(player.x, hq.x), world.deltaY(player.y, hq.y));
       if (d > hq.returnRadius) return;
@@ -226,12 +249,12 @@
         game.overShown = true;
         const victory = false;
         const badge = document.getElementById('gameover-badge');
-        badge.textContent = victory ? 'MISSION COMPLETE' : 'TANK DESTROYED';
+        badge.textContent = victory ? 'MISSION COMPLETE' : player.sunk ? 'TANK LOST' : 'TANK DESTROYED';
         badge.classList.toggle('danger', !victory);
         badge.classList.toggle('success', victory);
         document.getElementById('gameover-title').textContent = victory
           ? `${planetName()} 制圧 — 全${combat.bases.length}拠点を制圧`
-          : '車体大破 — MISSION FAILED';
+          : player.sunk ? '氷が割れて水没 — MISSION FAILED' : '車体大破 — MISSION FAILED';
         document.getElementById('gameover-summary').textContent =
           `制圧した拠点: ${combat.bases.filter((b) => b.cleared).length} / ${combat.bases.length} ／ 撃破した敵戦車: ${combat.kills} 両 ／ 残存僚機: ${combat.allies.length} 両 ／ 獲得スクラップ残高: ${combat.scrap}`;
         document.getElementById('btn-restart').textContent = victory ? 'もう一度出撃する' : '新車両で再出撃する';

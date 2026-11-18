@@ -180,7 +180,10 @@
         for (const k of b.garrison.tanks || []) kinds.add(k);
       }
       const hold = this.operation.hold;
-      if (hold) hold.kinds.forEach((k) => kinds.add(k));
+      if (hold) {
+        hold.kinds.forEach((k) => kinds.add(k));
+        if (hold.boss) kinds.add(hold.boss.kind);
+      }
       return ENEMY_KIND_ORDER.filter((k) => kinds.has(k));
     }
 
@@ -209,7 +212,11 @@
             + '全拠点を制圧した時点で作戦時間が確定します。その後は、この作戦本部まで帰還してください。';
         }
         case 'enemies':
-          if (mio.enemies) return `${mio.enemies}拠点の敵は待機していますが、接近するか攻撃すると出撃してきます。`;
+          if (mio.enemies) {
+            return this.combat.bases.length > 0
+              ? `${mio.enemies}拠点の敵は待機していますが、接近するか攻撃すると出撃してきます。`
+              : mio.enemies;
+          }
           return '敵は軽戦車、中戦車、トーチカで構成されています。拠点で待機していますが、接近するか攻撃すると出撃してきます。';
         case 'terrain':
           if (mio.terrain) return mio.terrain;
@@ -347,17 +354,37 @@
       if (op.weather && op.weather.sandstorm) {
         items.push(['storm', '砂嵐', 'ときどき発生。視界がほぼゼロになり、敵拠点にも気づかれにくくなる。']);
       }
+      if (op.weather && op.weather.blizzard) {
+        items.push(['blizzard', '吹雪', '止むことなく、強まったり弱まったりを繰り返す。強いときは視界がほぼゼロ。']);
+      }
+      if (op.polarNight) items.push(['night', '極夜', '太陽が昇らず、ずっと夜。敵拠点は撃たれるまでこちらに気づかない。']);
+      if (rules.thermal) items.push(['thermal', '熱源センサー', `吹雪や暗闇の中でも、約${global.CombatManager.THERMAL_RANGE}以内の敵を熱源として映し、照準できる。`]);
+      if (rules.cold) items.push(['cold', '低温', '長く止まると車体が冷え、砲塔の旋回とエンジンが鈍る。走れば暖まる。']);
       if (rules.heat) items.push(['heat', 'エンジン過熱', '全速で走り続けるとオーバーヒートし、冷えるまで速度が落ちる。']);
       if (rules.dust) items.push(['dust', '砂煙', '速く走るほど、遠くの拠点に気づかれやすい。止まっていれば気づかれにくい。']);
       if (op.mirage) items.push(['mirage', '蜃気楼', '昼間、遠くの敵は実際の位置からずれて揺らいで見える。']);
       if (op.longRange) items.push(['range', '遠距離戦', `自機の照準距離 +${op.longRange.player}。敵の射程も長い。`]);
       for (const z of world.zones) {
         if (z.kind === 'saltflat') items.push(['salt', '塩の平原', '岩ひとつない真っ白な平原。遮蔽物がまったくない。']);
-        if (z.kind === 'city') items.push(['city', `旧市街 建物×${world.structures.length}`, '建物は通行不可で、砲弾も通さない。狭い路地と行き止まりに注意。']);
+        if (z.kind === 'city') {
+          const name = z.style === 'snow' ? '首都' : '旧市街';
+          items.push(['city', `${name} 建物×${world.structures.length}`, '建物は通行不可で、砲弾も通さない。狭い路地と行き止まりに注意。']);
+        }
+        if (z.kind === 'lake') {
+          items.push(['lake', '凍った湖', '止まると氷が割れて沈む。走り続ければ渡れる。']);
+          items.push(['thin', `薄い氷 ×${z.thin.length}`, '色の濃いところ。重い戦車（重戦車・指揮官車）は踏み抜いて沈む。敵を誘い込める。']);
+        }
       }
-      if (op.hold) items.push(['hold', '封鎖', `制圧後、${op.hold.duration}秒間まわりの円を守る。円を出るとカウントが止まる。`]);
+      if (op.survey) items.push(['survey', `観測点 ×${op.survey.length}`, '水色の円に乗ると、その地点の氷の厚さを計測する。']);
+      if (op.feint) items.push(['feint', '陽動', `${op.sites[op.feint.site].name}に発見されたあと、${op.feint.distance}以上引き離す。攻め落とす必要はない。`]);
+      if (op.hold) {
+        const label = op.hold.label || '封鎖';
+        items.push(['hold', label, `${op.hold.duration}秒間、黄色い円の中を守る。円を出るとカウントが止まる。`]);
+      }
+      if (op.ammo) items.push(['ammo', `砲弾 ${op.ammo}発`, '撃ち尽くすと主砲が撃てない。撃破した敵1両につき2発回収できる。']);
+      if (op.noSupply) items.push(['nosupply', '補給なし', '補給拠点も修理キットもない。']);
       items.push(
-        ['rock', `大型の岩 ×${world.obstacles.length}`, '通行不可。砲弾を防ぐ遮蔽物として使える。'],
+        ['rock', `${rules.cold ? '雪をかぶった岩' : '大型の岩'} ×${world.obstacles.length}`, '通行不可。砲弾を防ぐ遮蔽物として使える。'],
         ['ramp', `ジャンプ台 ×${world.ramps.length}`, '勢いよく進入すると空中に跳躍する。'],
         ['wrap', `マップ ${world.width}×${world.height}`, '上下左右がつながっている（端を越えると反対側へ）。']
       );
@@ -429,7 +456,7 @@
       const k = S / world.width;
 
       g.clearRect(0, 0, S, S);
-      g.fillStyle = '#3a3027';
+      g.fillStyle = world.theme.mapBg;
       g.fillRect(0, 0, S, S);
 
       // Terrain (dimmed unless the terrain step is active)

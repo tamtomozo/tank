@@ -28,11 +28,23 @@
       }
       g.stroke();
     }
+    const ZONE_FILL = {
+      saltflat: 'rgba(236, 232, 220, 0.55)',
+      lake: 'rgba(125, 190, 230, 0.6)',
+      city: 'rgba(196, 168, 124, 0.45)',
+      snowCity: 'rgba(160, 172, 190, 0.5)'
+    };
     for (const z of world.zones) {
       g.beginPath();
       g.arc(z.x * k, z.y * k, z.radius * k, 0, Math.PI * 2);
-      g.fillStyle = z.kind === 'saltflat' ? 'rgba(236, 232, 220, 0.55)' : 'rgba(196, 168, 124, 0.45)';
+      g.fillStyle = ZONE_FILL[z.kind === 'city' && z.style === 'snow' ? 'snowCity' : z.kind];
       g.fill();
+      for (const t of z.thin || []) {
+        g.fillStyle = 'rgba(30, 70, 110, 0.75)';
+        g.beginPath();
+        g.arc((z.x + t.dx) * k, (z.y + t.dy) * k, Math.max(1.5, t.r * k), 0, Math.PI * 2);
+        g.fill();
+      }
       if (z.pond) {
         g.fillStyle = 'rgba(56, 140, 170, 0.85)';
         g.beginPath();

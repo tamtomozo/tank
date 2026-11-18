@@ -127,6 +127,16 @@ dialog.briefing-dialog {
 .briefing-swatch.is-salt { background: #ece8dc; }
 .briefing-swatch.is-city { background: #c4a87c; box-shadow: inset 0 0 0 2px #8a6e48; }
 .briefing-swatch.is-hold { border: 2px dashed #fde047; border-radius: 50%; }
+.briefing-swatch.is-blizzard { background: linear-gradient(135deg, #cbd5e1, #f8fafc); }
+.briefing-swatch.is-night { background: #0f172a; box-shadow: inset 0 0 0 2px #475569; }
+.briefing-swatch.is-thermal { background: radial-gradient(circle, #fef08a, #f97316 60%, #dc2626); border-radius: 50%; }
+.briefing-swatch.is-cold { background: #7dd3fc; }
+.briefing-swatch.is-lake { background: #9fd0ee; border-radius: 50%; }
+.briefing-swatch.is-thin { background: #2c5a85; border-radius: 50%; }
+.briefing-swatch.is-survey { background: #67e8f9; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+.briefing-swatch.is-feint { border: 2px solid #f97316; }
+.briefing-swatch.is-ammo { background: #fbbf24; border-radius: 0.4rem 0.4rem 0.1rem 0.1rem; }
+.briefing-swatch.is-nosupply { border: 2px solid #f87171; background: linear-gradient(45deg, transparent 45%, #f87171 45% 55%, transparent 55%); }
 
 .briefing-panels {
   min-inline-size: 0;

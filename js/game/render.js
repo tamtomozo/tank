@@ -250,10 +250,25 @@
       ctx.restore();
     }
 
-    // One enemy at its apparent position (ap); shimmering while a mirage shifts it
+    // Snow camouflage: fully visible within CAMO_NEAR, fading to CAMO_MIN by CAMO_FAR
+    const CAMO_NEAR = 260;
+    const CAMO_FAR = 520;
+    const CAMO_MIN = 0.2;
+
+    // One enemy at its apparent position (ap); shimmering while a mirage shifts it, faint from
+    // afar in snow camouflage
     function drawEnemy(e, ap, drawCamX, drawCamY, timeSec, nightFactor) {
+      let camoAlpha = 1;
+      if (e.camo) {
+        const d = Math.hypot(world.deltaX(player.x, e.x), world.deltaY(player.y, e.y));
+        const u = Math.max(0, Math.min(1, (d - CAMO_NEAR) / (CAMO_FAR - CAMO_NEAR)));
+        camoAlpha = 1 - (1 - CAMO_MIN) * u;
+      }
       if (ap.shift <= 0) {
+        const prev = ctx.globalAlpha;
+        ctx.globalAlpha = prev * camoAlpha;
         e.draw(ctx, drawCamX, drawCamY, viewW, viewH, nightFactor);
+        ctx.globalAlpha = prev;
         return;
       }
       const realX = e.x;
@@ -272,7 +287,7 @@
     function drawHoldZone(timeSec, drawCamX, drawCamY, offView) {
       const h = combat.hold;
       if (!h || !h.active || h.done) return;
-      const b = combat.bases[h.site];
+      const b = combat.holdCenter();
       const p = world.project(b.x, b.y, 0, drawCamX, drawCamY, viewW, viewH);
       if (!p || offView(p, h.radius * p.scale + 40)) return;
       const pulse = 0.5 + 0.5 * Math.sin(timeSec * (h.inside ? 3.2 : 8));
@@ -294,6 +309,87 @@
       ctx.beginPath();
       ctx.arc(0, 0, h.radius, -Math.PI / 2, -Math.PI / 2 + (h.progress / h.duration) * Math.PI * 2);
       ctx.stroke();
+      ctx.restore();
+    }
+
+    // Survey points not yet visited: a cyan ring on the ground (drawn under everything)
+    function drawSurveyRings(timeSec, drawCamX, drawCamY, offView) {
+      if (!combat.survey) return;
+      const pulse = 0.5 + 0.5 * Math.sin(timeSec * 3);
+      for (const pt of combat.survey) {
+        if (pt.done) continue;
+        const p = world.project(pt.x, pt.y, 0, drawCamX, drawCamY, viewW, viewH);
+        if (!p || offView(p, 100 * p.scale + 20)) continue;
+        ctx.save();
+        ctx.translate(p.sx, p.sy);
+        ctx.scale(p.scale, p.scale * p.tiltCos);
+        ctx.fillStyle = `rgba(34, 211, 238, ${0.08 + 0.06 * pulse})`;
+        ctx.strokeStyle = `rgba(103, 232, 249, ${0.55 + 0.35 * pulse})`;
+        ctx.lineWidth = 3;
+        ctx.setLineDash([10, 7]);
+        ctx.lineDashOffset = -timeSec * 14;
+        ctx.beginPath();
+        ctx.arc(0, 0, 80, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    // Survey point labels: a beacon line and the point's name (UI layer, above darkness and storms)
+    function drawSurveyLabels(drawCamX, drawCamY) {
+      if (!combat.survey) return;
+      ctx.save();
+      ctx.font = '800 12px system-ui, "Segoe UI", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.lineJoin = 'round';
+      for (const pt of combat.survey) {
+        if (pt.done) continue;
+        const p = world.project(pt.x, pt.y, 0, drawCamX, drawCamY, viewW, viewH);
+        if (!p || p.sx < -40 || p.sx > viewW + 40 || p.sy < -40 || p.sy > viewH + 40) continue;
+        const top = p.sy - 60 * p.scale - 10;
+        ctx.strokeStyle = 'rgba(103, 232, 249, 0.8)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(p.sx, p.sy);
+        ctx.lineTo(p.sx, top);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.strokeText(`◆ ${pt.name}`, p.sx, top - 4);
+        ctx.fillStyle = '#a5f3fc';
+        ctx.fillText(`◆ ${pt.name}`, p.sx, top - 4);
+      }
+      ctx.restore();
+    }
+
+    // Heat sensor (ice planet): enemies within range glow through storms and darkness
+    function drawHeatSignatures(timeSec, drawCamX, drawCamY) {
+      if (!combat.thermalActive()) return;
+      const range = global.CombatManager.THERMAL_RANGE;
+      ctx.save();
+      for (const e of combat.enemies) {
+        if (!e.alive) continue;
+        const d = Math.hypot(world.deltaX(player.x, e.x), world.deltaY(player.y, e.y));
+        if (d > range) continue;
+        const p = world.project(e.x, e.y, 0, drawCamX, drawCamY, viewW, viewH);
+        if (!p || p.sx < -60 || p.sx > viewW + 60 || p.sy < -60 || p.sy > viewH + 60) continue;
+        const r = 30 * p.scale * e.scale;
+        const a = 0.55 + 0.2 * Math.sin(timeSec * 5 + e.x * 0.01);
+        const grad = ctx.createRadialGradient(p.sx, p.sy, r * 0.15, p.sx, p.sy, r);
+        grad.addColorStop(0, `rgba(254, 240, 138, ${a.toFixed(2)})`);
+        grad.addColorStop(0.45, `rgba(249, 115, 22, ${(a * 0.7).toFixed(2)})`);
+        grad.addColorStop(1, 'rgba(220, 38, 38, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(p.sx, p.sy, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(251, 146, 60, 0.75)';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(p.sx - r * 0.8, p.sy - r * 0.8, r * 1.6, r * 1.6);
+      }
       ctx.restore();
     }
 
@@ -359,6 +455,7 @@
       // the return circle is drawn now so it lies under everything in the depth-sorted queue
       if (isReturning()) drawHqReturnZone(timeSec, drawCamX, drawCamY, offView);
       drawHoldZone(timeSec, drawCamX, drawCamY, offView);
+      drawSurveyRings(timeSec, drawCamX, drawCamY, offView);
       for (const part of world.hq.parts) {
         const p = world.project(part.x, part.y, 0, drawCamX, drawCamY, viewW, viewH);
         if (!p || offView(p, 150 * p.scale + 20)) continue;
@@ -414,7 +511,9 @@
         player.x, player.y, drawCamX, drawCamY, viewW, viewH, combat.allies
       );
       world.drawSandstorm(ctx, playerGroundProj, viewW, viewH, timeSec);
-      if (player.alive) game.hazards.drawHeatGauge(ctx, playerGroundProj, timeSec);
+      drawHeatSignatures(timeSec, drawCamX, drawCamY);
+      if (player.alive) game.hazards.drawGauges(ctx, playerGroundProj, timeSec);
+      drawSurveyLabels(drawCamX, drawCamY);
 
       // Fort icons floating over enemy-held compounds (UI layer: above the night darkness)
       for (const b of combat.bases) {

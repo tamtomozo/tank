@@ -197,7 +197,57 @@
       return '敵の増援を確認！ 四方から接近してきます！';
     },
 
+    bossArrived(kind) {
+      if (kind === 'ace') {
+        return '大型の熱源が接近……雪原迷彩のエース機です！ 遠くからは見えにくい、熱源とレーダーで捉えてください！';
+      }
+      return '敵の指揮官車が出てきました！ 気をつけて、隊長！';
+    },
+
+    // ---- survey / feint ----
+    surveyed(name, left) {
+      if (left > 0) return `${name}の氷厚を計測しました。戦車の重さに耐えられます。残る観測点は${left}か所です。`;
+      return `${name}の計測完了。湖を渡れるルートが確定しました！ 止まらなければ、戦車でも渡れます。`;
+    },
+
+    feintSpotted(baseName, distance) {
+      return `${baseName}が食いつきました！ 敵の主力が出てきます。撃ち合わずに${distance}以上引き離してください！`;
+    },
+
+    feintDone(baseName) {
+      return `陽動成功です。敵は${baseName}の守りに戻っていきます。主力は峠に釘付けです。`;
+    },
+
+    // ---- ice / ammunition ----
+    iceCrack() {
+      return '氷にひびが入っています！ 止まらないで、動いてください！';
+    },
+
+    iceBreak(isAlly) {
+      return isAlly
+        ? '僚機が氷を踏み抜きました……！ 湖の上では止まらないでください！'
+        : '敵車両が氷を踏み抜きました！ 重い戦車ほど、薄い氷に弱いようです。';
+    },
+
+    outOfAmmo() {
+      return '砲弾が尽きました！ 敵を撃破すれば、残骸から砲弾を回収できます。僚機の援護を頼ってください！';
+    },
+
     // ---- environment (js/game/hazards.js) ----
+    blizzardRising(thermal) {
+      return thermal
+        ? '吹雪が強まっています。視界がほぼありません。熱源センサーを頼りにしてください。'
+        : '吹雪が強まっています。視界がほぼありません。';
+    },
+
+    blizzardEasing() {
+      return '吹雪が少し弱まりました。視界が戻ります。';
+    },
+
+    coldWarning() {
+      return '車体が冷え切っています。砲塔の旋回とエンジンが鈍っています。少し走って暖めてください。';
+    },
+
     stormIncoming() {
       return pick([
         '砂嵐が来ます！ 視界がほぼなくなります。敵からもこちらは見えません、接近するなら今です。',

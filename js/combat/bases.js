@@ -1,11 +1,15 @@
 (function (global) {
   'use strict';
 
-  // Enemy compounds: garrisons, alerts and captures, and the operation's last objective.
+  // Enemy compounds: garrisons, alerts and captures, and the operation's objectives.
   // The compounds and their garrisons come from the operation (js/data/operations.js) and are all
-  // garrisoned from the start. The objective is done once every compound is captured — or, on an
-  // operation with a `hold` objective, once the platoon has then held the area around one compound
-  // for its full duration while enemy reinforcements arrive in waves.
+  // garrisoned from the start. The objectives, all of which must be met:
+  //   compounds  every compound not marked `optional` captured
+  //   survey     every survey point visited (drive onto it)
+  //   feint      be spotted by the feint compound, then get `distance` away from it: its
+  //              garrison gives up the chase and returns to its post
+  //   hold       after the others: hold the area around a compound (or a fixed point) for its
+  //              duration while enemy reinforcements arrive in waves (and maybe a boss)
   // Part of CombatManager (js/combat/combat.js): the methods below are mixed into its prototype.
 
   const { ENEMY_SPECS } = global.GameData;
@@ -23,6 +27,7 @@
   const STORM_SPOT_CUT = 0.8;
 
   const HOLD_FIRST_WAVE = 4; // s from the start of the hold to the first reinforcements
+  const SURVEY_RADIUS = 80; // the player this close to a survey point has surveyed it
   const RETREAT_DESPAWN_DIST = 1300; // retreating tanks vanish this far from the player
 
   class CombatBases {
@@ -30,6 +35,8 @@
     spawnBases() {
       this.bases = [];
       this.hold = null;
+      this.survey = null;
+      this.feint = null;
       if (!this.enemiesEnabled || !this.operation) return;
       const defs = this.operation.sites || [];
       for (const site of this.world.sites) {
@@ -40,6 +47,7 @@
           y: site.y,
           radius: site.radius,
           garrison: defs[site.id].garrison,
+          optional: !!defs[site.id].optional, // need not be captured (e.g. the target of a feint)
           alerted: false,
           cleared: false,
           total: 0
@@ -48,7 +56,12 @@
         this._garrisonBase(base, site);
         if (this.world.revealBase) this.world.revealBase(site.id);
       }
-      const h = this.operation.hold;
+      const op = this.operation;
+      if (op.survey) {
+        this.survey = op.survey.map((pt) => ({ x: this.world.wrapX(pt.x), y: this.world.wrapY(pt.y), name: pt.name, done: false }));
+      }
+      if (op.feint) this.feint = { ...op.feint, spotted: false, done: false };
+      const h = op.hold;
       if (h) {
         this.hold = {
           ...h,
@@ -57,7 +70,8 @@
           progress: 0,
           waveTimer: HOLD_FIRST_WAVE,
           inside: true,
-          halfReported: false
+          halfReported: false,
+          bossSpawned: false
         };
       }
     }
@@ -70,6 +84,7 @@
         const tank = this._makeEnemy(kind, slot.x, slot.y, angle, tier);
         tank.baseId = base.id;
         tank.state = 'idle'; // parked until the compound is alerted
+        tank.home = { x: slot.x, y: slot.y, angle }; // post it returns to after a feint
         this.enemies.push(tank);
         base.total += 1;
       };
@@ -171,12 +186,17 @@
         }
       }
 
-      if (this.missionComplete || this.bases.length === 0 || !this.bases.every((b) => b.cleared)) return;
+      if (!this.operation || this.missionComplete) return;
+      this._updateSurvey(player);
+      this._updateFeint(player);
+      if (!this.bases.every((b) => b.cleared || b.optional)) return;
+      if (this.survey && !this.survey.every((p) => p.done)) return;
+      if (this.feint && !this.feint.done) return;
       const hold = this.hold;
       if (hold && !hold.done) {
         if (!hold.active) {
           hold.active = true;
-          this.events.push({ type: 'holdStart', base: this.bases[hold.site] });
+          this.events.push({ type: 'holdStart' });
         }
         this._updateHold(dt, player);
         if (!hold.done) return;
@@ -187,12 +207,53 @@
       this.events.push({ type: 'areaSecured' });
     }
 
+    // ---- survey points / feint ------------------------------------------------------------------
+    _updateSurvey(player) {
+      if (!this.survey || !player.alive) return;
+      for (const [i, p] of this.survey.entries()) {
+        if (p.done) continue;
+        if (Math.hypot(this.world.deltaX(p.x, player.x), this.world.deltaY(p.y, player.y)) > SURVEY_RADIUS) continue;
+        p.done = true;
+        const left = this.survey.filter((q) => !q.done).length;
+        this.audio.playWaveClear();
+        this.events.push({ type: 'surveyed', point: p, index: i, left });
+      }
+    }
+
+    _updateFeint(player) {
+      const f = this.feint;
+      if (!f || f.done) return;
+      const base = this.bases[f.site];
+      if (!f.spotted && base.alerted) {
+        f.spotted = true;
+        this.events.push({ type: 'feintSpotted', base });
+      }
+      if (!f.spotted || !player.alive) return;
+      const d = Math.hypot(this.world.deltaX(base.x, player.x), this.world.deltaY(base.y, player.y));
+      if (d < f.distance) return;
+      f.done = true;
+      // The garrison gives up the chase and goes back to guard its compound
+      for (const e of this.enemies) {
+        if (e.alive && e.baseId === base.id && !e.isBunker && e.state === 'active') e.state = 'return';
+      }
+      base.alerted = false;
+      this.events.push({ type: 'feintDone', base });
+    }
+
     // ---- hold the area ---------------------------------------------------------------------------
+    // Centre of the area to hold: a compound (hold.site) or a fixed point (hold.at)
+    holdCenter() {
+      const h = this.hold;
+      if (!h) return null;
+      if (h.at) return { x: this.world.wrapX(h.at.x), y: this.world.wrapY(h.at.y) };
+      return this.bases[h.site];
+    }
+
     // The timer runs while the player stays inside the circle; reinforcements arrive in waves from
     // outside it until the time is up, then the ones still around fall back.
     _updateHold(dt, player) {
       const h = this.hold;
-      const base = this.bases[h.site];
+      const base = this.holdCenter();
       const d = Math.hypot(this.world.deltaX(base.x, player.x), this.world.deltaY(base.y, player.y));
       const inside = player.alive && d < h.radius;
       if (inside !== h.inside) {
@@ -210,6 +271,12 @@
         h.waveTimer = h.waveEvery;
         this._spawnWave(base, h);
       }
+      // A boss joins the attack part-way through (hold.boss = { kind, at: share of the time })
+      if (h.boss && !h.bossSpawned && h.progress >= h.duration * h.boss.at) {
+        h.bossSpawned = true;
+        const e = this._spawnAround(base, h.boss.kind, h.spawnDist);
+        if (e) this.events.push({ type: 'bossArrived', kind: h.boss.kind });
+      }
 
       if (h.progress >= h.duration) {
         h.done = true;
@@ -219,29 +286,36 @@
       }
     }
 
-    // Reinforcements: waveSize tanks at a clear spot spawnDist from the held compound, already on the move
+    // Reinforcements: waveSize tanks (waveSizeLate in the second half) at clear spots spawnDist
+    // from the held area, already on the move
     _spawnWave(base, h) {
-      const [minD, maxD] = h.spawnDist;
-      for (let n = 0; n < h.waveSize; n++) {
-        const kind = h.kinds[Math.floor(Math.random() * h.kinds.length)];
-        const r = ENEMY_SPECS[kind].scale * 24;
-        for (let tries = 0; tries < 24; tries++) {
-          const a = Math.random() * Math.PI * 2;
-          const dist = minD + Math.random() * (maxD - minD);
-          const x = this.world.wrapX(base.x + Math.cos(a) * dist);
-          const y = this.world.wrapY(base.y + Math.sin(a) * dist);
-          if (!this.world.isClearSpot(x, y, r + 12)) continue;
-          const e = this._makeEnemy(kind, x, y, a + Math.PI, 1);
-          e.baseId = -1;
-          e.wave = true;
-          e.state = 'active';
-          e.aiTimer = Math.random() * 0.6;
-          e.reactTimer = 0.6;
-          this.enemies.push(e);
-          break;
-        }
+      const size = h.waveSizeLate && h.progress >= h.duration * 0.5 ? h.waveSizeLate : h.waveSize;
+      for (let n = 0; n < size; n++) {
+        this._spawnAround(base, h.kinds[Math.floor(Math.random() * h.kinds.length)], h.spawnDist);
       }
       this.events.push({ type: 'holdWave' });
+    }
+
+    // One reinforcement of `kind` at a clear spot [minD, maxD] from the centre (null if none found;
+    // the ice of a frozen lake doesn't count as clear)
+    _spawnAround(center, kind, [minD, maxD]) {
+      const r = ENEMY_SPECS[kind].scale * 24;
+      for (let tries = 0; tries < 30; tries++) {
+        const a = Math.random() * Math.PI * 2;
+        const dist = minD + Math.random() * (maxD - minD);
+        const x = this.world.wrapX(center.x + Math.cos(a) * dist);
+        const y = this.world.wrapY(center.y + Math.sin(a) * dist);
+        if (!this.world.isClearSpot(x, y, r + 12) || this.world.iceAt(x, y)) continue;
+        const e = this._makeEnemy(kind, x, y, a + Math.PI, 1);
+        e.baseId = -1;
+        e.wave = true;
+        e.state = 'active';
+        e.aiTimer = Math.random() * 0.6;
+        e.reactTimer = 0.6;
+        this.enemies.push(e);
+        return e;
+      }
+      return null;
     }
 
     // Retreating reinforcements disappear once well away from the player (not counted as kills)

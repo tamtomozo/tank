@@ -379,6 +379,21 @@
   padding-block: 0.35rem;
 }
 
+.is-touch .hold-banner {
+  inset-block-start: calc(4.4rem + var(--safe-t));
+  inline-size: min(60vw, 22rem);
+  padding-block: 0.35rem;
+}
+
+.is-touch .boss-banner:not([hidden]) ~ .hold-banner {
+  inset-block-start: calc(7.4rem + var(--safe-t));
+}
+
+.is-touch .hold-title {
+  font-size: 0.68rem;
+  margin-block-end: 0.2rem;
+}
+
 .is-touch .boss-title {
   font-size: 0.68rem;
   margin-block-end: 0.2rem;

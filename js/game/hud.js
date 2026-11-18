@@ -41,7 +41,8 @@
       scrap: document.getElementById('hud-scrap'),
       bossBanner: document.getElementById('boss-banner'),
       holdBanner: document.getElementById('hold-banner'),
-      holdText: document.getElementById('hold-text')
+      holdText: document.getElementById('hold-text'),
+      goals: document.getElementById('hud-goals')
     };
     const lastText = new Map();
     const setText = (el, text) => {
@@ -101,7 +102,7 @@
       setVar('--reload-ratio', reloadRatio.toFixed(3));
       setVar('--damage-alpha', (combat.damageFlash * 0.85).toFixed(3));
 
-      const boss = combat.enemies.find((e) => e.alive && e.kind === 'boss');
+      const boss = combat.enemies.find((e) => e.alive && e.isBoss);
       if (boss) {
         if (hudEl.bossBanner.hidden) hudEl.bossBanner.hidden = false;
         setVar('--boss-hp-ratio', Math.max(0, boss.hp / boss.maxHp).toFixed(3));
@@ -131,9 +132,37 @@
       const hold = combat.hold;
       if (hold && hold.active && !hold.done) {
         const left = Math.ceil(hold.duration - hold.progress);
-        setText(hudEl.holdText, hold.inside ? `封鎖中 — 突入完了まで ${left} 秒` : `封鎖線の外！ 円に戻れ（残り ${left} 秒で停止中）`);
+        setText(hudEl.holdText, hold.inside
+          ? `${hold.banner || '封鎖中 — 完了まで'} ${left} 秒`
+          : `円の外！ 戻れ（残り ${left} 秒で停止中）`);
         hudEl.holdBanner.classList.toggle('is-outside', !hold.inside);
       }
+
+      setText(hudEl.goals, goalsText());
+    }
+
+    // The operation's objectives, one per line, ✔ once met
+    function goalsText() {
+      if (!combat.operation) return '';
+      const lines = [];
+      const tick = (done, text) => lines.push(`${done ? '✔' : '□'} ${text}`);
+      const required = combat.bases.filter((b) => !b.optional);
+      if (required.length > 0) {
+        const n = required.filter((b) => b.cleared).length;
+        tick(n === required.length, `拠点制圧 ${n}/${required.length}`);
+      }
+      const f = combat.feint;
+      if (f) {
+        const name = combat.bases[f.site].name;
+        tick(f.done, f.spotted || f.done ? `陽動：${name}から${f.distance}引き離す` : `陽動：${name}に発見される`);
+      }
+      if (combat.survey) {
+        const n = combat.survey.filter((p) => p.done).length;
+        tick(n === combat.survey.length, `氷上偵察 ${n}/${combat.survey.length}`);
+      }
+      const hold = combat.hold;
+      if (hold) tick(hold.done, `${hold.label || '周囲の封鎖'} ${hold.duration}秒`);
+      return lines.join('\n');
     }
 
     return { update, frame };

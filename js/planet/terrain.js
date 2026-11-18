@@ -312,7 +312,8 @@
         const r = Math.min(255, Math.round(baseRgb[0] * k));
         const g = Math.min(255, Math.round(baseRgb[1] * k));
         const bl = Math.min(255, Math.round(baseRgb[2] * k));
-        facets.push({ verts, rgb: [r, g, bl], color: `rgb(${r}, ${g}, ${bl})` });
+        // k (light) and up (how much the facet faces the sky) let a planet theme re-colour the rock
+        facets.push({ verts, rgb: [r, g, bl], color: `rgb(${r}, ${g}, ${bl})`, k, up: nz / nLen });
       };
       for (let i = 0; i < n; i++) {
         const j = (i + 1) % n;
@@ -330,7 +331,8 @@
         height: h,
         rot,
         base,
-        facets
+        facets,
+        baseRgb
       };
     }
 

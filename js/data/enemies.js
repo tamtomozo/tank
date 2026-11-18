@@ -90,7 +90,28 @@
       shellSpeed: 540,
       splashRadius: 72,
       scrapValue: 220,
-      preferredDist: 360
+      preferredDist: 360,
+      boss: true
+    },
+    // Ace in snow camouflage (ice planet): hard to make out from afar, quick and accurate
+    ace: {
+      hullColor: '#e2e8f0',
+      hullDark: '#94a3b8',
+      turretColor: '#f1f5f9',
+      accentColor: '#38bdf8',
+      scale: 1.45,
+      maxHp: 520,
+      maxSpeed: 185,
+      accel: 340,
+      turnSpeed: 1.9,
+      damage: 30,
+      reloadTime: 1.7,
+      shellSpeed: 560,
+      splashRadius: 64,
+      scrapValue: 200,
+      preferredDist: 330,
+      boss: true,
+      camo: true
     }
   };
 
@@ -100,11 +121,12 @@
     medium: { name: '中戦車', role: '火力と装甲のバランスが取れた主力。正面からの撃ち合いに強い。' },
     heavy: { name: '重戦車', role: '鈍重だが装甲が厚く、一撃が重い。距離を取って確実に削ること。' },
     bunker: { name: 'トーチカ', role: '拠点の固定砲台。移動しないが耐久が高く、射程も長い。' },
-    boss: { name: '司令官車', role: '敵指揮官が乗る大型戦車。装甲・火力ともに桁違いで、装填も速い。' }
+    boss: { name: '司令官車', role: '敵指揮官が乗る大型戦車。装甲・火力ともに桁違いで、装填も速い。' },
+    ace: { name: 'エース重戦車', role: '雪原迷彩をまとったエースの重戦車。遠くからは雪に溶けて見えにくい。速く、正確に撃ってくる。' }
   };
 
   // Briefing / report order of the enemy kinds
-  const ENEMY_KIND_ORDER = ['light', 'medium', 'heavy', 'bunker', 'boss'];
+  const ENEMY_KIND_ORDER = ['light', 'medium', 'heavy', 'bunker', 'boss', 'ace'];
 
   const GameData = global.GameData || (global.GameData = {});
   GameData.ENEMY_SPECS = ENEMY_SPECS;

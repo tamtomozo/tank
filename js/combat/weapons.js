@@ -11,6 +11,7 @@
   const CANNON_RECOIL_KNOCKBACK = 150; // px/s backwards shove when a tank fires its main gun (~21px)
   const HIT_KNOCKBACK_BASE = 110; // px/s shove from being caught in a blast…
   const HIT_KNOCKBACK_PER_DAMAGE = 3.2; // …plus this much per point of damage taken
+  const AMMO_PER_KILL = 2; // shells salvaged from a destroyed enemy tank (limited-ammo operation)
 
   class CombatWeapons {
     // A shot by the player for the accuracy statistic (final once the area is secured, so firing
@@ -21,6 +22,18 @@
 
     fireMainCannon(tank, targetX, targetY) {
       if (tank.reloadTimer > 0 || !tank.alive) return false;
+      // Limited ammunition (operation.ammo): the player's gun stays silent once it runs dry
+      if (tank.isPlayer && this.ammo != null) {
+        if (this.ammo <= 0) {
+          if (!this._dryReported) {
+            this._dryReported = true;
+            this.events.push({ type: 'outOfAmmo' });
+          }
+          return false;
+        }
+        this.ammo -= 1;
+        this._dryReported = false;
+      }
       tank.reloadTimer = tank.reloadTime;
       tank.triggerFireEffects();
 
@@ -56,7 +69,7 @@
         damage: tank.damage,
         splashRadius: tank.splashRadius,
         color: tank.isPlayer ? (isRail ? '#38bdf8' : '#fbbf24') : tank.isAlly ? '#a3e635' : '#f87171',
-        radius: tank.kind === 'boss' ? 7 : 5,
+        radius: tank.isBoss ? 7 : 5,
         life: 2.6,
         trailTimer: 0
       });
@@ -221,9 +234,19 @@
         this.stats.killsBy[by] += 1;
         this.explodeAt(enemy.x, enemy.y, 68 * enemy.scale, 0, true, this._playerRef, true);
         this.spawnPickup(enemy.x, enemy.y, 'scrap', enemy.scrapValue);
-        if (Math.random() < 0.35 || enemy.kind === 'boss') {
-          this.spawnPickup(enemy.x, enemy.y, 'repair', enemy.kind === 'boss' ? 45 : 22);
+        // No repair kits on an operation without supply (operation.noSupply)
+        const noSupply = this.operation && this.operation.noSupply;
+        if (!noSupply && (Math.random() < 0.35 || enemy.isBoss)) {
+          this.spawnPickup(enemy.x, enemy.y, 'repair', enemy.isBoss ? 45 : 22);
         }
+        this._onEnemyKilled(enemy);
+      }
+    }
+
+    // Any enemy lost (shot or through the ice): with limited ammunition, shells are salvaged from it
+    _onEnemyKilled(enemy) {
+      if (this.ammo != null && !enemy.isBunker) {
+        this.ammo = Math.min(this.ammoMax, this.ammo + AMMO_PER_KILL);
       }
     }
 

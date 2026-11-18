@@ -17,6 +17,7 @@
     const arrowPool = [];
 
     const RADAR_RANGE = 1200; // world units from the player to the radar edge (local radar)
+    const CAMO_RADAR = 450; // a snow-camouflaged tank shows on the radar only this close
 
     function update(drawCamX, drawCamY) {
       const player = game.player;
@@ -150,6 +151,36 @@
         if (returning) placeArrow(hq.x, hq.y, 'target-arrow is-base is-hq', '', 'hq');
       }
 
+      // Survey points not yet visited: cyan diamonds (pinned to the border when out of range)
+      // with an off-screen marker
+      for (const pt of combat.survey || []) {
+        if (pt.done) continue;
+        const pos = toRadar(pt.x, pt.y);
+        const at = pos.inRange ? pos : toRadarEdge(pos.dx, pos.dy);
+        radarCtx.fillStyle = '#67e8f9';
+        radarCtx.beginPath();
+        radarCtx.moveTo(at.rx, at.ry - 4);
+        radarCtx.lineTo(at.rx + 4, at.ry);
+        radarCtx.lineTo(at.rx, at.ry + 4);
+        radarCtx.lineTo(at.rx - 4, at.ry);
+        radarCtx.closePath();
+        radarCtx.fill();
+        placeArrow(pt.x, pt.y, 'target-arrow is-survey', '\u25c6');
+      }
+
+      // Area to hold (operation `hold`): amber ring
+      const hold = combat.hold;
+      if (hold && hold.active && !hold.done) {
+        const c = combat.holdCenter();
+        const pos = toRadar(c.x, c.y);
+        const at = pos.inRange ? pos : toRadarEdge(pos.dx, pos.dy);
+        radarCtx.strokeStyle = '#fde047';
+        radarCtx.lineWidth = 2;
+        radarCtx.beginPath();
+        radarCtx.arc(at.rx, at.ry, Math.max(4, hold.radius * scalePx), 0, Math.PI * 2);
+        radarCtx.stroke();
+      }
+
       // Wingmen within range as green dots
       radarCtx.fillStyle = '#4ade80';
       for (const a of combat.allies) {
@@ -162,12 +193,16 @@
       }
 
       // Enemies within range: parked units dim, sortied units bright (sortied ones also get an off-screen arrow).
-      // Shown where they appear to be (mirage); in a sandstorm only those within sight range.
-      const sight = combat.sightRange();
+      // Shown where they appear to be (mirage); in a storm only those within sight / heat-sensor
+      // range; a tank in snow camouflage only up close (or on the heat sensor)
+      const sight = combat.sensorRange();
+      const thermal = combat.thermalActive();
       for (const e of combat.enemies) {
         if (!e.alive) continue;
         const ap = combat.apparentPos(e);
-        if (sight < Infinity && Math.hypot(world.deltaX(player.x, e.x), world.deltaY(player.y, e.y)) > sight) continue;
+        const d = Math.hypot(world.deltaX(player.x, e.x), world.deltaY(player.y, e.y));
+        if (d > sight) continue;
+        if (e.camo && !thermal && d > CAMO_RADAR) continue;
         const idle = e.state === 'idle';
         if (!idle && e.state !== 'retreat') placeArrow(ap.x, ap.y, 'target-arrow', '\u25b2');
         const pos = toRadar(ap.x, ap.y);

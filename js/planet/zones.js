@@ -4,25 +4,42 @@
   // Operation layer over the generated map: every operation (js/data/operations.js) picks its own
   // enemy compounds and may lay areas over the map —
   //   saltflat  a flat white salt plain: the rocks and jump pads inside are cleared
-  //   city      an old oasis town: a grid of narrow streets between solid buildings (they block
-  //             tanks and shells), an open square in the middle, an oasis pond by the west road
+  //   city      a town: a grid of narrow streets between solid buildings (they block tanks and
+  //             shells), an open square in the middle. style 'oasis' (adobe, a pond by the west
+  //             road) or 'snow' (grey stone, snow on the roofs)
+  //   lake      a frozen lake: smooth ice with darker patches of thin ice (js/combat/ice.js)
   // Compounds at a fixed position also get the rocks around them cleared.
   // Also: the collision helpers shared by tanks, the AI and shells (round rocks + box buildings).
   // Part of HorizonWorld (js/planet/planet.js): the methods below are mixed into its prototype.
 
-  const { makeBox } = global.HorizonWorld.shared;
+  const { makeSolid } = global.HorizonWorld.shared;
 
   const SITE_CLEAR_RADIUS = 240; // rocks this close to a fixed compound centre are cleared
   const CITY_CELL = 200; // town block pitch; streets run along the block edges
   const CITY_STREET = 100; // narrowest street width between two buildings
   const BUILDING_SITE_CLEAR = 190; // no building this close to a compound centre (parked tanks)
 
-  const ADOBE = [
-    [204, 178, 136],
-    [190, 162, 122],
-    [214, 196, 158],
-    [178, 150, 112]
-  ];
+  // Wall colours per town style; roofs: adobe a shade lighter, snow towns white
+  const WALLS = {
+    oasis: [[204, 178, 136], [190, 162, 122], [214, 196, 158], [178, 150, 112]],
+    snow: [[118, 126, 140], [104, 112, 126], [132, 138, 150], [96, 100, 112]]
+  };
+  const SNOW_ROOF = [236, 242, 250];
+
+  // Box building (same data shape as a boulder, see makeSolid in js/planet/hq.js)
+  function makeBuilding(x, y, hx, hy, h, wall, roof) {
+    const b = [[-hx, -hy, 0], [hx, -hy, 0], [hx, hy, 0], [-hx, hy, 0]];
+    const t = b.map(([px, py]) => [px, py, h]);
+    const faces = [];
+    for (let i = 0; i < 4; i++) {
+      const j = (i + 1) % 4;
+      faces.push({ verts: [b[i], b[j], t[j], t[i]], rgb: wall });
+    }
+    faces.push({ verts: t, rgb: roof });
+    const solid = makeSolid(x, y, Math.hypot(hx, hy), h, b, faces, [0, 0, h * 0.5]);
+    solid.box = { hx, hy };
+    return solid;
+  }
 
   function seededRand(seed) {
     let s = Math.max(1, Math.floor(seed)) % 2147483647;
@@ -61,7 +78,9 @@
     // Set the map up for an operation (null = none): its compounds, areas, buildings and the
     // rocks they clear. Rebuilds the ground texture; compounds are stamped onto it again as they
     // are garrisoned (revealBase).
-    applyOperation(op) {
+    // themeId: the planet's look (planet.theme, js/planet/planet.js THEMES)
+    applyOperation(op, themeId = 'desert') {
+      this.setTheme(themeId);
       const dist = (ax, ay, bx, by) => Math.hypot(this.deltaX(ax, bx), this.deltaY(ay, by));
       const zones = op && op.zones ? op.zones.map((z) => ({ ...z, x: this.wrapX(z.x), y: this.wrapY(z.y) })) : [];
       const siteDefs = op && op.sites ? op.sites : [];
@@ -88,6 +107,7 @@
       for (const z of zones) {
         if (z.kind === 'city') this._buildCity(z);
         else if (z.kind === 'saltflat') this._prepareSaltflat(z);
+        else if (z.kind === 'lake') this._prepareLake(z);
       }
       this.zones = zones;
       this.colliders = [...this.obstacles, ...this.hq.colliders, ...this.structures];
@@ -104,6 +124,49 @@
       return null;
     }
 
+    // Frozen lake the point lies on (null if none); thin: on one of its thin-ice patches
+    iceAt(x, y) {
+      for (const z of this.zones) {
+        if (z.kind !== 'lake') continue;
+        const dx = this.deltaX(z.x, x);
+        const dy = this.deltaY(z.y, y);
+        if (Math.hypot(dx, dy) >= z.radius) continue;
+        const thin = z.thin.some((t) => Math.hypot(dx - t.dx, dy - t.dy) < t.r);
+        return { lake: z, thin };
+      }
+      return null;
+    }
+
+    // ---- frozen lake -----------------------------------------------------------------------------
+    // Thin-ice patches (fixed per seed) and the crack pattern of the ice
+    _prepareLake(z) {
+      const rand = seededRand(z.seed || 5);
+      z.thin = [];
+      const want = z.thinCount != null ? z.thinCount : 6;
+      for (let tries = 0; z.thin.length < want && tries < 300; tries++) {
+        const a = rand() * Math.PI * 2;
+        const d = Math.sqrt(rand()) * (z.radius - 120);
+        const t = { dx: Math.cos(a) * d, dy: Math.sin(a) * d, r: 70 + rand() * 60 };
+        // Keep clear of the survey points and of each other
+        if ((z.keepClear || []).some(([kx, ky]) => Math.hypot(t.dx - kx, t.dy - ky) < t.r + 70)) continue;
+        if (z.thin.some((o) => Math.hypot(t.dx - o.dx, t.dy - o.dy) < t.r + o.r + 40)) continue;
+        z.thin.push(t);
+      }
+      z.cracks = [];
+      for (let i = 0; i < 46; i++) {
+        const a = rand() * Math.PI * 2;
+        const d = Math.sqrt(rand()) * z.radius * 0.92;
+        const pts = [Math.cos(a) * d, Math.sin(a) * d];
+        let ang = rand() * Math.PI * 2;
+        for (let k = 0; k < 3; k++) {
+          ang += (rand() - 0.5) * 1.2;
+          const len = 30 + rand() * 60;
+          pts.push(pts[pts.length - 2] + Math.cos(ang) * len, pts[pts.length - 1] + Math.sin(ang) * len);
+        }
+        z.cracks.push(pts);
+      }
+    }
+
     // ---- old town --------------------------------------------------------------------------------
     // Blocks on a CITY_CELL grid centred on the town; the streets through the centre (east-west
     // and north-south) always stay open, the square in the middle is left empty. Some neighbouring
@@ -111,6 +174,9 @@
     // courtyards or split in two.
     _buildCity(z) {
       const rand = seededRand(z.seed || 7);
+      const style = z.style === 'snow' ? 'snow' : 'oasis';
+      const walls = WALLS[style];
+      const roofOf = (rgb) => (style === 'snow' ? SNOW_ROOF : rgb.map((c) => c + 16));
       const cell = CITY_CELL;
       const half = cell * 0.5;
       const edge = CITY_STREET * 0.5; // a building stays this far from its block edge
@@ -138,10 +204,7 @@
           const dy = Math.abs(this.deltaY(y, s.y)) - hy;
           if (Math.hypot(Math.max(0, dx), Math.max(0, dy)) < BUILDING_SITE_CLEAR) return;
         }
-        const solid = makeBox(x, y, hx, hy, h, rgb);
-        solid.box = { hx, hy };
-        solid.radius = Math.hypot(hx, hy);
-        this.structures.push(solid);
+        this.structures.push(makeBuilding(x, y, hx, hy, h, rgb, roofOf(rgb)));
       };
 
       const used = new Set();
@@ -151,7 +214,7 @@
         used.add(key(i, j));
         const cx = (i + 0.5) * cell;
         const cy = (j + 0.5) * cell;
-        const rgb = ADOBE[Math.floor(rand() * ADOBE.length)];
+        const rgb = walls[Math.floor(rand() * walls.length)];
         const shrink = () => rand() * 14;
         const r = rand();
 
@@ -179,14 +242,14 @@
           // Two houses side by side with a narrow alley between them (too narrow for a tank)
           const hx = (half - edge) * 0.5 - 4;
           add(cx - hx - 4, cy, hx, half - edge - shrink(), 26 + rand() * 18, rgb);
-          add(cx + hx + 4, cy, hx, half - edge - shrink(), 32 + rand() * 18, ADOBE[Math.floor(rand() * ADOBE.length)]);
+          add(cx + hx + 4, cy, hx, half - edge - shrink(), 32 + rand() * 18, walls[Math.floor(rand() * walls.length)]);
           continue;
         }
         add(cx, cy, half - edge - shrink(), half - edge - shrink(), 28 + rand() * 28, rgb);
       }
 
       // Oasis pond outside the town by the west road (ground decal only: shallow water)
-      z.pond = { dx: -z.radius * 0.74, dy: z.radius * 0.7, rx: 120, ry: 78 };
+      if (style === 'oasis') z.pond = { dx: -z.radius * 0.74, dy: z.radius * 0.7, rx: 120, ry: 78 };
     }
 
     // ---- salt flat -------------------------------------------------------------------------------
@@ -237,21 +300,52 @@
         g.stroke();
         return;
       }
+      if (z.kind === 'lake') {
+        // Smooth blue ice with a snowy shore, white cracks, darker thin-ice patches
+        const grad = g.createRadialGradient(0, 0, z.radius * 0.5, 0, 0, z.radius + 40);
+        grad.addColorStop(0, 'rgba(150, 196, 226, 0.95)');
+        grad.addColorStop(0.9, 'rgba(176, 214, 238, 0.92)');
+        grad.addColorStop(1, 'rgba(230, 240, 250, 0)');
+        g.fillStyle = grad;
+        g.beginPath();
+        g.arc(0, 0, z.radius + 40, 0, Math.PI * 2);
+        g.fill();
+        for (const t of z.thin) {
+          const tg = g.createRadialGradient(t.dx, t.dy, t.r * 0.2, t.dx, t.dy, t.r);
+          tg.addColorStop(0, 'rgba(40, 84, 122, 0.75)');
+          tg.addColorStop(1, 'rgba(70, 120, 160, 0.25)');
+          g.fillStyle = tg;
+          g.beginPath();
+          g.arc(t.dx, t.dy, t.r, 0, Math.PI * 2);
+          g.fill();
+        }
+        g.strokeStyle = 'rgba(240, 248, 255, 0.55)';
+        g.lineWidth = 1.6;
+        g.lineJoin = 'round';
+        g.beginPath();
+        for (const pts of z.cracks) {
+          g.moveTo(pts[0], pts[1]);
+          for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]);
+        }
+        g.stroke();
+        return;
+      }
       if (z.kind === 'city') {
-        // Packed sand streets, a paved square, wheel ruts along the main streets
+        // Packed streets, a paved square, wheel ruts along the main streets
+        const snowTown = z.style === 'snow';
         const grad = g.createRadialGradient(0, 0, z.radius * 0.6, 0, 0, z.radius + 100);
-        grad.addColorStop(0, 'rgba(196, 170, 128, 0.9)');
-        grad.addColorStop(0.8, 'rgba(184, 156, 116, 0.7)');
-        grad.addColorStop(1, 'rgba(184, 156, 116, 0)');
+        grad.addColorStop(0, snowTown ? 'rgba(168, 178, 192, 0.85)' : 'rgba(196, 170, 128, 0.9)');
+        grad.addColorStop(0.8, snowTown ? 'rgba(186, 196, 210, 0.65)' : 'rgba(184, 156, 116, 0.7)');
+        grad.addColorStop(1, snowTown ? 'rgba(186, 196, 210, 0)' : 'rgba(184, 156, 116, 0)');
         g.fillStyle = grad;
         g.beginPath();
         g.arc(0, 0, z.radius + 100, 0, Math.PI * 2);
         g.fill();
 
         const plaza = z.plaza || 250;
-        g.fillStyle = 'rgba(214, 196, 160, 0.9)';
+        g.fillStyle = snowTown ? 'rgba(150, 160, 174, 0.9)' : 'rgba(214, 196, 160, 0.9)';
         g.fillRect(-plaza, -plaza, plaza * 2, plaza * 2);
-        g.strokeStyle = 'rgba(150, 126, 92, 0.35)';
+        g.strokeStyle = snowTown ? 'rgba(90, 100, 116, 0.4)' : 'rgba(150, 126, 92, 0.35)';
         g.lineWidth = 1.5;
         g.beginPath();
         for (let v = -plaza; v <= plaza; v += 40) {

@@ -556,7 +556,7 @@
       const oy = (H - world.height * k) / 2;
       const marks = [];
 
-      g.fillStyle = '#2f271f';
+      g.fillStyle = world.theme.mapBg;
       g.fillRect(0, 0, W, H);
       g.save();
       g.translate(ox, oy);

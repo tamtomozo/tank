@@ -171,7 +171,28 @@
         ctx.fill();
       }
 
-      ctx.fillStyle = 'rgb(22, 18, 14)';
+      // Holes where tanks broke through the ice of a frozen lake: black water, broken white rim
+      ctx.globalAlpha = 1;
+      for (const hole of this.iceHoles) {
+        const p = this.project(hole.x, hole.y, 0, camX, camY, viewW, viewH);
+        if (!p || this._isOffscreen(p, hole.r * p.scale * 1.4 + 2, viewW, viewH)) continue;
+        ctx.save();
+        ctx.translate(p.sx, p.sy);
+        ctx.scale(p.scale, p.scale * p.tiltCos);
+        ctx.fillStyle = 'rgba(236, 244, 252, 0.9)';
+        ctx.beginPath();
+        hole.rim.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = 'rgb(14, 30, 46)';
+        ctx.beginPath();
+        hole.rim.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x * 0.8, y * 0.8) : ctx.lineTo(x * 0.8, y * 0.8)));
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      ctx.fillStyle = this.theme.treadRgb;
       for (const tm of this.treadMarks) {
         const p = this.project(tm.x, tm.y, 0, camX, camY, viewW, viewH);
         if (!p || this._isOffscreen(p, 10, viewW, viewH)) continue;

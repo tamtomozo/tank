@@ -104,13 +104,16 @@
       const endStamp = stats.endClock || { day: t.day, clock: t.clockText }; // moment the planet was secured
       const accuracyPct = Math.round(r.accuracy * 100);
       const aliveAllies = combat.allies.filter((a) => a.alive).length;
+      const op = combat.operation;
 
       this.body.replaceChildren(
         card('作戦時間（ゲーム内）', formatGameDuration(stats.elapsed, world.dayDuration), [
           `開始 ${stampText(stats.startClock)} → 制圧完了 ${stampText(endStamp)}`,
-          `作戦本部へ帰還 ${stampText(stats.returnClock)}（作戦時間に含まず）`
+          op && op.endInPlace ? '現地で作戦終了（帰還なし）' : `作戦本部へ帰還 ${stampText(stats.returnClock)}（作戦時間に含まず）`
         ]),
-        card('拠点制圧時刻（ゲーム内）', `${capturedBases} / ${combat.bases.length} 拠点`, baseLines),
+        combat.bases.length > 0
+          ? card('拠点制圧時刻（ゲーム内）', `${capturedBases} / ${combat.bases.length} 拠点`, baseLines)
+          : card('作戦目標', '達成', [op && op.goal ? op.goal : '']),
         card('回収アイテム', `${stats.itemsCollected} 個`),
         card('撃破数', `${totalKills} 両`, [
           kinds.length ? kinds.map((k) => `${ENEMY_INFO[k].name} ${stats.killsByKind[k]}`).join(' ／ ') : '—',

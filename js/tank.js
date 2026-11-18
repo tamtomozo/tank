@@ -9,6 +9,8 @@
       this.isPlayer = Boolean(options.isPlayer);
       this.isAlly = Boolean(options.isAlly); // AI wingman in the player's platoon
       this.isBunker = Boolean(options.isBunker);
+      this.isBoss = Boolean(options.boss); // boss health bar, bigger shells (js/data/enemies.js)
+      this.camo = Boolean(options.camo); // snow camouflage: faint from afar (js/game/render.js)
       this.kind = options.kind || (this.isPlayer ? 'player' : 'medium');
       this.scale = options.scale || 1.0;
 
@@ -59,6 +61,7 @@
       this.splashRadius = options.splashRadius ?? 54;
       this.armorReduction = 0;
       this.turretTraverseSpeed = options.turretTraverseSpeed ?? 6.5;
+      this.traverseLimit = 1; // share of the turret traverse speed available (cold: js/game/hazards.js)
 
       // Visual levels from the tuning (gun barrel, ERA, track width)
       this.cannonLevel = 1;
@@ -160,7 +163,7 @@
 
     _traverseTurretTowardLocal(desiredLocal, dt) {
       const diff = wrapAngle(desiredLocal - this.turretLocalAngle);
-      const maxStep = this.turretTraverseSpeed * dt;
+      const maxStep = this.turretTraverseSpeed * this.traverseLimit * dt;
       if (Math.abs(diff) <= maxStep) {
         this.turretLocalAngle = wrapAngle(desiredLocal);
       } else {
@@ -512,7 +515,7 @@
         const by = bodyProj.sy - 34 * bodyProj.scale * this.scale;
         ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
         ctx.fillRect(bx - 1, by - 1, barW + 2, barH + 2);
-        ctx.fillStyle = this.isAlly ? '#22c55e' : this.kind === 'boss' ? '#f59e0b' : '#ef4444';
+        ctx.fillStyle = this.isAlly ? '#22c55e' : this.isBoss ? '#f59e0b' : '#ef4444';
         ctx.fillRect(bx, by, barW * Math.max(0, this.hp / this.maxHp), barH);
       }
 

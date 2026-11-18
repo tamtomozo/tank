@@ -212,12 +212,18 @@
       // Draw fn(g) at (x, y) plus wrapped copies wherever its bounding radius crosses a world edge
       const stamp = (x, y, r, fn) => this._stampTiles(tiles, x, y, r, fn);
 
+      // Snow planet: the same layout drawn as snowfields — drifts instead of earth patches,
+      // frozen creeks instead of gullies, wind-carved snow instead of dust streaks; no mud flats,
+      // fissures or brush (js/planet/planet.js THEMES)
+      const snow = this.theme.snow;
+      const SNOW_PATCH = ['rgba(255, 255, 255, 0.34)', 'rgba(160, 182, 210, 0.26)', 'rgba(232, 240, 250, 0.3)', 'rgba(140, 162, 190, 0.22)'];
+
       // Terrain colour patches (ragged outline + inner tone)
-      for (const patch of this.patches) {
+      for (const [pi, patch] of this.patches.entries()) {
         const shape = patch.shape;
         stamp(patch.x, patch.y, Math.max(patch.rx, patch.ry) * 1.35, (g) => {
           g.rotate(patch.rot);
-          g.fillStyle = patch.color;
+          g.fillStyle = snow ? SNOW_PATCH[pi % 4] : patch.color;
           g.beginPath();
           g.moveTo(shape[0], shape[1]);
           for (let i = 2; i < shape.length; i += 2) g.lineTo(shape[i], shape[i + 1]);
@@ -225,7 +231,7 @@
           g.fill();
           const ix = patch.rx * 0.12;
           const iy = -patch.ry * 0.08;
-          g.fillStyle = patch.innerColor;
+          g.fillStyle = snow ? 'rgba(255, 255, 255, 0.18)' : patch.innerColor;
           g.beginPath();
           g.moveTo(ix + shape[0] * 0.56, iy + shape[1] * 0.56);
           for (let i = 2; i < shape.length; i += 2) g.lineTo(ix + shape[i] * 0.56, iy + shape[i + 1] * 0.56);
@@ -235,7 +241,7 @@
       }
 
       // Cracked dry-mud hardpan flats
-      for (const hp of this.hardpans) {
+      for (const hp of snow ? [] : this.hardpans) {
         const sprite = this.hardpanSprites[hp.variant];
         if (!sprite) break;
         stamp(hp.x, hp.y, hp.size * 0.75, (g) => {
@@ -259,10 +265,10 @@
             g.beginPath();
             g.moveTo(a.ux - x0, a.uy - y0);
             g.lineTo(b.ux - x0, b.uy - y0);
-            g.strokeStyle = 'rgba(52, 38, 28, 0.48)';
+            g.strokeStyle = snow ? 'rgba(110, 140, 175, 0.42)' : 'rgba(52, 38, 28, 0.48)';
             g.lineWidth = b.w * 1.15;
             g.stroke();
-            g.strokeStyle = 'rgba(34, 24, 16, 0.32)';
+            g.strokeStyle = snow ? 'rgba(200, 225, 245, 0.5)' : 'rgba(34, 24, 16, 0.32)';
             g.lineWidth = b.w * 0.42;
             g.stroke();
           }
@@ -272,7 +278,9 @@
       // Windblown dust streaks
       for (const rp of this.ripples) {
         stamp(rp.x, rp.y, 220, (g) => {
-          g.strokeStyle = `rgba(206, 186, 152, ${(rp.alpha * 0.8).toFixed(2)})`;
+          g.strokeStyle = snow
+            ? `rgba(255, 255, 255, ${(rp.alpha * 1.6).toFixed(2)})`
+            : `rgba(206, 186, 152, ${(rp.alpha * 0.8).toFixed(2)})`;
           g.lineWidth = 2.2;
           g.beginPath();
           g.moveTo(0, 0);
@@ -282,7 +290,7 @@
       }
 
       // Dry earth fissures & pebbles
-      for (const ck of this.cracks) {
+      for (const ck of snow ? [] : this.cracks) {
         stamp(ck.x, ck.y, 70, (g) => {
           if (ck.isPebble) {
             g.fillStyle = 'rgba(64, 46, 32, 0.55)';
@@ -312,7 +320,7 @@
       }
 
       // Dead branching brush
-      for (const sc of this.scrubs) {
+      for (const sc of snow ? [] : this.scrubs) {
         stamp(sc.x, sc.y, 24 * sc.scale, (g) => {
           g.scale(sc.scale, sc.scale);
           g.rotate(sc.rot);

@@ -8,7 +8,8 @@
   //   sky.js      sky / backdrop / haze      night.js   darkness + headlight cone
   //   props.js    flags, crates, rocks, jump pads    hq.js      operations HQ (作戦本部)
   //   zones.js    per-operation compounds, salt flat / old town, collision helpers
-  //   weather.js  sandstorm overlay
+  //   weather.js  sandstorm / blizzard overlay
+  // The planet's look (sky palette, ground style, rock colours) is a theme: THEMES below, setTheme.
 
   // World size: 4800 x 4800 (4x the original 2400 x 2400 area). Content counts below are scaled by
   // AREA_SCALE so the density of rocks, terrain detail, crates and jump pads stays the same.
@@ -133,6 +134,61 @@
     }
   ];
 
+  // Ice planet: cold blue sky, a pale low sun, snow-white ground by day and blue-grey by night.
+  // Same key times and night strengths as the desert, so night play works the same.
+  const ICE_KEYFRAMES = [
+    { t: 0.00, skyTop: [2, 6, 16], skyMid: [8, 18, 38], skyHor: [22, 36, 60], rim: [125, 211, 252],
+      gFar: [42, 50, 64], gMid: [58, 68, 84], gNear: [48, 56, 70], star: 1.0, night: 1.0 },
+    { t: 0.17, skyTop: [4, 9, 22], skyMid: [12, 24, 46], skyHor: [28, 42, 66], rim: [125, 211, 252],
+      gFar: [46, 54, 68], gMid: [62, 72, 88], gNear: [52, 60, 74], star: 0.95, night: 0.95 },
+    { t: 0.25, skyTop: [24, 34, 72], skyMid: [96, 92, 142], skyHor: [232, 176, 160], rim: [253, 186, 160],
+      gFar: [122, 130, 152], gMid: [152, 162, 184], gNear: [134, 144, 166], star: 0.25, night: 0.30 },
+    { t: 0.32, skyTop: [40, 78, 128], skyMid: [110, 152, 196], skyHor: [206, 224, 240], rim: [224, 242, 254],
+      gFar: [170, 184, 202], gMid: [198, 210, 226], gNear: [180, 192, 210], star: 0.0, night: 0.0 },
+    { t: 0.48, skyTop: [46, 88, 140], skyMid: [120, 164, 206], skyHor: [214, 230, 244], rim: [224, 242, 254],
+      gFar: [178, 192, 210], gMid: [206, 218, 232], gNear: [188, 200, 216], star: 0.0, night: 0.0 },
+    { t: 0.68, skyTop: [42, 80, 130], skyMid: [114, 154, 198], skyHor: [208, 222, 238], rim: [224, 236, 250],
+      gFar: [172, 184, 202], gMid: [200, 210, 226], gNear: [182, 192, 210], star: 0.0, night: 0.0 },
+    { t: 0.75, skyTop: [30, 26, 66], skyMid: [120, 82, 132], skyHor: [228, 152, 142], rim: [251, 170, 150],
+      gFar: [116, 120, 142], gMid: [146, 150, 174], gNear: [126, 130, 154], star: 0.35, night: 0.40 },
+    { t: 0.82, skyTop: [5, 10, 24], skyMid: [14, 26, 48], skyHor: [30, 44, 68], rim: [125, 211, 252],
+      gFar: [46, 54, 68], gMid: [62, 72, 88], gNear: [52, 60, 74], star: 0.95, night: 0.95 },
+    { t: 1.00, skyTop: [2, 6, 16], skyMid: [8, 18, 38], skyHor: [22, 36, 60], rim: [125, 211, 252],
+      gFar: [42, 50, 64], gMid: [58, 68, 84], gNear: [48, 56, 70], star: 1.0, night: 1.0 }
+  ];
+
+  // Look of a planet (planet.theme in js/data/operations.js), applied by applyOperation:
+  //   sky          day/night palette keyframes        snow     ground texture drawn as snow
+  //   rock         boulder colours (null = as generated: desert rock / sandstone; else base + snow caps)
+  //   dust         blast / track dust colours          storm    storm overlay colour (rgb) + streaks
+  //   treadDecay   how fast tread marks fade (snow keeps them for long: tracks can be followed)
+  const THEMES = {
+    desert: {
+      id: 'desert',
+      sky: SKY_KEYFRAMES,
+      snow: false,
+      rock: null,
+      dust: ['#c9b38c', '#b59d78', '#a88f6a', '#d4c29c'],
+      treadDecay: 1,
+      treadRgb: 'rgb(22, 18, 14)',
+      maxTreadMarks: 320,
+      storm: { rgb: '186, 140, 88', streak: '232, 200, 150' },
+      mapBg: '#3a3027'
+    },
+    ice: {
+      id: 'ice',
+      sky: ICE_KEYFRAMES,
+      snow: true,
+      rock: { base: [92, 102, 118], snow: [232, 240, 248] },
+      dust: ['#eef3f8', '#dbe5ef', '#f8fafc', '#cbd8e6'],
+      treadDecay: 0.25,
+      treadRgb: 'rgb(74, 96, 124)',
+      maxTreadMarks: 760,
+      storm: { rgb: '220, 230, 242', streak: '255, 255, 255' },
+      mapBg: '#2a3442'
+    }
+  };
+
   const { lerp } = global.TankUtil;
 
   function lerpRgb(c1, c2, t) {
@@ -142,13 +198,13 @@
     return `rgb(${r}, ${g}, ${b})`;
   }
 
-  function sampleDayPalette(t) {
-    let a = SKY_KEYFRAMES[0];
-    let b = SKY_KEYFRAMES[SKY_KEYFRAMES.length - 1];
-    for (let i = 0; i < SKY_KEYFRAMES.length - 1; i++) {
-      if (t >= SKY_KEYFRAMES[i].t && t <= SKY_KEYFRAMES[i + 1].t) {
-        a = SKY_KEYFRAMES[i];
-        b = SKY_KEYFRAMES[i + 1];
+  function sampleDayPalette(t, frames = SKY_KEYFRAMES) {
+    let a = frames[0];
+    let b = frames[frames.length - 1];
+    for (let i = 0; i < frames.length - 1; i++) {
+      if (t >= frames[i].t && t <= frames[i + 1].t) {
+        a = frames[i];
+        b = frames[i + 1];
         break;
       }
     }
@@ -192,6 +248,8 @@
       this.dayTime = 0.30;
       this.dayCount = 1;
       this.dayDuration = DAY_DURATION; // real seconds per in-game day
+      this.clockFrozen = false; // polar night operation: the time of day stands still
+      this.theme = THEMES.desert; // planet look (setTheme)
 
       this.stars = [];
       this.horizonRidges = [];
@@ -207,7 +265,7 @@
       this.maxTreadMarks = 320;
       this.scorchMarks = [];
       this.maxScorchMarks = 90;
-
+      this.iceHoles = []; // where a tank broke through the ice of a frozen lake (js/combat/ice.js)
       this.revealedBases = new Set(); // compounds whose ground pad is drawn (garrisoned this sortie)
       // Set per operation by applyOperation (js/planet/zones.js)
       this.sites = []; // compound layouts of the current operation (index == compound id)
@@ -241,6 +299,32 @@
       this._horizonProj = null;
     }
 
+    // Planet look (THEMES): sky palette, rock colours (re-shaded from the facets' stored light),
+    // ground texture style (rebuilt by applyOperation)
+    setTheme(id) {
+      const theme = THEMES[id] || THEMES.desert;
+      if (theme === this.theme) return;
+      this.theme = theme;
+      this._palCacheT = NaN;
+      this.maxTreadMarks = theme.maxTreadMarks;
+      this.treadMarks.length = 0;
+      for (const rock of this.allObstacles) {
+        for (const f of rock.facets) {
+          let rgb;
+          if (!theme.rock) {
+            rgb = rock.baseRgb.map((c) => Math.min(255, Math.round(c * f.k)));
+          } else {
+            const snowy = f.up > 0.55;
+            const src = snowy ? theme.rock.snow : theme.rock.base;
+            const k = snowy ? Math.min(1, 0.55 + f.k * 0.5) : f.k;
+            rgb = src.map((c) => Math.min(255, Math.round(c * k)));
+          }
+          f.rgb = rgb;
+          f.color = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+        }
+      }
+    }
+
     // Restore destructible props and clear decals for a fresh sortie
     resetDynamic() {
       for (const prop of this.props) {
@@ -249,12 +333,13 @@
       }
       this.treadMarks.length = 0;
       this.scorchMarks.length = 0;
+      this.iceHoles.length = 0;
     }
 
     getPalette() {
       if (this._palCacheT !== this.dayTime) {
         this._palCacheT = this.dayTime;
-        this._palCache = sampleDayPalette(this.dayTime);
+        this._palCache = sampleDayPalette(this.dayTime, this.theme.sky);
       }
       return this._palCache;
     }
@@ -427,6 +512,18 @@
       });
     }
 
+    // A hole broken into the ice at (x, y) (radius r, ragged rim)
+    addIceHole(x, y, r) {
+      const rim = [];
+      const n = 11;
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2;
+        const rr = r * (0.8 + Math.random() * 0.45);
+        rim.push([Math.cos(a) * rr, Math.sin(a) * rr]);
+      }
+      this.iceHoles.push({ x: this.wrapX(x), y: this.wrapY(y), r, rim });
+    }
+
     getTimeInfo() {
       const totalMins = Math.floor(this.dayTime * 24 * 60) % (24 * 60);
       const snappedMins = Math.floor(totalMins / 15) * 15;
@@ -462,14 +559,14 @@
     }
 
     update(dt, advanceDay = true) {
-      if (advanceDay) {
+      if (advanceDay && !this.clockFrozen) {
         this.dayTime += dt / DAY_DURATION;
         if (this.dayTime >= 1) {
           this.dayTime -= 1;
           this.dayCount += 1;
         }
       }
-      this._decayDecals(this.treadMarks, dt * 0.05);
+      this._decayDecals(this.treadMarks, dt * 0.05 * this.theme.treadDecay);
       this._decayDecals(this.scorchMarks, dt * 0.03);
     }
 
@@ -491,6 +588,8 @@
   }
 
   // Module-level constants / helpers that the HorizonWorld parts in other files use
+  HorizonWorld.THEMES = THEMES;
+
   HorizonWorld.shared = {
     scaled,
     AREA_SCALE,

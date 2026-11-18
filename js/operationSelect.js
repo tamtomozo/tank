@@ -37,6 +37,12 @@
       });
     }
 
+    // Why a stage is still locked: the previous stage, or (first stage) the previous planet's last one
+    _lockNote(op) {
+      const other = global.GameData.PLANETS.find((p) => p !== this.planet && p.operations.some((o) => o.id === op.requires));
+      return other ? `${other.name}の作戦をすべて完了すると解放されます。` : '前の段階の作戦を完了すると解放されます。';
+    }
+
     // One stage of the planet's campaign; locked until the stage it requires is completed (js/campaign.js)
     _card(op) {
       const campaign = global.Campaign;
@@ -56,7 +62,7 @@
         label,
         el('strong', 'op-card-name', unlocked ? `「${op.name}」` : '「？？？」'),
         el('p', 'op-card-goal', unlocked ? `目標: ${op.goal}` : '目標: 機密'),
-        el('p', 'op-card-summary', unlocked ? op.summary : '前の段階の作戦を完了すると解放されます。')
+        el('p', 'op-card-summary', unlocked ? op.summary : this._lockNote(op))
       );
       card.append(body, el('span', 'op-card-go', unlocked ? 'ブリーフィングへ ▶' : '🔒 未解放'));
       if (unlocked) card.addEventListener('click', () => this.finish({ operation: op }));

@@ -8,7 +8,6 @@
 
   const MAX_PARTICLES = 2400; // impact effects stop adding particles beyond this
   const MAX_FIRES = 40;
-  const SAND_COLORS = ['#c9b38c', '#b59d78', '#a88f6a', '#d4c29c'];
   // Flame colour by remaining life (hot white-yellow -> orange -> dull red)
   const flameColor = (t) => (t > 0.75 ? '#fff4c2' : t > 0.5 ? '#fcd34d' : t > 0.28 ? '#f97316' : '#b91c1c');
 
@@ -74,7 +73,7 @@
           size: rand(8, 13) * k,
           grow: rand(1.8, 2.8),
           alpha: 0.5,
-          color: SAND_COLORS[(Math.random() * SAND_COLORS.length) | 0]
+          color: this.world.theme.dust[(Math.random() * this.world.theme.dust.length) | 0]
         });
       }
 
@@ -196,7 +195,7 @@
           maxLife: 1.2,
           size: (4 + Math.random() * 3) * s,
           grow: 1.6 + strength * 0.8,
-          color: Math.random() < 0.5 ? '#c9b38c' : '#b59d78'
+          color: this.world.theme.dust[Math.random() < 0.5 ? 0 : 1]
         });
       }
     }

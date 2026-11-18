@@ -9,6 +9,7 @@
   const { ENEMY_SPECS } = global.GameData; // js/data/enemies.js
 
   const SHELL_GRAVITY = 380;
+  const THERMAL_RANGE = 720; // reach of the heat sensor (ice planet)
   const MIN_SHELL_DIST = 80;
   const MAX_SHELL_DIST = 820;
 
@@ -27,7 +28,7 @@
     static freshStats() {
       return {
         elapsed: 0, // mission time: seconds of tactical play until the area is secured (pauses excluded)
-        killsByKind: { light: 0, medium: 0, heavy: 0, bunker: 0, boss: 0 },
+        killsByKind: { light: 0, medium: 0, heavy: 0, bunker: 0, boss: 0, ace: 0 },
         killsBy: { player: 0, ally: 0, other: 0 },
         shotsFired: 0, // player's shells / rounds / missiles
         shotsHit: 0, // player's projectiles that damaged at least one enemy
@@ -83,6 +84,8 @@
       this.repairBonus = 1.0;
       this._playerRef = null;
       this.operation = null; // operation being fought (js/data/operations.js), null before one is picked
+      this.ammo = null; // player's shells left on a limited-ammo operation (null = unlimited)
+      this.ammoMax = null;
       this.rules = {}; // the planet's environment rules (planet.hazards)
       this.hold = null; // "hold the area" objective state (js/combat/bases.js)
       this.time = 0; // seconds of battle (drives the mirage shimmer)
@@ -94,6 +97,10 @@
       this.operation = selection ? selection.operation : null;
       this.rules = (selection && selection.planet.hazards) || {};
       this.time = 0;
+      // Limited ammunition for the player's gun (operation.ammo; null = unlimited)
+      this.ammoMax = this.operation && this.operation.ammo ? this.operation.ammo : null;
+      this.ammo = this.ammoMax;
+      this._dryReported = false;
       this.enemies = [];
       this.projectiles = [];
       this.particles = [];
@@ -133,6 +140,7 @@
       this.damageFlash = Math.max(0, this.damageFlash - dt * 2.8);
 
       this._updateEnemies(dt, player);
+      this._updateIce(dt, player);
       this._updateProjectiles(dt, player);
       this._emitTrackDust(player, dt, player);
       for (const a of this.allies) this._emitTrackDust(a, dt, player);
@@ -155,10 +163,22 @@
       return lr ? lr.enemy || 1 : 1;
     }
 
-    // How far anyone can see a tank right now (a sandstorm closes in to ~210; Infinity = clear)
+    // How far anyone can see a tank right now (a storm closes in to ~210; Infinity = clear)
     sightRange() {
       const storm = this.world.storm;
       return storm > 0.01 ? 900 - 690 * storm : Infinity;
+    }
+
+    // Heat sensor (planet rule `thermal`) working: in a storm or in the dark it shows enemies
+    // as heat signatures out to THERMAL_RANGE
+    thermalActive() {
+      return !!this.rules.thermal && (this.world.storm > 0.25 || this.world.getNightDarkStrength() > 0.4);
+    }
+
+    // How far the player's lock-on and radar reach: sight, or the heat sensor when that is farther
+    sensorRange() {
+      const sight = this.sightRange();
+      return this.thermalActive() ? Math.max(sight, THERMAL_RANGE) : sight;
     }
 
     // Where an enemy appears to be: on a salt flat in daylight the mirage shifts distant tanks off
@@ -187,11 +207,13 @@
   global.TankUtil.mixin(CombatManager, CombatConditions);
 
   // Module-level constants / helpers that the CombatManager parts in other files use
+  // (bases.js, weapons.js, enemyAI.js, effects.js, ice.js)
   CombatManager.shared = {
     SHELL_GRAVITY,
     compactInPlace
   };
 
   CombatManager.SHELL_GRAVITY = SHELL_GRAVITY;
+  CombatManager.THERMAL_RANGE = THERMAL_RANGE;
   global.CombatManager = CombatManager;
 })(window);

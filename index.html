@@ -53,6 +53,7 @@
   <script src="js/combat/weapons.js" defer></script>
   <script src="js/combat/enemyAI.js" defer></script>
   <script src="js/combat/effects.js" defer></script>
+  <script src="js/combat/ice.js" defer></script>
   <script src="js/squad.js" defer></script>
   <script src="js/hudframe.js" defer></script>
   <script src="js/radio.js" defer></script>
@@ -99,6 +100,7 @@
         <div class="hud-title-row">
           <strong id="hud-objective">—</strong>
         </div>
+        <div id="hud-goals" class="hud-goals"></div>
         <div class="hud-sub-row">
           <strong id="hud-clock" class="tabular-num">DAY 1 07:00</strong>
         </div>
@@ -253,6 +255,7 @@
             <li>マップは上下・左右すべてループ連結（無限周回）</li>
             <li>ジャンプ台に勢いよく進入すると空中に跳躍する</li>
             <li>惑星ザハル＝3段階の作戦（侵食 → 決戦 → 斬首）。砂嵐・エンジン過熱・砂煙・蜃気楼に注意</li>
+            <li>惑星ヴェルグ＝3段階の作戦（侵食 → 斬首 → 決戦）。吹雪・凍った湖・低温・極夜に注意。熱源センサーが頼り</li>
             <li>戦車はブリーフィングの「車両調整」で、レーダーチャートにポイントを配分して調整する（自機・僚機）</li>
             <li>制圧した拠点の白旗まわりの円に入るたびに補給・僚機補充メニューが開く（補給はここでのみ）</li>
             <li>敵・クレート破壊でスクラップ＆修理キット回収</li>
