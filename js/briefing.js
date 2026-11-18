@@ -2,15 +2,15 @@
   'use strict';
 
   // Pre-operation briefing scene, shown before the tactical phase of every sortie.
-  // Five steps: strategic situation, operation (start time, districts & compounds), tank tuning
+  // Five steps: strategic situation, operation (start time, compounds), tank tuning
   // (radar charts, js/tuningPanel.js), enemy intel, terrain.
   // ⑤ 地理情報 only: a tactical map of the whole battlefield on the left, the details on the right.
   // Other steps: the details take the whole width. Bottom: Mio narrates each step.
 
-  // 'tactical' = start time followed by districts & compounds (in that order)
+  // 'tactical' = start time followed by the compounds (in that order)
   const STEP_IDS = ['status', 'tactical', 'tuning', 'enemies', 'terrain'];
 
-  const { ENEMY_INFO, ENEMY_SPECS, DISTRICT_TEMPLATES } = global.GameData; // js/data/enemies.js
+  const { ENEMY_INFO, ENEMY_SPECS, BASE_GARRISONS } = global.GameData; // js/data/enemies.js
   const { el } = global.TankUtil;
 
   const OPEN_DELAY_MS = 900; // pause before the briefing window starts drawing
@@ -128,19 +128,17 @@
 
     // ------------------------------------------------------------------ data helpers
     // Combat power of both armies: sum over units of armour (HP) x firepower (damage per second).
-    // Enemy = every compound's garrison template (all districts, HP scaled per district tier);
+    // Enemy = every compound's garrison (HP scaled per garrison tier);
     // ours = the player's tank + living wingmen with their current tuning.
     _powerBalance() {
       const specs = ENEMY_SPECS;
-      const tpls = DISTRICT_TEMPLATES;
       const unitPower = (hp, dmg, reload) => hp * (dmg / Math.max(0.1, reload));
       let enemyPower = 0;
       let enemyTanks = 0;
       let enemyBunkers = 0;
       for (const site of this.world.enemyBases) {
-        const tier = Math.min(site.districtId, tpls.length - 1);
-        const tpl = tpls[tier][Math.min(site.slot, tpls[tier].length - 1)];
-        const hpScale = 1 + tier * 0.15;
+        const tpl = BASE_GARRISONS[Math.min(site.id, BASE_GARRISONS.length - 1)];
+        const hpScale = 1 + tpl.tier * 0.15;
         const add = (kind) => {
           const sp = specs[kind];
           enemyPower += unitPower(sp.maxHp * hpScale, sp.damage, sp.reloadTime);
@@ -162,17 +160,13 @@
         ourTanks: 1 + allies.length,
         enemyTanks,
         enemyBunkers,
-        enemyBases: this.world.enemyBases.length,
-        districts: this.combat.districts.length
+        enemyBases: this.world.enemyBases.length
       };
     }
 
     _status() {
       const combat = this.combat;
-      const cur = combat.currentDistrict || combat.districts.find((d) => !d.unlocked) || null;
       return {
-        objective: cur,
-        districtCount: combat.districts.length,
         baseCount: combat.bases.length,
         squadMax: this.squad.maxSize
       };
@@ -180,7 +174,6 @@
 
     _mioLine(stepId) {
       const st = this._status();
-      const d0 = this.combat.districts[0];
       switch (stepId) {
         case 'status': {
           if (!SHOW_POWER_BALANCE) return 'ハヤセ将軍より、全車への戦況概要です。目を通しておいてください、隊長。';
@@ -191,15 +184,12 @@
           return `車両調整です。主砲・装填・機動・装甲の4項目に、自機と僚機それぞれ${this.tuning.budget}ポイントを配分してください。`
             + 'どこかを上げるなら、ほかを下げる必要があります。出撃後は調整できません。作戦に合わせて決めてください、隊長。';
         case 'tactical': {
-          // Same order as the panel: operation name, objective, start time, then districts & compounds
+          // Same order as the panel: operation name, objective, start time, then the compounds
           const t = this.world.getTimeInfo();
-          const target = st.objective || d0;
-          const names = target ? target.baseIds.map((id) => this.combat.bases[id].name).join('と') : '';
-          return `作戦名は「${this.operation.name}」、目標は${this.planet.name}の${this.combat.districts.length}地区の制圧です。`
+          return `作戦名は「${this.operation.name}」、目標は${this.planet.name}の敵拠点${st.baseCount}か所の制圧です。`
             + `戦術行動の開始はDAY ${t.day}の${t.clockText}、${t.phaseName}です。`
-            + `作戦区域は${this.planet.name}、${this.combat.districts.length}つの地区に分かれています。${target ? `${target.name}の拠点${names}を制圧してください。` : ''}`
-            + '後続の地区は、前の地区を確保すると解放されます。'
-            + '全地区を制圧した時点で作戦時間が確定します。その後は、この作戦本部まで帰還してください。';
+            + '敵拠点は作戦本部の周囲に散らばっています。どこから攻めるかは隊長に任せます。制圧した拠点では補給と僚機の補充ができます。'
+            + '全拠点を制圧した時点で作戦時間が確定します。その後は、この作戦本部まで帰還してください。';
         }
         case 'enemies':
           return '敵は軽戦車、中戦車、トーチカで構成されています。拠点で待機していますが、接近するか攻撃すると出撃してきます。';
@@ -225,18 +215,17 @@
       // 1. Strategic situation = the scenario: the general's overview of the war, written to raise
       //    morale in four parts: pre-head (who it's for), catch copy (headline), deck copy (reinforces
       //    the headline and sparks curiosity), lead (who it targets and what they gain).
-      const target = st.objective || combat.districts[0];
       const statusBox = this.dialog.querySelector('#briefing-status');
       statusBox.replaceChildren(
         el('p', 'scenario-prehead', `${this.planet.name}奪還作戦に臨む、第1機甲小隊の全戦車兵へ`),
         el('h4', 'scenario-catch', 'この荒野を取り戻すのは、君たちの履帯だ。'),
         el('p', 'scenario-deck',
-          `敵は${st.districtCount}つの地区に${st.baseCount}つの拠点を築き、勝利を確信している。`
+          `敵は${this.planet.name}の各地に${st.baseCount}つの拠点を築き、勝利を確信している。`
           + `だが彼らはまだ知らない――たった${st.squadMax}両の小隊が、この戦況を塗り替えようとしていることを。`),
         el('p', 'scenario-lead',
           'この作戦は、最前線で砲火をくぐる諸君のためにある。'
-          + `まず${target ? target.name : '第1地区'}の敵拠点を叩け。確保した地区は諸君の補給線となり、失った僚機を補う。`
-          + `拠点を落とすたびに前線は押し上がり、${st.districtCount}地区すべてを制圧したとき、${this.planet.name}は再び我々の大地となる。`
+          + '敵拠点を一つずつ叩け。制圧した拠点は諸君の補給線となり、失った僚機を補う。'
+          + `拠点を落とすたびに前線は押し上がり、${st.baseCount}拠点すべてを制圧したとき、${this.planet.name}は再び我々の大地となる。`
           + `作戦名「${this.operation.name}」――その鉄槌を振るうのは、諸君だ。`)
       );
 
@@ -276,13 +265,13 @@
       cols.append(
         side('is-ours', '我が軍　第1機甲小隊', [
           ['兵力', `戦車 ${pb.ourTanks} 両`],
-          ['強み', '機動力と連携。確保した地区での補給と僚機補充'],
-          ['弱み', '数で劣る。補給は地区を確保するまで受けられない']
+          ['強み', '機動力と連携。制圧した拠点での補給と僚機補充'],
+          ['弱み', '数で劣る。補給は拠点を制圧するまで受けられない']
         ]),
         side('is-enemy', `敵軍　${this.planet.name}守備隊`, [
           ['兵力', `戦車 約${pb.enemyTanks} 両・トーチカ 約${pb.enemyBunkers} 基（推定）`],
           ['強み', '数と、トーチカに守られた拠点の防御'],
-          ['弱み', `${pb.districts}地区・${pb.enemyBases}拠点に分散。待機中は動かない`]
+          ['弱み', `${pb.enemyBases}拠点に分散。待機中は動かない`]
         ])
       );
 
@@ -292,24 +281,27 @@
         cols,
         el('p', 'power-comment',
           `数の上では、敵は我が小隊の約${pb.ratio.toFixed(1)}倍の戦力を持つ。だが敵は${pb.enemyBases}つの拠点に分散し、互いを支援できない。`
-          + '一拠点ずつ確実に落とし、確保した地区で補給を重ねれば、天秤は必ず我々に傾く。'),
+          + '一拠点ずつ確実に落とし、制圧した拠点で補給を重ねれば、天秤は必ず我々に傾く。'),
         el('p', 'scenario-sign', `―― ${GENERAL}`)
       );
       }
 
-      // 2. Districts & compounds
-      const dTable = this.dialog.querySelector('#briefing-districts');
+      // 2. Compounds: bearing and distance from the operations HQ (north = up on the map)
+      const bTable = this.dialog.querySelector('#briefing-bases');
       const head = el('tr');
-      ['地区', '方面', '拠点'].forEach((h) => head.append(el('th', '', h)));
-      const rows = combat.districts.map((d) => {
+      ['拠点', '方位（作戦本部から）', '距離'].forEach((h) => head.append(el('th', '', h)));
+      const DIRS = ['東', '南東', '南', '南西', '西', '北西', '北', '北東'];
+      const rows = combat.bases.map((b) => {
+        const dx = world.deltaX(world.hq.x, b.x);
+        const dy = world.deltaY(world.hq.y, b.y);
+        const dir = DIRS[((Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) % 8) + 8) % 8];
         const tr = el('tr');
-        const names = d.baseIds.map((id) => combat.bases[id].name).join('・');
-        tr.append(el('td', '', d.name), el('td', '', world.districts[d.id].dir), el('td', '', names));
+        tr.append(el('td', '', b.name), el('td', '', dir), el('td', '', `約${Math.round(Math.hypot(dx, dy) / 100) * 100}`));
         return tr;
       });
-      dTable.replaceChildren(head, ...rows);
+      bTable.replaceChildren(head, ...rows);
 
-      // 3. Enemy intel: enemy types only (no per-district / per-compound counts)
+      // 3. Enemy intel: enemy types only (no per-compound counts)
       const specs = ENEMY_SPECS;
       const cards = this.dialog.querySelector('#briefing-enemies');
       cards.replaceChildren(...['light', 'medium', 'bunker'].map((kind) => {
@@ -361,7 +353,7 @@
       const opBox = this.dialog.querySelector('#briefing-operation');
       opBox.replaceChildren(
         kv('作戦名', `「${this.operation.name}」`, true),
-        kv('目標', `${combat.districts.length}地区の制圧`)
+        kv('目標', `敵拠点${combat.bases.length}か所の制圧`)
       );
     }
 
@@ -405,50 +397,30 @@
       g.fillStyle = '#3a3027';
       g.fillRect(0, 0, S, S);
 
-      // District bands
-      for (const d of combat.districts) {
-        const wd = world.districts[d.id];
-        const x = wd.x0 * k;
-        const w = wd.width * k;
-        g.fillStyle = d.secured ? 'rgba(34, 197, 94, 0.16)'
-          : d.unlocked ? 'rgba(56, 189, 248, 0.12)' : 'rgba(2, 6, 23, 0.42)';
-        g.fillRect(x, 0, w, S);
-        g.strokeStyle = 'rgba(253, 230, 138, 0.55)';
-        g.lineWidth = 1;
-        g.setLineDash([5, 4]);
-        g.beginPath();
-        g.moveTo(x, 0);
-        g.lineTo(x, S);
-        g.stroke();
-        g.setLineDash([]);
-      }
-
       // Terrain (dimmed unless the terrain step is active)
       g.globalAlpha = stepId === 'terrain' ? 1 : 0.55;
       global.TacticalMap.drawTerrain(g, world, k); // js/tacticalMap.js
       g.globalAlpha = 1;
 
-      // Compounds (fort icons): current/secured districts in colour, later districts as estimates
+      // Compounds (fort icons): enemy-held in red, captured in green
       for (const b of combat.bases) {
         const px = b.x * k;
         const py = b.y * k;
-        const locked = b.locked;
         g.save();
         g.globalAlpha = stepId === 'terrain' ? 0.55 : 1;
         g.translate(px, py);
         g.scale(0.55, 0.55);
         if (global.FortIcon) {
-          global.FortIcon.draw(g, b.cleared ? '#22c55e' : locked ? '#64748b' : '#ef4444', 'rgba(255,255,255,0.9)', 2);
+          global.FortIcon.draw(g, b.cleared ? '#22c55e' : '#ef4444', 'rgba(255,255,255,0.9)', 2);
         }
         g.restore();
         g.font = '700 12px system-ui, "Segoe UI", sans-serif';
         g.textAlign = 'left';
         g.lineWidth = 3;
         g.strokeStyle = 'rgba(15, 23, 42, 0.9)';
-        const label = locked ? `${b.name}?` : b.name;
-        g.strokeText(label, px + 10, py + 4);
-        g.fillStyle = locked ? '#cbd5e1' : '#fff';
-        g.fillText(label, px + 10, py + 4);
+        g.strokeText(b.name, px + 10, py + 4);
+        g.fillStyle = '#fff';
+        g.fillText(b.name, px + 10, py + 4);
       }
 
       // Operations HQ: where the sortie starts and where the platoon returns once the planet is secured
@@ -492,26 +464,6 @@
       g.strokeText('自軍小隊', sx, sy + 27);
       g.fillStyle = '#bae6fd';
       g.fillText('自軍小隊', sx, sy + 27);
-
-      // District labels last, outlined, so terrain never covers them
-      g.textAlign = 'center';
-      g.lineJoin = 'round';
-      for (const d of combat.districts) {
-        const wd = world.districts[d.id];
-        const cxBand = (wd.x0 + wd.width / 2) * k;
-        const outlined = (text, y, font, color) => {
-          g.font = font;
-          g.lineWidth = 4;
-          g.strokeStyle = 'rgba(15, 23, 42, 0.92)';
-          g.strokeText(text, cxBand, y);
-          g.fillStyle = color;
-          g.fillText(text, cxBand, y);
-        };
-        g.globalAlpha = stepId === 'terrain' ? 0.8 : 1;
-        outlined(`${d.name}（${wd.dir}）`, 18, '700 13px system-ui, "Segoe UI", sans-serif', d.unlocked ? '#fde68a' : '#cbd5e1');
-        outlined(d.secured ? '確保済み' : d.unlocked ? '作戦対象' : '未解放', 34, '11px system-ui, "Segoe UI", sans-serif', 'rgba(226, 232, 240, 0.9)');
-        g.globalAlpha = 1;
-      }
 
       // Frame
       g.strokeStyle = 'rgba(148, 180, 218, 0.45)';

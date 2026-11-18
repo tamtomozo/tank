@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  // Enemy unit data: tank/bunker specs, the garrison of every compound per district and the
+  // Enemy unit data: tank/bunker specs, the garrison of every compound and the
   // names/descriptions shown on the briefing and the after-action report.
   // Read by CombatManager (js/combat/), BriefingScene (briefing.js) and ResultsReport (results.js).
 
@@ -94,21 +94,16 @@
     }
   };
 
-  // Garrison of each compound per district (district 1 -> 3 gets progressively stronger);
-  // the second compound of a district is the larger one
-  const DISTRICT_TEMPLATES = [
-    [
-      { bunkers: 1, tanks: ['light', 'light', 'medium'] },
-      { bunkers: 1, tanks: ['light', 'light', 'medium', 'medium'] }
-    ],
-    [
-      { bunkers: 1, tanks: ['light', 'medium', 'medium', 'medium'] },
-      { bunkers: 2, tanks: ['light', 'light', 'medium', 'medium'] }
-    ],
-    [
-      { bunkers: 2, tanks: ['light', 'medium', 'medium', 'medium'] },
-      { bunkers: 2, tanks: ['light', 'light', 'medium', 'medium', 'medium'] }
-    ]
+  // Garrison of each compound, by compound id (α, β, … — see _initEnemyBases in js/planet/terrain.js).
+  // tier raises HP and scrap value (+15% per tier): the central compounds near the HQ are the
+  // lightest, the eastern ones stronger, the western ones the strongest.
+  const BASE_GARRISONS = [
+    { tier: 0, bunkers: 1, tanks: ['light', 'light', 'medium'] },
+    { tier: 0, bunkers: 1, tanks: ['light', 'light', 'medium', 'medium'] },
+    { tier: 1, bunkers: 1, tanks: ['light', 'medium', 'medium', 'medium'] },
+    { tier: 1, bunkers: 2, tanks: ['light', 'light', 'medium', 'medium'] },
+    { tier: 2, bunkers: 2, tanks: ['light', 'medium', 'medium', 'medium'] },
+    { tier: 2, bunkers: 2, tanks: ['light', 'light', 'medium', 'medium', 'medium'] }
   ];
 
   // Display names + one-line role descriptions (briefing enemy intel, results kill breakdown)
@@ -120,6 +115,6 @@
 
   const GameData = global.GameData || (global.GameData = {});
   GameData.ENEMY_SPECS = ENEMY_SPECS;
-  GameData.DISTRICT_TEMPLATES = DISTRICT_TEMPLATES;
+  GameData.BASE_GARRISONS = BASE_GARRISONS;
   GameData.ENEMY_INFO = ENEMY_INFO;
 })(window);

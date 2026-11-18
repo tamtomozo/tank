@@ -54,7 +54,7 @@
       };
     }
 
-    // locked: Mio is reporting a secured district -> no driving, aiming or firing (the tank coasts to a stop)
+    // locked: Mio is reporting the secured area / the return -> no driving, aiming or firing (the tank coasts to a stop)
     function update(dt, locked) {
       const player = game.player;
       const { input } = game;

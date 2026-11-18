@@ -1,10 +1,11 @@
 (function (global) {
   'use strict';
 
-  // Enemy compounds: garrisons, districts unlocking one after another, alerts and captures.
+  // Enemy compounds: garrisons, alerts and captures. Every compound is garrisoned from the start;
+  // the area is secured once all of them are captured.
   // Part of CombatManager (js/combat/combat.js): the methods below are mixed into its prototype.
 
-  const { DISTRICT_TEMPLATES, ENEMY_SPECS } = global.GameData;
+  const { BASE_GARRISONS, ENEMY_SPECS } = global.GameData;
 
   const ALERT_RADIUS = 650; // the player this close to a compound puts it on alert
   const ENEMY_REACTION_TIME = 1.0; // s an alerted tank holds still (turret tracking only) before moving/firing
@@ -13,54 +14,31 @@
   const BASE_CLEAR_BONUS = 50; // scrap reward for neutralising a compound
 
   class CombatBases {
-    // Build runtime state for every district and compound. Only district 1 is garrisoned at the
-    // start; each later district (and its compounds) appears when the previous one is secured.
+    // Build runtime state for every compound, garrison it and draw it on the ground
     spawnBases() {
       this.bases = [];
-      this.districts = [];
       if (!this.enemiesEnabled) return;
-      for (const d of this.world.districts || []) {
-        this.districts.push({ id: d.id, name: d.name, unlocked: false, secured: false, baseIds: [] });
-      }
       for (const site of this.world.enemyBases || []) {
-        this.districts[site.districtId].baseIds.push(site.id);
-        this.bases.push({
+        const base = {
           id: site.id,
           name: site.name,
-          districtId: site.districtId,
-          slot: site.slot,
           x: site.x,
           y: site.y,
           radius: site.radius,
-          locked: true, // its district hasn't been unlocked yet: no garrison, not shown
           alerted: false,
           cleared: false,
           total: 0
-        });
-      }
-      if (this.districts.length) this.unlockDistrict(0, false);
-    }
-
-    // Reveal a district: garrison its compounds and draw them on the ground
-    unlockDistrict(id, announce) {
-      const district = this.districts[id];
-      if (!district || district.unlocked) return;
-      district.unlocked = true;
-      for (const bid of district.baseIds) {
-        const base = this.bases[bid];
-        const site = this.world.enemyBases[bid];
-        base.locked = false;
+        };
+        this.bases.push(base);
         this._garrisonBase(base, site);
-        if (this.world.revealBase) this.world.revealBase(bid);
+        if (this.world.revealBase) this.world.revealBase(site.id);
       }
-      if (announce) this.events.push({ type: 'districtUnlocked', district });
     }
 
-    // Parked (idle) tanks and manned bunkers for one compound, scaled by district tier
+    // Parked (idle) tanks and manned bunkers for one compound, scaled by its garrison tier
     _garrisonBase(base, site) {
-      const tier = base.districtId;
-      const tpls = DISTRICT_TEMPLATES[Math.min(tier, DISTRICT_TEMPLATES.length - 1)];
-      const tpl = tpls[Math.min(site.slot, tpls.length - 1)];
+      const tpl = BASE_GARRISONS[Math.min(site.id, BASE_GARRISONS.length - 1)];
+      const tier = tpl.tier;
       const hpScale = 1 + tier * 0.15;
       const add = (kind, slot, angle) => {
         const spec = ENEMY_SPECS[kind];
@@ -86,20 +64,6 @@
         const slot = site.parkingSlots[k % site.parkingSlots.length];
         add(kind, slot, slot.angle);
       });
-    }
-
-    // District currently being fought over (first unlocked, unsecured one)
-    get currentDistrict() {
-      return this.districts.find((d) => d.unlocked && !d.secured) || null;
-    }
-
-    get districtsSecured() {
-      return this.districts.filter((d) => d.secured).length;
-    }
-
-    districtRemaining(id) {
-      const d = this.districts[id];
-      return d ? d.baseIds.filter((bid) => !this.bases[bid].cleared).length : 0;
     }
 
     get basesRemaining() {
@@ -131,7 +95,7 @@
       // an approach: a compound only wakes up once one of its units is hit (see damageEnemy).
       const friendlies = this.world.isNightTime() ? [] : [player, ...this.allies];
       for (const base of this.bases) {
-        if (base.locked || base.alerted || base.cleared) continue;
+        if (base.alerted || base.cleared) continue;
         for (const f of friendlies) {
           if (!f.alive) continue;
           const d = Math.hypot(this.world.deltaX(base.x, f.x), this.world.deltaY(base.y, f.y));
@@ -144,7 +108,6 @@
 
       // A compound is cleared once its whole garrison is destroyed
       for (const base of this.bases) {
-        if (base.locked) continue;
         if (base.cleared) {
           // White flag is hoisted up the pole over ~1.2 s after the compound falls
           base.flagRaise = Math.min(1, (base.flagRaise || 0) + dt / 1.2);
@@ -153,33 +116,22 @@
         if (!this.enemies.some((e) => e.alive && e.baseId === base.id)) {
           base.cleared = true;
           base.flagRaise = 0;
+          this.stats.baseClock[base.id] = this._clockStamp();
           this.scrap += BASE_CLEAR_BONUS;
           this.stats.scrapEarned += BASE_CLEAR_BONUS;
           // Capturing a compound hauls in every scattered item. No automatic resupply: repairs are
-          // only available at compounds in a secured district (garage menu "補給").
+          // only available at captured compounds (garage menu "補給").
           const collected = this._vacuumAllPickups();
           this.audio.playWaveClear();
           this.events.push({ type: 'cleared', base, bonus: BASE_CLEAR_BONUS, collected });
         }
       }
 
-      // A district is secured once all of its compounds are captured. The next district is NOT
-      // unlocked here: the UI calls unlockDistrict(next.id) once the operator's report has finished.
-      for (const d of this.districts) {
-        if (!d.unlocked || d.secured) continue;
-        if (d.baseIds.every((bid) => this.bases[bid].cleared)) {
-          d.secured = true;
-          this.stats.districtTimes[d.id] = this.stats.elapsed;
-          this.stats.districtClock[d.id] = this._clockStamp();
-          const next = this.districts[d.id + 1] || null;
-          this.events.push({ type: 'districtSecured', district: d, next });
-        }
-      }
-
-      // The area is secured the instant its last district is: the mission clock stops right here
-      if (!this.missionComplete && this.districts.length > 0 && this.districts.every((d) => d.secured)) {
+      // The area is secured the instant its last compound falls: the mission clock stops right here
+      if (!this.missionComplete && this.bases.length > 0 && this.bases.every((b) => b.cleared)) {
         this.missionComplete = true;
         this.stats.endClock = this._clockStamp();
+        this.events.push({ type: 'areaSecured' });
       }
     }
   }

@@ -312,26 +312,23 @@
         if (!b.cleared) continue;
         const p = world.project(b.x, b.y, 0, drawCamX, drawCamY, viewW, viewH);
         if (!p || offView(p, 110 * p.scale + 20)) continue;
-        // Supply-depot zone ring on the ground (secured districts only); drawn now so it lies under
-        // everything in the depth-sorted queue. Brighter while the menu is ready to be offered.
-        const district = combat.districts[b.districtId];
-        if (district && district.secured) {
-          const ready = b.supplyArmed !== false;
-          const pulse = 0.5 + 0.5 * Math.sin(timeSec * 3.2);
-          ctx.save();
-          ctx.translate(p.sx, p.sy);
-          ctx.scale(p.scale, p.scale * p.tiltCos);
-          ctx.fillStyle = `rgba(74, 222, 128, ${ready ? 0.10 + 0.06 * pulse : 0.05})`;
-          ctx.strokeStyle = `rgba(134, 239, 172, ${ready ? 0.55 + 0.3 * pulse : 0.3})`;
-          ctx.lineWidth = 2.5;
-          ctx.setLineDash([10, 7]);
-          ctx.lineDashOffset = -timeSec * 14;
-          ctx.beginPath();
-          ctx.arc(0, 0, zoneR, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.stroke();
-          ctx.restore();
-        }
+        // Supply-depot zone ring on the ground; drawn now so it lies under everything in the
+        // depth-sorted queue. Brighter while the menu is ready to be offered.
+        const ready = b.supplyArmed !== false;
+        const pulse = 0.5 + 0.5 * Math.sin(timeSec * 3.2);
+        ctx.save();
+        ctx.translate(p.sx, p.sy);
+        ctx.scale(p.scale, p.scale * p.tiltCos);
+        ctx.fillStyle = `rgba(74, 222, 128, ${ready ? 0.10 + 0.06 * pulse : 0.05})`;
+        ctx.strokeStyle = `rgba(134, 239, 172, ${ready ? 0.55 + 0.3 * pulse : 0.3})`;
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([10, 7]);
+        ctx.lineDashOffset = -timeSec * 14;
+        ctx.beginPath();
+        ctx.arc(0, 0, zoneR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
         renderQueue.push({ dy: p.dy, draw: () => world.drawWhiteFlag(ctx, p, b.flagRaise || 0, timeSec) });
       }
 
@@ -360,7 +357,7 @@
 
       // Fort icons floating over enemy-held compounds (UI layer: above the night darkness)
       for (const b of combat.bases) {
-        if (b.cleared || b.locked) continue;
+        if (b.cleared) continue;
         const p = world.project(b.x, b.y, 0, drawCamX, drawCamY, viewW, viewH);
         if (!p) continue;
         drawBaseFortIcon(b, p, timeSec);

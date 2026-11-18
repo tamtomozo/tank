@@ -289,7 +289,7 @@ dialog.briefing-dialog {
   justify-self: end;
 }
 
-/* Sub-sections inside a briefing step (e.g. 戦術情報: start time, then districts & compounds) */
+/* Sub-sections inside a briefing step (e.g. 戦術情報: start time, then the compounds) */
 .briefing-subhead {
   margin: 0.9rem 0 0.45rem;
   font-size: 0.86rem;

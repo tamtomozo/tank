@@ -20,15 +20,15 @@
       code: 'PLANET 01',
       name: '惑星アリダ',
       terrain: '荒野',
-      summary: '岩と涸れ川が続く乾いた荒野の惑星。敵は3つの地区に拠点を築いている。',
+      summary: '岩と涸れ川が続く乾いた荒野の惑星。敵は各地に6つの拠点を築いている。',
       available: true,
       globe: { style: 'desert', base: '#b7793f', dark: '#6f4322', light: '#e6b77c', glow: '#f59e0b', seed: 11 },
       operations: [
         {
           id: 'dust-hammer',
           name: '砂塵の鉄槌',
-          goal: '3地区・6拠点の制圧',
-          summary: '作戦本部から出撃し、地区ごとに敵拠点を制圧して惑星アリダを奪還する。全地区制圧後は作戦本部へ帰還。'
+          goal: '6拠点の制圧',
+          summary: '作戦本部から出撃し、敵拠点をすべて制圧して惑星アリダを奪還する。全拠点制圧後は作戦本部へ帰還。'
         }
       ]
     },

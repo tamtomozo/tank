@@ -4,7 +4,7 @@
   // After-action report shown once the whole planet has been secured and the platoon is back at the
   // operations HQ (and Mio's final report ended). Mission time runs until the moment the planet was
   // secured; the drive back isn't counted.
-  // Overall rank, mission time, per-district times, kills, accuracy, damage, platoon losses,
+  // Overall rank, mission time, per-compound capture times, kills, accuracy, damage, platoon losses,
   // scrap and items, plus a closing comment from Mio typed out one character at a time.
 
   const { ENEMY_INFO } = global.GameData; // js/data/enemies.js
@@ -98,8 +98,8 @@
       const t = world.getTimeInfo();
       const totalKills = stats.killsByKind.light + stats.killsByKind.medium + stats.killsByKind.bunker;
       const capturedBases = combat.bases.filter((b) => b.cleared).length;
-      // In-game clock time at which each district was secured
-      const districtLines = combat.districts.map((d) => `${d.name}　${stampText(stats.districtClock[d.id])}`);
+      // In-game clock time at which each compound was captured
+      const baseLines = combat.bases.map((b) => `拠点${b.name}　${b.cleared ? stampText(stats.baseClock[b.id]) : '未制圧'}`);
       const endStamp = stats.endClock || { day: t.day, clock: t.clockText }; // moment the planet was secured
       const accuracyPct = Math.round(r.accuracy * 100);
       const aliveAllies = combat.allies.filter((a) => a.alive).length;
@@ -109,8 +109,8 @@
           `開始 ${stampText(stats.startClock)} → 制圧完了 ${stampText(endStamp)}`,
           `作戦本部へ帰還 ${stampText(stats.returnClock)}（作戦時間に含まず）`
         ]),
-        card('地区確保時刻（ゲーム内）', `${combat.districtsSecured} / ${combat.districts.length} 地区`, districtLines),
-        card('制圧した拠点', `${capturedBases} / ${combat.bases.length}`, [`回収アイテム　${stats.itemsCollected} 個`]),
+        card('拠点制圧時刻（ゲーム内）', `${capturedBases} / ${combat.bases.length} 拠点`, baseLines),
+        card('回収アイテム', `${stats.itemsCollected} 個`),
         card('撃破数', `${totalKills} 両`, [
           `${ENEMY_INFO.light.name} ${stats.killsByKind.light} ／ ${ENEMY_INFO.medium.name} ${stats.killsByKind.medium} ／ ${ENEMY_INFO.bunker.name} ${stats.killsByKind.bunker}`,
           `自機 ${stats.killsBy.player} ／ 僚機 ${stats.killsBy.ally}${stats.killsBy.other ? ` ／ その他 ${stats.killsBy.other}` : ''}`

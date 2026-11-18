@@ -2,7 +2,7 @@
   'use strict';
 
   // Mission flow: (re)starting a sortie at the operations HQ, Mio's radio reports on combat events,
-  // supply depots in secured districts (resupply + wingman reinforcement), the drive back to the HQ once the planet
+  // supply depots at captured compounds (resupply + wingman reinforcement), the drive back to the HQ once the planet
   // is secured and the end of the sortie (after-action report / game over).
 
   // Supply-depot trigger zone around a captured compound's white flag (the compound centre)
@@ -71,11 +71,7 @@
         delayMs: SCENE_SWITCH_DELAY_MS,
         onStart: () => {
           backdrop.hide(); // fade out to the battlefield
-          radio.say(global.RadioComms.script.missionStart(
-            combat.districts.length ? combat.districts[0].name : null,
-            combat.districts.length,
-            selection.planet.name
-          ));
+          radio.say(global.RadioComms.script.missionStart(combat.bases.length, selection.planet.name));
         },
         onBack: () => {
           backdrop.show('room');
@@ -97,11 +93,10 @@
       }
     });
 
-    // ---- Supply depots: compounds in a SECURED district ---------------------------------------
-    // Supply is only available once a whole district is secured. Driving onto the white flag of
-    // one of its compounds opens the depot menu (free resupply + wingman reinforcement), once per visit
-    // (drive off the flag zone to re-arm). The zone is drawn as a ring around the flag (render.js).
-    // Compounds in a district still being fought over offer nothing; there is no automatic resupply.
+    // ---- Supply depots: CAPTURED compounds -----------------------------------------------------
+    // Driving onto the white flag of a captured compound opens the depot menu (free resupply +
+    // wingman reinforcement), once per visit (drive off the flag zone to re-arm). The zone is drawn
+    // as a ring around the flag (render.js). There is no automatic resupply.
     const { SUPPLY_PROMPT_RADIUS, SUPPLY_REARM_RADIUS } = SUPPLY_ZONE;
 
     function checkSupplyDepots() {
@@ -116,8 +111,6 @@
           b.supplyArmed = true;
           b.supplyBlockedNotified = false;
         } else if (d < SUPPLY_PROMPT_RADIUS && b.supplyArmed) {
-          const district = combat.districts[b.districtId];
-          if (!district || !district.secured) continue; // district not secured yet: no supply here
           if (inCombat) {
             if (!b.supplyBlockedNotified) {
               b.supplyBlockedNotified = true;
@@ -126,12 +119,12 @@
             continue;
           }
           b.supplyArmed = false; // once per visit
-          openDepotMenu(`拠点 ${b.name}（${district.name}・確保済み）— 補給・僚機補充`);
+          openDepotMenu(`拠点 ${b.name}（制圧済み）— 補給・僚機補充`);
         }
       }
     }
 
-    // Depot menu (#garage-dialog): opened when entering a compound in a secured district
+    // Depot menu (#garage-dialog): opened when entering a captured compound
     function openDepotMenu(title) {
       const player = game.player;
       if (!player.alive || garageDialog.open || gameoverDialog.open) return;
@@ -145,7 +138,7 @@
       return game.operation ? game.operation.planet.name : '作戦区域';
     }
 
-    // Radio reports for what happened in combat this frame (compound alerted / captured, district secured)
+    // Radio reports for what happened in combat this frame (compound alerted / captured, area secured)
     function handleCombatEvents() {
       for (const ev of combat.drainEvents()) {
         if (ev.type === 'alert') {
@@ -154,25 +147,22 @@
           // Capture hauls in every scattered item (done in CombatManager); no automatic resupply
           ev.base.supplyArmed = false; // the depot menu is offered on the next visit (leave and return)
           radio.say(global.RadioComms.script.baseCaptured(ev.base.name));
-        } else if (ev.type === 'districtSecured') {
-          // No automatic depot menu: it opens by entering a compound in a secured district.
-          // Mio reports in steps (short result line, then details); the next district is unlocked
-          // only after the last of those transmissions has finished.
-          const next = ev.next;
-          const nextDir = next ? world.districts[next.id].dir : '';
-          const lines = global.RadioComms.script.districtSecured(ev.district.name, next ? next.name : null, nextDir, planetName());
-          lines.forEach((line, i) => {
-            const isLast = i === lines.length - 1;
-            const opts = { lockControls: true };
-            if (isLast && next) opts.onDone = () => combat.unlockDistrict(next.id, true);
-            radio.say(line, opts);
-          });
+          // First capture of the sortie (and not the last one): tell the player about the depot
+          if (combat.bases.filter((b) => b.cleared).length === 1 && !combat.missionComplete) {
+            radio.say(global.RadioComms.script.supplyAvailable(ev.base.name));
+          }
+        } else if (ev.type === 'areaSecured') {
+          // Last compound captured: Mio reports the planet secured and orders the platoon home
+          // (controls locked until she has finished)
+          for (const line of global.RadioComms.script.areaSecured(planetName())) {
+            radio.say(line, { lockControls: true });
+          }
         }
       }
     }
 
     // ---- Return to the operations HQ ------------------------------------------------------------
-    // Securing the last district doesn't end the sortie: Mio orders the platoon home and the
+    // Capturing the last compound doesn't end the sortie: Mio orders the platoon home and the
     // player drives back. Entering the painted circle on the HQ pad reports in (controls lock
     // while Mio confirms), and the after-action report follows (checkEnd).
     function checkReturnToHq() {
@@ -207,10 +197,10 @@
         badge.classList.toggle('danger', !victory);
         badge.classList.toggle('success', victory);
         document.getElementById('gameover-title').textContent = victory
-          ? `${planetName()} 制圧 — 全${combat.districts.length}地区を確保`
+          ? `${planetName()} 制圧 — 全${combat.bases.length}拠点を制圧`
           : '車体大破 — MISSION FAILED';
         document.getElementById('gameover-summary').textContent =
-          `確保した地区: ${combat.districtsSecured} / ${combat.districts.length} ／ 制圧した拠点: ${combat.bases.filter((b) => b.cleared).length} / ${combat.bases.length} ／ 撃破した敵戦車: ${combat.kills} 両 ／ 残存僚機: ${combat.allies.length} 両 ／ 獲得スクラップ残高: ${combat.scrap}`;
+          `制圧した拠点: ${combat.bases.filter((b) => b.cleared).length} / ${combat.bases.length} ／ 撃破した敵戦車: ${combat.kills} 両 ／ 残存僚機: ${combat.allies.length} 両 ／ 獲得スクラップ残高: ${combat.scrap}`;
         document.getElementById('btn-restart').textContent = victory ? 'もう一度出撃する' : '新車両で再出撃する';
         gameoverDialog.showModal();
       }

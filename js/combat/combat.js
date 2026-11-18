@@ -3,10 +3,10 @@
 
   // CombatManager: everything that fights. This file holds the battle state, the per-frame update
   // order and the event queue; the rest of the class is mixed in from the other files in js/combat/:
-  //   bases.js    enemy compounds & districts     weapons.js  firing, shells, explosions, damage
+  //   bases.js    enemy compounds                 weapons.js  firing, shells, explosions, damage
   //   enemyAI.js  enemy tank behaviour            effects.js  particles, pickups, resupply
 
-  const { ENEMY_SPECS, DISTRICT_TEMPLATES } = global.GameData; // js/data/enemies.js
+  const { ENEMY_SPECS } = global.GameData; // js/data/enemies.js
 
   const SHELL_GRAVITY = 380;
   const MIN_SHELL_DIST = 80;
@@ -35,9 +35,8 @@
         alliesLost: 0,
         scrapEarned: 0,
         itemsCollected: 0,
-        districtTimes: {}, // district id -> elapsed seconds when secured
         startClock: null, // in-game time when the tactical phase began { day, clock }
-        districtClock: {}, // district id -> in-game time when secured { day, clock }
+        baseClock: {}, // compound id -> in-game time when captured { day, clock }
         endClock: null, // in-game time when the whole area was secured (mission time stops here)
         returnClock: null // in-game time when the platoon was back at the operations HQ
       };
@@ -75,10 +74,9 @@
       this.scrap = 0;
       this.kills = 0;
       this.bases = []; // runtime state of each enemy compound (index == compound id)
-      this.districts = []; // runtime state of each district (unlocked / secured)
       this.events = []; // UI events (base alerted / cleared), drained by main.js
       this.stats = CombatManager.freshStats(); // battle statistics for the after-action report
-      // Set the moment the last district is secured: mission time and battle statistics are final
+      // Set the moment the last compound is captured: mission time and battle statistics are final
       // from then on (the sortie itself ends back at the operations HQ, see js/game/mission.js)
       this.missionComplete = false;
       this.magnetRadius = 110;
@@ -116,7 +114,7 @@
       return ev;
     }
 
-    // countTime: false while the clock is frozen (Mio's district report) -> mission time stands still.
+    // countTime: false while the clock is frozen (Mio's area-secured report) -> mission time stands still.
     // Mission time also stops for good once the area is secured (the drive back to HQ isn't counted).
     update(dt, player, countTime = true) {
       this._playerRef = player;

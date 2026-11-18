@@ -223,7 +223,7 @@
       <h1 id="start-title" class="dialog-main-title">PLANET PANZER</h1>
       <p class="dialog-lead">
         奥行きに惑星の地平線が広がり、上下左右がシームレスに繋がる戦場を2D戦車で駆け抜けろ！<br>
-        惑星アリダの戦場は3つの地区からなる。地区内の敵拠点をすべて制圧して地区を確保し、次の地区へ進め。
+        惑星アリダには6つの敵拠点がある。攻める順番は自由。すべて制圧して作戦本部へ帰還せよ。
       </p>
       <div class="briefing-grid">
         <div class="briefing-card">
@@ -240,9 +240,9 @@
           <ul>
             <li>マップは上下・左右すべてループ連結（無限周回）</li>
             <li>ジャンプ台に勢いよく進入すると空中に跳躍する</li>
-            <li>惑星アリダ＝3地区（各2拠点）。地区を確保すると次の地区が解放される</li>
+            <li>惑星アリダ＝6拠点。すべての拠点が最初から稼働しており、攻略順は自由</li>
             <li>戦車はブリーフィングの「車両調整」で、レーダーチャートにポイントを配分して調整する（自機・僚機）</li>
-            <li>地区を確保すると、その地区の拠点の白旗まわりの円に入るたびに補給・僚機補充メニューが開く（補給はここでのみ）</li>
+            <li>制圧した拠点の白旗まわりの円に入るたびに補給・僚機補充メニューが開く（補給はここでのみ）</li>
             <li>敵・クレート破壊でスクラップ＆修理キット回収</li>
             <li>最大5両の小隊で出撃：僚機は敵接近で自動散開・交戦し、平時は楔形隊列に戻る</li>
             <li>敵拠点（砦マーク）に近づくと待機車両が出撃する</li>
@@ -450,7 +450,7 @@
 
       <div class="briefing-main">
         <div class="briefing-map-wrap hud-boot" style="--boot-i: 1">
-          <canvas id="briefing-map" aria-label="作戦区域マップ（地区・拠点・地形）"></canvas>
+          <canvas id="briefing-map" aria-label="作戦区域マップ（拠点・地形）"></canvas>
           <div class="briefing-legend" aria-hidden="true">
             <span><i class="briefing-swatch is-fort"></i>敵拠点</span>
             <span><i class="briefing-swatch is-hq"></i>作戦本部</span>
@@ -474,10 +474,10 @@
             <div id="briefing-operation" class="briefing-kv-list"></div>
             <h4 class="briefing-subhead">戦術行動開始時刻</h4>
             <div id="briefing-time" class="briefing-time"></div>
-            <h4 class="briefing-subhead">地区と拠点の配置</h4>
-            <table id="briefing-districts" class="briefing-table"></table>
-            <p class="briefing-note">地区内の拠点をすべて制圧すると、その地区を確保。確保した地区の拠点では補給と僚機の補充ができる。</p>
-            <p class="briefing-note">作戦本部（マップ中央）から出撃。全地区を制圧した瞬間に作戦時間が確定し、作戦本部の円内まで自走で帰還すると作戦終了。</p>
+            <h4 class="briefing-subhead">拠点の配置</h4>
+            <table id="briefing-bases" class="briefing-table"></table>
+            <p class="briefing-note">全拠点が最初から稼働しており、攻略の順番は自由。制圧した拠点では補給と僚機の補充ができる。</p>
+            <p class="briefing-note">作戦本部（マップ中央）から出撃。全拠点を制圧した瞬間に作戦時間が確定し、作戦本部の円内まで自走で帰還すると作戦終了。</p>
           </section>
           <section class="briefing-panel" hidden>
             <h3>車両調整</h3>

@@ -336,29 +336,6 @@
         });
       }
 
-      // District borders: dashed survey line along each band edge (x = 0/4800, 1600, 3200).
-      // Drawn from the top to the bottom of the world in every tile it touches, so the dashes line up.
-      for (const d of this.districts) {
-        for (const bx of d.x0 === 0 ? [0, W] : [d.x0]) {
-          for (const tile of tiles) {
-            if (bx + 4 < tile.x0 || bx - 4 > tile.x0 + TILE_W) continue;
-            const g = tile.g;
-            g.lineCap = 'butt';
-            g.setLineDash([22, 16]);
-            g.strokeStyle = 'rgba(30, 22, 16, 0.32)';
-            g.lineWidth = 7;
-            g.beginPath();
-            g.moveTo(bx, 0);
-            g.lineTo(bx, H);
-            g.stroke();
-            g.strokeStyle = 'rgba(236, 222, 190, 0.42)';
-            g.lineWidth = 3;
-            g.stroke();
-            g.setLineDash([]);
-          }
-        }
-      }
-
       this.groundTiles = tiles;
       // Operations HQ pad (always there, unlike the compounds below)
       if (this.hq) this._stampGround(this.hq.x, this.hq.y, this.hq.radius + 40, (gg) => this._drawHqPad(gg));

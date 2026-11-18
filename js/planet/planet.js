@@ -51,15 +51,6 @@
     return r - half;
   }
 
-  // Area layout: the wrapped map is split into three vertical district bands (800 wide each).
-  // District 1 is the centre band with the spawn point, 2 lies east of it, 3 west (across the wrap).
-  const DISTRICT_WIDTH = WORLD_W / 3; // 1600
-  const DISTRICT_DEFS = [
-    { id: 0, name: '第1地区', x0: DISTRICT_WIDTH, dir: '中央' },
-    { id: 1, name: '第2地区', x0: DISTRICT_WIDTH * 2, dir: '東' },
-    { id: 2, name: '第3地区', x0: 0, dir: '西' }
-  ];
-
   // Screen Y of a ground point at depth offset dy (depends only on dy and viewport height)
   function screenYForDy(dy, viewH, focal) {
     const th = -dy / CYL_R;
@@ -215,8 +206,7 @@
       this.scorchMarks = [];
       this.maxScorchMarks = 90;
 
-      this.districts = DISTRICT_DEFS.map((d) => ({ ...d, width: DISTRICT_WIDTH }));
-      this.revealedBases = new Set(); // compounds whose ground pad is drawn (unlocked districts)
+      this.revealedBases = new Set(); // compounds whose ground pad is drawn (garrisoned this sortie)
 
       this._initBackdrop();
       this._initTerrainAndProps();
@@ -240,15 +230,6 @@
     }
 
     // Restore destructible props and clear decals for a fresh sortie
-    // District id (0..2) containing world x
-    districtAt(x) {
-      const wx = wrapCoord(x, WORLD_W);
-      for (const d of this.districts) {
-        if (wrapCoord(wx - d.x0, WORLD_W) < d.width) return d.id;
-      }
-      return 0;
-    }
-
     resetDynamic() {
       for (const prop of this.props) {
         prop.hp = prop.maxHp;
@@ -394,7 +375,7 @@
       };
     }
 
-    // Show a compound on the ground (its district was unlocked)
+    // Show a compound on the ground (garrisoned at the start of a sortie)
     revealBase(id) {
       if (this.revealedBases.has(id)) return;
       this.revealedBases.add(id);

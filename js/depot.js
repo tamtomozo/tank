@@ -1,8 +1,8 @@
 (function (global) {
   'use strict';
 
-  // Supply-depot menu (#garage-dialog), opened on the white flag of a compound in a secured
-  // district (js/game/mission.js). Two services: a free full resupply and wingman reinforcement
+  // Supply-depot menu (#garage-dialog), opened on the white flag of a captured compound
+  // (js/game/mission.js). Two services: a free full resupply and wingman reinforcement
   // for scrap. Tanks are no longer upgraded here — they are tuned before the sortie on the
   // briefing's radar charts (js/tuningPanel.js).
 

@@ -54,7 +54,7 @@
       return !this.current && this.queue.length === 0;
     }
 
-    // A control-locking report (district secured) is on screen or still queued
+    // A control-locking report (area secured / back at the HQ) is on screen or still queued
     get controlsLocked() {
       return (!!this.current && this.current.lockControls) || this.queue.some((m) => m.lockControls);
     }
@@ -132,9 +132,9 @@
 
   // Report scripts (original lines for this game's HQ operator, Mio)
   RadioComms.script = {
-    missionStart(firstDistrict, districtCount, planetName) {
-      if (!firstDistrict) return 'こちら作戦本部、オペレーターのミオです。周辺に敵影はありません。自由に走行してください。';
-      return `こちら作戦本部、オペレーターのミオです。作戦を開始します。まずは${firstDistrict}の敵拠点を制圧してください。${planetName}の作戦区域は全${districtCount}地区です。`;
+    missionStart(baseCount, planetName) {
+      if (!baseCount) return 'こちら作戦本部、オペレーターのミオです。周辺に敵影はありません。自由に走行してください。';
+      return `こちら作戦本部、オペレーターのミオです。作戦を開始します。${planetName}の敵拠点は全${baseCount}か所、すべて制圧してください。攻略の順番は隊長に任せます。`;
     },
 
     controlMode(isDirect) {
@@ -155,21 +155,17 @@
       return `拠点${baseName}は制圧完了です。`;
     },
 
-    // District secured: a short "◯は△です" line first, then the follow-up details as separate
-    // transmissions, in order. Returns an array of lines. After the last district the platoon is
-    // ordered back to the operations HQ.
-    districtSecured(districtName, next, nextDir, planetName) {
-      if (!next) {
-        return [
-          `${districtName}は確保完了です。`,
-          `${planetName}は全地区制圧です。現刻をもって作戦行動完了です。`,
-          '作戦本部へ帰還してください、隊長。本部の位置を送ります。'
-        ];
-      }
+    // After the first capture of a sortie: captured compounds serve as supply depots
+    supplyAvailable(baseName) {
+      return `制圧した拠点では、白旗まわりの円に入ると補給と僚機の補充が可能です。拠点${baseName}も利用できます。`;
+    },
+
+    // Every compound captured: separate transmissions, in order (returns an array of lines).
+    // The platoon is ordered back to the operations HQ.
+    areaSecured(planetName) {
       return [
-        `${districtName}は確保完了です。`,
-        `${districtName}の拠点では、補給と僚機の補充が可能です。`,
-        `次の目標は${nextDir}の${next}です。敵拠点の位置を送ります。`
+        `${planetName}は全拠点制圧です。現刻をもって作戦行動完了です。`,
+        '作戦本部へ帰還してください、隊長。本部の位置を送ります。'
       ];
     },
 

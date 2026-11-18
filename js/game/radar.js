@@ -96,33 +96,6 @@
         }
       };
 
-      // District bands within range: locked ones darkened, secured ones tinted green, dashed borders
-      // (each band is also tried one world-width either side so wrapped copies show up)
-      for (const d of combat.districts) {
-        const wd = world.districts[d.id];
-        const fill = d.secured ? 'rgba(34, 197, 94, 0.13)' : d.unlocked ? null : 'rgba(2, 6, 23, 0.55)';
-        const dx0 = world.deltaX(player.x, wd.x0);
-        for (const k of [-1, 0, 1]) {
-          const left = dx0 + k * world.width;
-          if (left > RADAR_RANGE || left + wd.width < -RADAR_RANGE) continue;
-          const px0 = cx + left * scalePx;
-          if (fill) {
-            radarCtx.fillStyle = fill;
-            radarCtx.fillRect(px0, 0, wd.width * scalePx, h);
-          }
-          if (Math.abs(left) <= RADAR_RANGE) {
-            radarCtx.strokeStyle = 'rgba(253, 230, 138, 0.5)';
-            radarCtx.lineWidth = 1;
-            radarCtx.setLineDash([3, 3]);
-            radarCtx.beginPath();
-            radarCtx.moveTo(px0, 0);
-            radarCtx.lineTo(px0, h);
-            radarCtx.stroke();
-            radarCtx.setLineDash([]);
-          }
-        }
-      }
-
       // Range rings (half and full range) and a faint crosshair
       radarCtx.strokeStyle = 'rgba(56, 189, 248, 0.22)';
       radarCtx.lineWidth = 1;
@@ -141,7 +114,6 @@
       // Compounds: fort icons (green once captured). Out of range -> small, faded, pinned to the border
       // so the direction to every known compound stays visible.
       for (const b of combat.bases) {
-        if (b.locked) continue;
         const pos = toRadar(b.x, b.y);
         const at = pos.inRange ? pos : toRadarEdge(pos.dx, pos.dy);
         const iconScale = pos.inRange ? 0.36 : 0.26;

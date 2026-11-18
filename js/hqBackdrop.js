@@ -72,7 +72,7 @@
       if (this.mode !== mode) this.switchedAt = now;
       this.mode = mode;
       if (mode === 'map') {
-        this.map = null; // the districts / compounds may have changed since the last briefing
+        this.map = null; // the compounds may have changed since the last briefing
         if (selection) {
           const { planet, operation } = selection;
           this.captionPlanet.textContent = `${planet.code} — ${planet.name}（${planet.terrain}）`;
@@ -393,7 +393,7 @@
       g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
       g.drawImage(still, 0, 0, W, H);
 
-      // Situation screen: the planet turning, enemy districts blinking, a scan line sweeping down
+      // Situation screen: the planet turning, enemy positions blinking, a scan line sweeping down
       const sw = scr.x1 - scr.x0;
       const sh = scr.y1 - scr.y0;
       const cx = (scr.x0 + scr.x1) / 2;
@@ -543,7 +543,7 @@
     }
 
     // ================================================================ tactical map (briefing)
-    // The whole battlefield scaled to cover the screen: districts, terrain, compounds, the HQ and the
+    // The whole battlefield scaled to cover the screen: terrain, compounds, the HQ and the
     // platoon, under a coordinate grid; a radar sweep crosses it and the enemy compounds pulse.
     _buildMap() {
       const W = this.w;
@@ -560,24 +560,6 @@
       g.fillRect(0, 0, W, H);
       g.save();
       g.translate(ox, oy);
-
-      // District bands
-      for (const d of combat.districts) {
-        const wd = world.districts[d.id];
-        const x = wd.x0 * k;
-        const w = wd.width * k;
-        g.fillStyle = d.secured ? 'rgba(34, 197, 94, 0.14)'
-          : d.unlocked ? 'rgba(56, 189, 248, 0.10)' : 'rgba(2, 6, 23, 0.38)';
-        g.fillRect(x, 0, w, world.height * k);
-        g.strokeStyle = 'rgba(253, 230, 138, 0.5)';
-        g.lineWidth = 1.5;
-        g.setLineDash([8, 6]);
-        g.beginPath();
-        g.moveTo(x, 0);
-        g.lineTo(x, world.height * k);
-        g.stroke();
-        g.setLineDash([]);
-      }
 
       global.TacticalMap.drawTerrain(g, world, k);
 
@@ -615,14 +597,14 @@
       for (const b of combat.bases) {
         const px = b.x * k;
         const py = b.y * k;
-        const color = b.cleared ? '#22c55e' : b.locked ? '#64748b' : '#ef4444';
+        const color = b.cleared ? '#22c55e' : '#ef4444';
         g.save();
         g.translate(px, py);
         g.scale(0.85, 0.85);
         if (global.FortIcon) global.FortIcon.draw(g, color, 'rgba(255,255,255,0.9)', 2);
         g.restore();
-        outlined(b.locked ? `${b.name}?` : b.name, px + 15, py + 5, `700 13px ${FONT_UI}`, b.locked ? '#cbd5e1' : '#fff', 'left');
-        if (!b.cleared && !b.locked) marks.push({ x: ox + px, y: oy + py, color: '239, 68, 68' });
+        outlined(b.name, px + 15, py + 5, `700 13px ${FONT_UI}`, '#fff', 'left');
+        if (!b.cleared) marks.push({ x: ox + px, y: oy + py, color: '239, 68, 68' });
       }
 
       // Operations HQ + own platoon
@@ -655,14 +637,6 @@
         g.stroke();
       }
 
-      // District names along the top
-      for (const d of combat.districts) {
-        const wd = world.districts[d.id];
-        const bx = (wd.x0 + wd.width / 2) * k;
-        const y = -oy + 36;
-        outlined(`${d.name}（${wd.dir}）`, bx, y, `700 18px ${FONT_UI}`, d.unlocked ? '#fde68a' : '#cbd5e1');
-        outlined(d.secured ? '確保済み' : d.unlocked ? '作戦対象' : '未解放', bx, y + 20, `13px ${FONT_UI}`, 'rgba(226, 232, 240, 0.9)');
-      }
       g.restore();
 
       // Vignette so the briefing window stands out

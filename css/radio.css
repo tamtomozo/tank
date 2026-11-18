@@ -47,7 +47,7 @@
   transition: none;
 }
 
-/* Shown while a district-secured report has the controls locked */
+/* Shown while an area-secured report has the controls locked */
 .radio-lock {
   display: none;
   font-family: var(--font-mono);

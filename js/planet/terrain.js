@@ -2,7 +2,7 @@
   'use strict';
 
   // World generation (run once by the constructor): backdrop stars & ridges, rocks, jump pads, crates,
-  // the enemy compound sites per district and the wasteland detail (patches, ripples, scrub, gullies).
+  // the enemy compound sites and the wasteland detail (patches, ripples, scrub, gullies).
   // Part of HorizonWorld (js/planet/planet.js): the methods below are mixed into its prototype.
 
   const { AREA_SCALE, BASE_WORLD, WORLD_H, WORLD_W, scaled } = global.HorizonWorld.shared;
@@ -10,7 +10,12 @@
   const SPAWN_X = WORLD_W * 0.5; // player spawn point (map centre) = the operations HQ (hq.js)
   const SPAWN_Y = WORLD_H * 0.5;
 
-  const BASES_PER_DISTRICT = 2;
+  // Compound placement: the wrapped map is split into three vertical bands (1600 wide each) and
+  // two compounds are placed in each — the centre band around the HQ first (α, β), then east (γ, δ),
+  // then west across the wrap (ε, ζ). Layout only: the bands have no meaning in play.
+  const SITE_BAND_WIDTH = WORLD_W / 3;
+  const SITE_BANDS = [SITE_BAND_WIDTH, SITE_BAND_WIDTH * 2, 0]; // left edge x of each band
+  const BASES_PER_BAND = 2;
 
   class WorldTerrain {
     _initBackdrop() {
@@ -208,7 +213,7 @@
       const dist = (ax, ay, bx, by) => Math.hypot(this.deltaX(ax, bx), this.deltaY(ay, by));
       const names = ['α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ', 'ι'];
 
-      // Per district: place compounds fully inside the district band. Strict spacing first, then
+      // Per band: place compounds fully inside the band. Strict spacing first, then
       // progressively relaxed until they fit among the boulders.
       const passes = [
         { margin: 230, spawn: 720, clear: 230, sep: 760 },
@@ -216,20 +221,20 @@
         { margin: 200, spawn: 690, clear: 200, sep: 600 }
       ];
       const placed = [];
-      for (const d of this.districts) {
+      for (const x0 of SITE_BANDS) {
         const sites = [];
         for (const pass of passes) {
-          const span = d.width - pass.margin * 2;
-          for (let tries = 0; sites.length < BASES_PER_DISTRICT && tries < 4000; tries++) {
-            const x = this.wrapX(d.x0 + pass.margin + rand() * span);
+          const span = SITE_BAND_WIDTH - pass.margin * 2;
+          for (let tries = 0; sites.length < BASES_PER_BAND && tries < 4000; tries++) {
+            const x = this.wrapX(x0 + pass.margin + rand() * span);
             const y = rand() * WORLD_H;
             if (dist(x, y, SPAWN_X, SPAWN_Y) < pass.spawn) continue;
             if (this.obstacles.some((o) => dist(x, y, o.x, o.y) < o.radius + pass.clear)) continue;
             if (this.ramps.some((r) => dist(x, y, r.x, r.y) < r.radius + pass.clear)) continue;
             if ([...placed, ...sites].some((s) => dist(x, y, s.x, s.y) < pass.sep)) continue;
-            sites.push({ x, y, districtId: d.id });
+            sites.push({ x, y });
           }
-          if (sites.length >= BASES_PER_DISTRICT) break;
+          if (sites.length >= BASES_PER_BAND) break;
         }
         placed.push(...sites);
       }
@@ -246,12 +251,9 @@
           const a = rot + (k / 6) * Math.PI * 2 + 0.52;
           parkingSlots.push({ x: this.wrapX(s.x + Math.cos(a) * 158), y: this.wrapY(s.y + Math.sin(a) * 158), angle: a });
         }
-        const slot = placed.slice(0, i).filter((o) => o.districtId === s.districtId).length;
         return {
           id: i,
           name: names[i] || String(i + 1),
-          districtId: s.districtId,
-          slot, // index within its district (0 = smaller garrison)
           x: s.x,
           y: s.y,
           radius: 200,

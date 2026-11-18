@@ -149,14 +149,14 @@
       const menuOpen = !game.started || dialogs.start.open || sortieSelect.isOpen || briefing.isOpen || dialogs.garage.open || dialogs.gameover.open || results.isOpen;
       // Phones held upright: everything waits behind the "turn sideways" screen (landscape only)
       const paused = game.touchUi.update(menuOpen) || menuOpen;
-      // While Mio reports a secured district (controls locked) the in-game clock and the mission
+      // While Mio reports the secured area (controls locked) the in-game clock and the mission
       // timer stand still; the radio itself and on-screen effects keep running
       const timeFrozen = radio.controlsLocked;
       world.update(dt, !paused && !timeFrozen);
 
       const player = game.player;
       if (!paused && player.alive) {
-        // While Mio reports a secured district the player can't drive, aim or fire (the tank coasts to a stop)
+        // While Mio reports the secured area the player can't drive, aim or fire (the tank coasts to a stop)
         controls.update(dt, timeFrozen);
 
         // Wingmen: hold formation, or fan out and fight when enemies close in

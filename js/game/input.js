@@ -113,7 +113,7 @@
         e.preventDefault();
         return;
       }
-      if (code === 'KeyC' && radio.controlsLocked) return; // don't cut into Mio's district report
+      if (code === 'KeyC' && radio.controlsLocked) return; // don't cut into Mio's area-secured report
       if (code === 'KeyC' && !garageDialog.open && !gameoverDialog.open) {
         toggleControlMode();
         return;
