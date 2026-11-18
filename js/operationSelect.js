@@ -29,24 +29,37 @@
       this.context.replaceChildren(global.PlanetGlobe.create(planet, 'is-small'), text);
       this.list.replaceChildren(...planet.operations.map((op) => this._card(op)));
       this.show(delayMs, (sayDelayMs) => {
-        const first = this.list.querySelector('button');
-        if (first) first.focus();
-        this.say(`${planet.name}で実行可能な作戦です。作戦名を選んでください。選んだ作戦のブリーフィングに移ります。`, sayDelayMs);
+        // Focus the next stage to play: the first open one not yet completed (else the first open one)
+        const open = [...this.list.querySelectorAll('button:not([disabled])')];
+        const next = open.find((b) => !b.classList.contains('is-cleared')) || open[0];
+        if (next) next.focus();
+        this.say(`${planet.name}の作戦は${planet.operations.length}段階です。前の段階を完了すると、次の作戦が解放されます。作戦を選んでください。`, sayDelayMs);
       });
     }
 
+    // One stage of the planet's campaign; locked until the stage it requires is completed (js/campaign.js)
     _card(op) {
+      const campaign = global.Campaign;
+      const unlocked = campaign.isUnlocked(op);
+      const cleared = campaign.isCleared(op.id);
       const card = el('button', 'op-card');
       card.type = 'button';
+      if (cleared) card.classList.add('is-cleared');
+      if (!unlocked) {
+        card.classList.add('is-locked');
+        card.disabled = true;
+      }
       const body = el('div', 'op-card-body');
+      const label = el('span', 'op-card-label', op.stage ? `第${op.stage}段階　${op.phase || ''}` : '作戦名');
+      if (cleared) label.append(el('span', 'op-card-badge', '完了'));
       body.append(
-        el('span', 'op-card-label', '作戦名'),
-        el('strong', 'op-card-name', `「${op.name}」`),
-        el('p', 'op-card-goal', `目標: ${op.goal}`),
-        el('p', 'op-card-summary', op.summary)
+        label,
+        el('strong', 'op-card-name', unlocked ? `「${op.name}」` : '「？？？」'),
+        el('p', 'op-card-goal', unlocked ? `目標: ${op.goal}` : '目標: 機密'),
+        el('p', 'op-card-summary', unlocked ? op.summary : '前の段階の作戦を完了すると解放されます。')
       );
-      card.append(body, el('span', 'op-card-go', 'ブリーフィングへ ▶'));
-      card.addEventListener('click', () => this.finish({ operation: op }));
+      card.append(body, el('span', 'op-card-go', unlocked ? 'ブリーフィングへ ▶' : '🔒 未解放'));
+      if (unlocked) card.addEventListener('click', () => this.finish({ operation: op }));
       return card;
     }
   }

@@ -161,12 +161,16 @@
         radarCtx.fill();
       }
 
-      // Enemies within range: parked units dim, sortied units bright (sortied ones also get an off-screen arrow)
+      // Enemies within range: parked units dim, sortied units bright (sortied ones also get an off-screen arrow).
+      // Shown where they appear to be (mirage); in a sandstorm only those within sight range.
+      const sight = combat.sightRange();
       for (const e of combat.enemies) {
         if (!e.alive) continue;
+        const ap = combat.apparentPos(e);
+        if (sight < Infinity && Math.hypot(world.deltaX(player.x, e.x), world.deltaY(player.y, e.y)) > sight) continue;
         const idle = e.state === 'idle';
-        if (!idle) placeArrow(e.x, e.y, 'target-arrow', '\u25b2');
-        const pos = toRadar(e.x, e.y);
+        if (!idle && e.state !== 'retreat') placeArrow(ap.x, ap.y, 'target-arrow', '\u25b2');
+        const pos = toRadar(ap.x, ap.y);
         if (!pos.inRange) continue;
         radarCtx.fillStyle = idle ? 'rgba(239, 68, 68, 0.45)' : '#ef4444';
         radarCtx.beginPath();

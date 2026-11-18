@@ -2,7 +2,8 @@
   'use strict';
 
   // Terrain layer of the top-down tactical maps (briefing map js/briefing.js and the full-screen
-  // briefing backdrop js/hqBackdrop.js): dry hardpans, gullies, large rocks and jump ramps.
+  // briefing backdrop js/hqBackdrop.js): dry hardpans, gullies, the operation's areas (salt flat,
+  // old town with its buildings), large rocks and jump ramps.
   // `k` = map pixels per world unit; the caller sets the origin and any global alpha.
 
   function drawTerrain(g, world, k) {
@@ -26,6 +27,27 @@
         prev = pt;
       }
       g.stroke();
+    }
+    for (const z of world.zones) {
+      g.beginPath();
+      g.arc(z.x * k, z.y * k, z.radius * k, 0, Math.PI * 2);
+      g.fillStyle = z.kind === 'saltflat' ? 'rgba(236, 232, 220, 0.55)' : 'rgba(196, 168, 124, 0.45)';
+      g.fill();
+      if (z.pond) {
+        g.fillStyle = 'rgba(56, 140, 170, 0.85)';
+        g.beginPath();
+        g.ellipse((z.x + z.pond.dx) * k, (z.y + z.pond.dy) * k, z.pond.rx * k, z.pond.ry * k, 0.2, 0, Math.PI * 2);
+        g.fill();
+      }
+    }
+    g.fillStyle = '#a88a5e';
+    g.strokeStyle = '#4a3a26';
+    g.lineWidth = 0.8;
+    for (const st of world.structures) {
+      const x = (st.x - st.box.hx) * k;
+      const y = (st.y - st.box.hy) * k;
+      g.fillRect(x, y, st.box.hx * 2 * k, st.box.hy * 2 * k);
+      g.strokeRect(x, y, st.box.hx * 2 * k, st.box.hy * 2 * k);
     }
     for (const o of world.obstacles) {
       g.fillStyle = '#8b7d6b';

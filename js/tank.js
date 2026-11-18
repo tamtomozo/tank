@@ -48,6 +48,7 @@
       this.maxHp = options.maxHp ?? 120;
       this.hp = this.maxHp;
       this.maxSpeed = options.maxSpeed ?? 225;
+      this.speedLimit = 1; // share of maxSpeed currently allowed (engine overheat: js/game/hazards.js)
       this.accel = options.accel ?? 460;
       this.turnSpeed = options.turnSpeed ?? 2.8;
       this.damage = options.damage ?? 40;
@@ -278,7 +279,7 @@
       this._tickTimers(dt);
       if (this.isBunker) return;
 
-      const targetSpeed = throttle * this.maxSpeed;
+      const targetSpeed = throttle * this.maxSpeed * this.speedLimit;
       const rate = Math.abs(throttle) > 0.05 ? this.accel : this.accel * 1.4;
       if (this.speed < targetSpeed) {
         this.speed = Math.min(targetSpeed, this.speed + rate * dt);
@@ -316,8 +317,8 @@
       if (hasInput) {
         const dirX = moveX / inputLen;
         const dirY = moveY / inputLen;
-        targetVx = dirX * this.maxSpeed;
-        targetVy = dirY * this.maxSpeed;
+        targetVx = dirX * this.maxSpeed * this.speedLimit;
+        targetVy = dirY * this.maxSpeed * this.speedLimit;
 
         const targetAngle = Math.atan2(dirY, dirX);
         const diff = wrapAngle(targetAngle - this.hullAngle);
@@ -376,21 +377,21 @@
         }
       }
 
-      // Solid obstacle collision (wrapped delta): boulders and the HQ's tent / crates
+      // Solid obstacle collision (wrapped delta): boulders, the HQ's tent / crates and the
+      // buildings of an old town (boxes: pushed out through the nearest side)
       for (const obs of this.world.colliders) {
         const dx = this.world.deltaX(obs.x, this.x);
         const dy = this.world.deltaY(obs.y, this.y);
-        const minDist = this.radius + obs.radius;
-        const dSq = dx * dx + dy * dy;
-        if (dSq < minDist * minDist && dSq > 0.001) {
-          const d = Math.sqrt(dSq);
-          const push = minDist - d;
-          this.x = this.world.wrapX(this.x + (dx / d) * push);
-          this.y = this.world.wrapY(this.y + (dy / d) * push);
-          this.speed *= 0.7;
-          this._velX *= 0.7;
-          this._velY *= 0.7;
-        }
+        const reach = this.radius + obs.radius;
+        if (dx * dx + dy * dy >= reach * reach) continue;
+        const s = this.world.surfaceGap(obs, this.x, this.y);
+        if (s.gap >= this.radius) continue;
+        const push = this.radius - s.gap;
+        this.x = this.world.wrapX(this.x + s.nx * push);
+        this.y = this.world.wrapY(this.y + s.ny * push);
+        this.speed *= 0.7;
+        this._velX *= 0.7;
+        this._velY *= 0.7;
       }
 
       // Differential left/right caterpillar tread animation

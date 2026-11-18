@@ -21,18 +21,23 @@
       let bestTarget = null;
       let bestDistSq = Infinity;
 
+      // In a sandstorm nothing beyond sight range can be locked onto
+      const sight = combat.sightRange();
       const consider = (obj) => {
         if (!obj.alive) return;
+        // Enemies: where they appear to be (a mirage shifts distant ones off their real position)
+        const pos = obj instanceof global.Tank2D ? combat.apparentPos(obj) : obj;
         if (!world.isPointInHeadlightRange(
-          obj.x, obj.y, obj.radius,
+          pos.x, pos.y, obj.radius,
           player.x, player.y, player.hullAngle, player.cannonRange,
           game.cam.x, game.cam.y, game.view.w, game.view.h
         )) {
           return;
         }
-        const dx = world.deltaX(player.x, obj.x);
-        const dy = world.deltaY(player.y, obj.y);
+        const dx = world.deltaX(player.x, pos.x);
+        const dy = world.deltaY(player.y, pos.y);
         const dSq = dx * dx + dy * dy;
+        if (dSq > sight * sight) return;
         if (dSq < bestDistSq) {
           bestDistSq = dSq;
           bestTarget = obj;
@@ -116,8 +121,12 @@
       // after every shot and had to re-traverse once the reload finished)
       const lockCandidate = locked ? null : findLookAtTarget();
       if (lockCandidate) {
-        player.aimAtWorldPoint(lockCandidate.x, lockCandidate.y, dt);
-        game.activeTarget = player.isAimedAt(lockCandidate.x, lockCandidate.y) ? lockCandidate : null;
+        // Aim where the target appears to be (its real position unless a mirage shifts it)
+        const pt = lockCandidate instanceof global.Tank2D ? combat.apparentPos(lockCandidate) : lockCandidate;
+        game.activeTargetPoint.x = pt.x;
+        game.activeTargetPoint.y = pt.y;
+        player.aimAtWorldPoint(pt.x, pt.y, dt);
+        game.activeTarget = player.isAimedAt(pt.x, pt.y) ? lockCandidate : null;
       } else {
         game.activeTarget = null;
         player.returnTurretStraight(dt);
@@ -127,7 +136,7 @@
       // The player is busy driving / fighting: hud.js keeps the HUD panels out of the way meanwhile
       game.playerActing = moving || firing;
       if (firing) {
-        const fireTarget = game.activeTarget || barrelForwardTarget(340);
+        const fireTarget = game.activeTarget ? game.activeTargetPoint : barrelForwardTarget(340);
         combat.fireMainCannon(player, fireTarget.x, fireTarget.y);
       }
     }

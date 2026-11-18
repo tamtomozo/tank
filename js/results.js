@@ -7,7 +7,7 @@
   // Overall rank, mission time, per-compound capture times, kills, accuracy, damage, platoon losses,
   // scrap and items, plus a closing comment from Mio typed out one character at a time.
 
-  const { ENEMY_INFO } = global.GameData; // js/data/enemies.js
+  const { ENEMY_INFO, ENEMY_KIND_ORDER } = global.GameData; // js/data/enemies.js
   const { el } = global.TankUtil;
   const OPEN_DELAY_MS = 700; // pause after Mio's final report before the window starts drawing
   const BOOT_INTRO_MS = 1900; // frame + contents reveal (css/hudframe.css) before Mio comments
@@ -16,7 +16,7 @@
   const MIO_COMMENTS = {
     S: () => '見事な指揮でした、隊長。損害を最小限に抑えた、完璧な作戦です。',
     A: () => '作戦成功です。小隊の連携も上々でした。お疲れさまでした、隊長。',
-    B: (planet) => `${planet}の制圧を確認しました。課題は残りますが、任務は完遂です。`,
+    B: (planet) => `${planet}での作戦目標の達成を確認しました。課題は残りますが、任務は完遂です。`,
     C: () => 'なんとか制圧できましたね……次は損害をもっと抑えましょう、隊長。'
   };
 
@@ -96,7 +96,8 @@
       };
 
       const t = world.getTimeInfo();
-      const totalKills = stats.killsByKind.light + stats.killsByKind.medium + stats.killsByKind.bunker;
+      const kinds = ENEMY_KIND_ORDER.filter((k) => stats.killsByKind[k] > 0);
+      const totalKills = kinds.reduce((sum, k) => sum + stats.killsByKind[k], 0);
       const capturedBases = combat.bases.filter((b) => b.cleared).length;
       // In-game clock time at which each compound was captured
       const baseLines = combat.bases.map((b) => `拠点${b.name}　${b.cleared ? stampText(stats.baseClock[b.id]) : '未制圧'}`);
@@ -112,7 +113,7 @@
         card('拠点制圧時刻（ゲーム内）', `${capturedBases} / ${combat.bases.length} 拠点`, baseLines),
         card('回収アイテム', `${stats.itemsCollected} 個`),
         card('撃破数', `${totalKills} 両`, [
-          `${ENEMY_INFO.light.name} ${stats.killsByKind.light} ／ ${ENEMY_INFO.medium.name} ${stats.killsByKind.medium} ／ ${ENEMY_INFO.bunker.name} ${stats.killsByKind.bunker}`,
+          kinds.length ? kinds.map((k) => `${ENEMY_INFO[k].name} ${stats.killsByKind[k]}`).join(' ／ ') : '—',
           `自機 ${stats.killsBy.player} ／ 僚機 ${stats.killsBy.ally}${stats.killsBy.other ? ` ／ その他 ${stats.killsBy.other}` : ''}`
         ]),
         card('命中率', `${accuracyPct}%`, [`命中 ${stats.shotsHit} ／ 発射 ${stats.shotsFired}`]),

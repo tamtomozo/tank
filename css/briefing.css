@@ -119,6 +119,14 @@ dialog.briefing-dialog {
 .briefing-swatch.is-gully { background: #2a1d12; block-size: 0.3rem; }
 .briefing-swatch.is-hardpan { background: rgb(214 190 150 / 0.6); border-radius: 50%; }
 .briefing-swatch.is-wrap { border: 2px dashed #fde68a; }
+.briefing-swatch.is-storm { background: linear-gradient(135deg, #ba8c58, #e8c896); }
+.briefing-swatch.is-heat { background: linear-gradient(90deg, #f59e0b, #ef4444); }
+.briefing-swatch.is-dust { background: rgb(168 162 158 / 0.8); border-radius: 50%; }
+.briefing-swatch.is-mirage { background: repeating-linear-gradient(0deg, #fde68a 0 2px, transparent 2px 4px); }
+.briefing-swatch.is-range { border: 2px solid #f87171; border-radius: 50%; }
+.briefing-swatch.is-salt { background: #ece8dc; }
+.briefing-swatch.is-city { background: #c4a87c; box-shadow: inset 0 0 0 2px #8a6e48; }
+.briefing-swatch.is-hold { border: 2px dashed #fde047; border-radius: 50%; }
 
 .briefing-panels {
   min-inline-size: 0;

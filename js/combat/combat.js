@@ -27,7 +27,7 @@
     static freshStats() {
       return {
         elapsed: 0, // mission time: seconds of tactical play until the area is secured (pauses excluded)
-        killsByKind: { light: 0, medium: 0, bunker: 0 },
+        killsByKind: { light: 0, medium: 0, heavy: 0, bunker: 0, boss: 0 },
         killsBy: { player: 0, ally: 0, other: 0 },
         shotsFired: 0, // player's shells / rounds / missiles
         shotsHit: 0, // player's projectiles that damaged at least one enemy
@@ -82,10 +82,18 @@
       this.magnetRadius = 110;
       this.repairBonus = 1.0;
       this._playerRef = null;
+      this.operation = null; // operation being fought (js/data/operations.js), null before one is picked
+      this.rules = {}; // the planet's environment rules (planet.hazards)
+      this.hold = null; // "hold the area" objective state (js/combat/bases.js)
+      this.time = 0; // seconds of battle (drives the mirage shimmer)
     }
 
-    reset(player) {
+    // selection: { planet, operation } picked on the sortie-select screens, or null (no compounds)
+    reset(player, selection = null) {
       this._playerRef = player;
+      this.operation = selection ? selection.operation : null;
+      this.rules = (selection && selection.planet.hazards) || {};
+      this.time = 0;
       this.enemies = [];
       this.projectiles = [];
       this.particles = [];
@@ -118,6 +126,7 @@
     // Mission time also stops for good once the area is secured (the drive back to HQ isn't counted).
     update(dt, player, countTime = true) {
       this._playerRef = player;
+      this.time += dt;
       if (!this.stats.startClock) this.stats.startClock = this._clockStamp();
       if (countTime && !this.missionComplete) this.stats.elapsed += dt;
       this.shakeIntensity = Math.max(0, this.shakeIntensity - dt * 2.0);
@@ -131,11 +140,51 @@
       this._updateParticles(dt);
       this._updatePickups(dt, player);
 
+      this._despawnRetreated(player);
       compactInPlace(this.enemies, (e) => e.alive);
       compactInPlace(this.allies, (a) => a.alive);
       this._updateBases(dt, player);
     }
   }
+
+  // Sight, range and the mirage: how the operation's conditions bend what tanks can see and reach
+  class CombatConditions {
+    // Enemy fire / aim distances and preferred range are stretched on a long-range operation
+    get enemyRangeScale() {
+      const lr = this.operation && this.operation.longRange;
+      return lr ? lr.enemy || 1 : 1;
+    }
+
+    // How far anyone can see a tank right now (a sandstorm closes in to ~210; Infinity = clear)
+    sightRange() {
+      const storm = this.world.storm;
+      return storm > 0.01 ? 900 - 690 * storm : Infinity;
+    }
+
+    // Where an enemy appears to be: on a salt flat in daylight the mirage shifts distant tanks off
+    // their real position (drawing, radar and the player's lock-on all use this). Returns the
+    // real position when there is no mirage. The returned object is kept on the tank.
+    apparentPos(e) {
+      const out = e._apparent || (e._apparent = { x: 0, y: 0, shift: 0 });
+      out.x = e.x;
+      out.y = e.y;
+      out.shift = 0;
+      const m = this.world.mirage;
+      const player = this._playerRef;
+      if (m <= 0.01 || !player) return out;
+      const d = Math.hypot(this.world.deltaX(player.x, e.x), this.world.deltaY(player.y, e.y));
+      const amp = Math.max(0, Math.min(1, (d - 320) / 380)) * 62 * m;
+      if (amp <= 0.5) return out;
+      const ph = e.miragePhase || (e.miragePhase = 1 + Math.random() * 6);
+      const t = this.time;
+      out.x = this.world.wrapX(e.x + Math.sin(t * 0.7 + ph) * amp);
+      out.y = this.world.wrapY(e.y + Math.cos(t * 0.53 + ph * 1.7) * amp * 0.7);
+      out.shift = amp / 62;
+      return out;
+    }
+  }
+
+  global.TankUtil.mixin(CombatManager, CombatConditions);
 
   // Module-level constants / helpers that the CombatManager parts in other files use
   CombatManager.shared = {

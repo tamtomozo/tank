@@ -339,9 +339,13 @@
       this.groundTiles = tiles;
       // Operations HQ pad (always there, unlike the compounds below)
       if (this.hq) this._stampGround(this.hq.x, this.hq.y, this.hq.radius + 40, (gg) => this._drawHqPad(gg));
+      // Areas of the current operation (salt flat, old town: js/planet/zones.js)
+      for (const z of this.zones) {
+        this._stampGround(z.x, z.y, z.radius + 120, (gg) => this._drawZoneGround(gg, z));
+      }
       // Re-stamp compounds that were already revealed (if the texture is ever rebuilt mid-game)
       for (const id of this.revealedBases) {
-        const b = this.enemyBases.find((s) => s.id === id);
+        const b = this.sites.find((s) => s.id === id);
         if (b) this._stampGround(b.x, b.y, b.radius + 40, (gg) => this._drawBasePad(gg, b));
       }
     }

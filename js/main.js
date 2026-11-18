@@ -9,6 +9,7 @@
   //   render.js   draws the frame                        fortIcon.js  compound icon (also briefing)
   //   quality.js  render resolution / phone settings     hqIcon.js    operations HQ icon
   //   touchControls.js  on-screen stick & buttons, "turn the phone sideways" screen (phones)
+  //   hazards.js  sandstorm, mirage, engine heat (the operation's environment)
 
   function bootstrap() {
     const canvas = document.getElementById('game-canvas');
@@ -113,12 +114,14 @@
       // Camera follows the player, leading it by (lookX, lookY) along its facing (js/game/controls.js)
       cam: { x: player.x, y: player.y, lookX: 0, lookY: 0, starOffsetX: 0 },
       activeTarget: null, // enemy / prop the turret is locked onto (null = aiming straight ahead)
+      activeTargetPoint: { x: 0, y: 0 }, // where the locked target appears to be (mirage) = the aim point
       started: false,
       overShown: false, // after-action report or game-over window already shown for this sortie
       returnedToHq: false, // planet secured AND the player has driven back to the operations HQ
       input: null,
       controls: null,
       mission: null,
+      hazards: null, // sandstorm / engine heat / mirage (js/game/hazards.js)
       hud: null,
       radar: null,
       renderer: null,
@@ -126,6 +129,7 @@
     };
     game.input = global.GameInput.create(game);
     game.touchUi = global.GameTouchControls.create(game);
+    game.hazards = global.GameHazards.create(game);
     game.mission = global.GameMission.create(game);
     game.hud = global.GameHud.create(game);
     game.radar = global.GameRadar.create(game);
@@ -158,6 +162,9 @@
       if (!paused && player.alive) {
         // While Mio reports the secured area the player can't drive, aim or fire (the tank coasts to a stop)
         controls.update(dt, timeFrozen);
+
+        // Sandstorm, mirage and engine heat (the clock stands still while Mio reports the area secured)
+        if (!timeFrozen) game.hazards.update(dt);
 
         // Wingmen: hold formation, or fan out and fight when enemies close in
         squad.update(dt, player);

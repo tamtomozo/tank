@@ -260,12 +260,13 @@
       for (const obs of w.colliders) {
         const ox = w.deltaX(obs.x, a.x);
         const oy = w.deltaY(obs.y, a.y);
-        const od = Math.hypot(ox, oy);
-        const clearance = od - obs.radius - a.radius;
-        if (clearance > 90 || od < 1) continue;
+        if (Math.hypot(ox, oy) - obs.radius - a.radius > 90) continue;
+        const s = w.surfaceGap(obs, a.x, a.y);
+        const clearance = s.gap - a.radius;
+        if (clearance > 90) continue;
         const push = (1 - Math.max(0, clearance) / 90) * 1.6;
-        ax += (ox / od) * push;
-        ay += (oy / od) * push;
+        ax += s.nx * push;
+        ay += s.ny * push;
       }
       return { x: ax, y: ay };
     }

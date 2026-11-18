@@ -45,6 +45,8 @@
   <script src="js/planet/night.js" defer></script>
   <script src="js/planet/props.js" defer></script>
   <script src="js/planet/hq.js" defer></script>
+  <script src="js/planet/zones.js" defer></script>
+  <script src="js/planet/weather.js" defer></script>
   <script src="js/tank.js" defer></script>
   <script src="js/combat/combat.js" defer></script>
   <script src="js/combat/bases.js" defer></script>
@@ -62,6 +64,7 @@
   <script src="js/planetGlobe.js" defer></script>
   <script src="js/sortieSelect.js" defer></script>
   <script src="js/planetSelect.js" defer></script>
+  <script src="js/campaign.js" defer></script>
   <script src="js/operationSelect.js" defer></script>
   <script src="js/briefing.js" defer></script>
   <script src="js/results.js" defer></script>
@@ -71,6 +74,7 @@
   <script src="js/game/input.js" defer></script>
   <script src="js/game/controls.js" defer></script>
   <script src="js/game/touchControls.js" defer></script>
+  <script src="js/game/hazards.js" defer></script>
   <script src="js/game/mission.js" defer></script>
   <script src="js/game/hud.js" defer></script>
   <script src="js/game/radar.js" defer></script>
@@ -158,6 +162,14 @@
       </div>
     </section>
 
+    <!-- Hold-the-area objective (hidden unless one is running) -->
+    <section id="hold-banner" class="hold-banner" hidden aria-live="polite">
+      <div id="hold-text" class="hold-title">封鎖中</div>
+      <div class="meter-track hold-track">
+        <div id="hold-fill" class="meter-fill hold-fill"></div>
+      </div>
+    </section>
+
     <!-- HQ operator radio: every on-screen report, typed out at upper centre by js/radio.js -->
     <section id="radio-panel" class="radio-panel has-hud-frame" aria-label="オペレーター無線">
       <div class="hud-frame" aria-hidden="true">
@@ -223,7 +235,7 @@
       <h1 id="start-title" class="dialog-main-title">PLANET PANZER</h1>
       <p class="dialog-lead">
         奥行きに惑星の地平線が広がり、上下左右がシームレスに繋がる戦場を2D戦車で駆け抜けろ！<br>
-        惑星アリダには6つの敵拠点がある。攻める順番は自由。すべて制圧して作戦本部へ帰還せよ。
+        惑星ごとの作戦は段階制。目標を達成して作戦本部へ帰還すると、次の段階の作戦が解放される。
       </p>
       <div class="briefing-grid">
         <div class="briefing-card">
@@ -240,7 +252,7 @@
           <ul>
             <li>マップは上下・左右すべてループ連結（無限周回）</li>
             <li>ジャンプ台に勢いよく進入すると空中に跳躍する</li>
-            <li>惑星アリダ＝6拠点。すべての拠点が最初から稼働しており、攻略順は自由</li>
+            <li>惑星ザハル＝3段階の作戦（侵食 → 決戦 → 斬首）。砂嵐・エンジン過熱・砂煙・蜃気楼に注意</li>
             <li>戦車はブリーフィングの「車両調整」で、レーダーチャートにポイントを配分して調整する（自機・僚機）</li>
             <li>制圧した拠点の白旗まわりの円に入るたびに補給・僚機補充メニューが開く（補給はここでのみ）</li>
             <li>敵・クレート破壊でスクラップ＆修理キット回収</li>

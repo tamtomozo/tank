@@ -362,5 +362,9 @@
     }
   }
 
+  // Shared with the old-town buildings (js/planet/zones.js)
+  global.HorizonWorld.shared.makeSolid = makeSolid;
+  global.HorizonWorld.shared.makeBox = makeCrate;
+
   global.TankUtil.mixin(global.HorizonWorld, WorldHeadquarters);
 })(window);

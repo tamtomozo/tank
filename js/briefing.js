@@ -10,7 +10,7 @@
   // 'tactical' = start time followed by the compounds (in that order)
   const STEP_IDS = ['status', 'tactical', 'tuning', 'enemies', 'terrain'];
 
-  const { ENEMY_INFO, ENEMY_SPECS, BASE_GARRISONS } = global.GameData; // js/data/enemies.js
+  const { ENEMY_INFO, ENEMY_SPECS, ENEMY_KIND_ORDER } = global.GameData; // js/data/enemies.js
   const { el } = global.TankUtil;
 
   const OPEN_DELAY_MS = 900; // pause before the briefing window starts drawing
@@ -136,17 +136,17 @@
       let enemyPower = 0;
       let enemyTanks = 0;
       let enemyBunkers = 0;
-      for (const site of this.world.enemyBases) {
-        const tpl = BASE_GARRISONS[Math.min(site.id, BASE_GARRISONS.length - 1)];
-        const hpScale = 1 + tpl.tier * 0.15;
+      for (const base of this.combat.bases) {
+        const tpl = base.garrison;
+        const hpScale = 1 + (tpl.tier || 0) * 0.15;
         const add = (kind) => {
           const sp = specs[kind];
           enemyPower += unitPower(sp.maxHp * hpScale, sp.damage, sp.reloadTime);
         };
-        for (let i = 0; i < tpl.bunkers; i++) add('bunker');
-        for (const k of tpl.tanks) add(k);
-        enemyBunkers += tpl.bunkers;
-        enemyTanks += tpl.tanks.length;
+        for (let i = 0; i < (tpl.bunkers || 0); i++) add('bunker');
+        for (const k of tpl.tanks || []) add(k);
+        enemyBunkers += tpl.bunkers || 0;
+        enemyTanks += (tpl.tanks || []).length;
       }
       const player = this.getPlayer();
       const allies = this.combat.allies.filter((a) => a.alive);
@@ -160,7 +160,7 @@
         ourTanks: 1 + allies.length,
         enemyTanks,
         enemyBunkers,
-        enemyBases: this.world.enemyBases.length
+        enemyBases: this.combat.bases.length
       };
     }
 
@@ -172,8 +172,21 @@
       };
     }
 
+    // Enemy kinds this operation fields (compound garrisons + reinforcements), in briefing order
+    _enemyKinds() {
+      const kinds = new Set();
+      for (const b of this.combat.bases) {
+        if (b.garrison.bunkers) kinds.add('bunker');
+        for (const k of b.garrison.tanks || []) kinds.add(k);
+      }
+      const hold = this.operation.hold;
+      if (hold) hold.kinds.forEach((k) => kinds.add(k));
+      return ENEMY_KIND_ORDER.filter((k) => kinds.has(k));
+    }
+
     _mioLine(stepId) {
       const st = this._status();
+      const mio = this.operation.mio || {};
       switch (stepId) {
         case 'status': {
           if (!SHOW_POWER_BALANCE) return 'ハヤセ将軍より、全車への戦況概要です。目を通しておいてください、隊長。';
@@ -186,14 +199,20 @@
         case 'tactical': {
           // Same order as the panel: operation name, objective, start time, then the compounds
           const t = this.world.getTimeInfo();
+          if (mio.tactical) {
+            return `作戦名は「${this.operation.name}」です。${mio.tactical}`
+              + `戦術行動の開始はDAY ${t.day}の${t.clockText}、${t.phaseName}です。目標を達成したら、この作戦本部まで帰還してください。`;
+          }
           return `作戦名は「${this.operation.name}」、目標は${this.planet.name}の敵拠点${st.baseCount}か所の制圧です。`
             + `戦術行動の開始はDAY ${t.day}の${t.clockText}、${t.phaseName}です。`
             + '敵拠点は作戦本部の周囲に散らばっています。どこから攻めるかは隊長に任せます。制圧した拠点では補給と僚機の補充ができます。'
             + '全拠点を制圧した時点で作戦時間が確定します。その後は、この作戦本部まで帰還してください。';
         }
         case 'enemies':
+          if (mio.enemies) return `${mio.enemies}拠点の敵は待機していますが、接近するか攻撃すると出撃してきます。`;
           return '敵は軽戦車、中戦車、トーチカで構成されています。拠点で待機していますが、接近するか攻撃すると出撃してきます。';
         case 'terrain':
+          if (mio.terrain) return mio.terrain;
           return '大型の岩は砲弾を防ぐ遮蔽物になります。ジャンプ台に勢いよく進入すると飛び越えられます。マップは上下左右がつながっています。'
             + '準備ができたら、作戦本部から出撃してください。';
         default:
@@ -216,17 +235,19 @@
       //    morale in four parts: pre-head (who it's for), catch copy (headline), deck copy (reinforces
       //    the headline and sparks curiosity), lead (who it targets and what they gain).
       const statusBox = this.dialog.querySelector('#briefing-status');
+      const sc = this.operation.scenario || {
+        prehead: `${this.planet.name}奪還作戦に臨む、第1機甲小隊の全戦車兵へ`,
+        catch: 'この星を取り戻すのは、君たちの履帯だ。',
+        deck: `敵は${this.planet.name}の各地に${st.baseCount}つの拠点を築き、勝利を確信している。`
+          + `だが彼らはまだ知らない――たった${st.squadMax}両の小隊が、この戦況を塗り替えようとしていることを。`,
+        lead: '敵拠点を一つずつ叩け。制圧した拠点は諸君の補給線となり、失った僚機を補う。'
+          + `作戦名「${this.operation.name}」――それを成し遂げるのは、諸君だ。`
+      };
       statusBox.replaceChildren(
-        el('p', 'scenario-prehead', `${this.planet.name}奪還作戦に臨む、第1機甲小隊の全戦車兵へ`),
-        el('h4', 'scenario-catch', 'この荒野を取り戻すのは、君たちの履帯だ。'),
-        el('p', 'scenario-deck',
-          `敵は${this.planet.name}の各地に${st.baseCount}つの拠点を築き、勝利を確信している。`
-          + `だが彼らはまだ知らない――たった${st.squadMax}両の小隊が、この戦況を塗り替えようとしていることを。`),
-        el('p', 'scenario-lead',
-          'この作戦は、最前線で砲火をくぐる諸君のためにある。'
-          + '敵拠点を一つずつ叩け。制圧した拠点は諸君の補給線となり、失った僚機を補う。'
-          + `拠点を落とすたびに前線は押し上がり、${st.baseCount}拠点すべてを制圧したとき、${this.planet.name}は再び我々の大地となる。`
-          + `作戦名「${this.operation.name}」――その鉄槌を振るうのは、諸君だ。`)
+        el('p', 'scenario-prehead', sc.prehead),
+        el('h4', 'scenario-catch', sc.catch),
+        el('p', 'scenario-deck', sc.deck),
+        el('p', 'scenario-lead', sc.lead)
       );
 
       // Power balance of both armies (balance bar + side-by-side comparison + general's assessment).
@@ -304,7 +325,7 @@
       // 3. Enemy intel: enemy types only (no per-compound counts)
       const specs = ENEMY_SPECS;
       const cards = this.dialog.querySelector('#briefing-enemies');
-      cards.replaceChildren(...['light', 'medium', 'bunker'].map((kind) => {
+      cards.replaceChildren(...this._enemyKinds().map((kind) => {
         const spec = specs[kind];
         const card = el('article', 'briefing-enemy');
         card.append(this._enemyIcon(kind));
@@ -318,15 +339,28 @@
         return card;
       }));
 
-      // 4. Terrain
+      // 4. Terrain and the operation's conditions (environment first: it matters most)
       const terrain = this.dialog.querySelector('#briefing-terrain');
-      const items = [
+      const op = this.operation;
+      const rules = this.planet.hazards || {};
+      const items = [];
+      if (op.weather && op.weather.sandstorm) {
+        items.push(['storm', '砂嵐', 'ときどき発生。視界がほぼゼロになり、敵拠点にも気づかれにくくなる。']);
+      }
+      if (rules.heat) items.push(['heat', 'エンジン過熱', '全速で走り続けるとオーバーヒートし、冷えるまで速度が落ちる。']);
+      if (rules.dust) items.push(['dust', '砂煙', '速く走るほど、遠くの拠点に気づかれやすい。止まっていれば気づかれにくい。']);
+      if (op.mirage) items.push(['mirage', '蜃気楼', '昼間、遠くの敵は実際の位置からずれて揺らいで見える。']);
+      if (op.longRange) items.push(['range', '遠距離戦', `自機の照準距離 +${op.longRange.player}。敵の射程も長い。`]);
+      for (const z of world.zones) {
+        if (z.kind === 'saltflat') items.push(['salt', '塩の平原', '岩ひとつない真っ白な平原。遮蔽物がまったくない。']);
+        if (z.kind === 'city') items.push(['city', `旧市街 建物×${world.structures.length}`, '建物は通行不可で、砲弾も通さない。狭い路地と行き止まりに注意。']);
+      }
+      if (op.hold) items.push(['hold', '封鎖', `制圧後、${op.hold.duration}秒間まわりの円を守る。円を出るとカウントが止まる。`]);
+      items.push(
         ['rock', `大型の岩 ×${world.obstacles.length}`, '通行不可。砲弾を防ぐ遮蔽物として使える。'],
         ['ramp', `ジャンプ台 ×${world.ramps.length}`, '勢いよく進入すると空中に跳躍する。'],
-        ['gully', `涸れ川 ×${world.gullies.length}`, '走行可能な浸食溝。進路の目印になる。'],
-        ['hardpan', `ひび割れ地帯 ×${world.hardpans.length}`, '乾いた泥の平地。走行への影響はない。'],
         ['wrap', `マップ ${world.width}×${world.height}`, '上下左右がつながっている（端を越えると反対側へ）。']
-      ];
+      );
       terrain.replaceChildren(...items.map(([key, title, desc]) => {
         const li = el('li', 'briefing-terrain-item');
         li.append(el('span', `briefing-swatch is-${key}`), el('strong', '', title), el('span', '', desc));
@@ -353,7 +387,8 @@
       const opBox = this.dialog.querySelector('#briefing-operation');
       opBox.replaceChildren(
         kv('作戦名', `「${this.operation.name}」`, true),
-        kv('目標', `敵拠点${combat.bases.length}か所の制圧`)
+        ...(this.operation.stage ? [kv('段階', `第${this.operation.stage}段階（${this.operation.phase}）`)] : []),
+        kv('目標', this.operation.goal || `敵拠点${combat.bases.length}か所の制圧`)
       );
     }
 

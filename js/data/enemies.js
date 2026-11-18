@@ -1,8 +1,8 @@
 (function (global) {
   'use strict';
 
-  // Enemy unit data: tank/bunker specs, the garrison of every compound and the
-  // names/descriptions shown on the briefing and the after-action report.
+  // Enemy unit data: tank/bunker specs and the names/descriptions shown on the briefing and the
+  // after-action report. The garrison of each compound is set per operation (js/data/operations.js).
   // Read by CombatManager (js/combat/), BriefingScene (briefing.js) and ResultsReport (results.js).
 
   const ENEMY_SPECS = {
@@ -94,27 +94,20 @@
     }
   };
 
-  // Garrison of each compound, by compound id (α, β, … — see _initEnemyBases in js/planet/terrain.js).
-  // tier raises HP and scrap value (+15% per tier): the central compounds near the HQ are the
-  // lightest, the eastern ones stronger, the western ones the strongest.
-  const BASE_GARRISONS = [
-    { tier: 0, bunkers: 1, tanks: ['light', 'light', 'medium'] },
-    { tier: 0, bunkers: 1, tanks: ['light', 'light', 'medium', 'medium'] },
-    { tier: 1, bunkers: 1, tanks: ['light', 'medium', 'medium', 'medium'] },
-    { tier: 1, bunkers: 2, tanks: ['light', 'light', 'medium', 'medium'] },
-    { tier: 2, bunkers: 2, tanks: ['light', 'medium', 'medium', 'medium'] },
-    { tier: 2, bunkers: 2, tanks: ['light', 'light', 'medium', 'medium', 'medium'] }
-  ];
-
   // Display names + one-line role descriptions (briefing enemy intel, results kill breakdown)
   const ENEMY_INFO = {
     light: { name: '軽戦車', role: '高速で接近してくる突撃型。装甲は薄いが数が多い。' },
     medium: { name: '中戦車', role: '火力と装甲のバランスが取れた主力。正面からの撃ち合いに強い。' },
-    bunker: { name: 'トーチカ', role: '拠点の固定砲台。移動しないが耐久が高く、射程も長い。' }
+    heavy: { name: '重戦車', role: '鈍重だが装甲が厚く、一撃が重い。距離を取って確実に削ること。' },
+    bunker: { name: 'トーチカ', role: '拠点の固定砲台。移動しないが耐久が高く、射程も長い。' },
+    boss: { name: '司令官車', role: '敵指揮官が乗る大型戦車。装甲・火力ともに桁違いで、装填も速い。' }
   };
+
+  // Briefing / report order of the enemy kinds
+  const ENEMY_KIND_ORDER = ['light', 'medium', 'heavy', 'bunker', 'boss'];
 
   const GameData = global.GameData || (global.GameData = {});
   GameData.ENEMY_SPECS = ENEMY_SPECS;
-  GameData.BASE_GARRISONS = BASE_GARRISONS;
   GameData.ENEMY_INFO = ENEMY_INFO;
+  GameData.ENEMY_KIND_ORDER = ENEMY_KIND_ORDER;
 })(window);

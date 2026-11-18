@@ -9,6 +9,7 @@
 
   class CombatEnemyAI {
     _updateEnemies(dt, player) {
+      const sight = this.sightRange();
       for (const e of this.enemies) {
         if (!e.alive) continue;
         e.tickAlertMark(dt);
@@ -20,6 +21,14 @@
 
         let throttle = 0;
         let steer = 0;
+        const spec = ENEMY_SPECS[e.kind];
+        const rangeScale = this.enemyRangeScale; // long-range operation: fire and keep station farther out
+        // A sandstorm hides the target beyond sight range: the tank keeps closing in but holds fire
+        const inSight = dist < sight;
+        if (e.state === 'retreat') {
+          this._retreat(e, dx, dy, dist, dt);
+          continue;
+        }
         const idle = e.state === 'idle'; // parked at its compound until alerted
         // Just alerted: still reacting — turret swings onto the target but the tank neither moves nor fires
         const reacting = !idle && e.reactTimer > 0;
@@ -32,7 +41,7 @@
             if (Math.random() < 0.4) e.aiStrafeDir *= -1;
           }
 
-          const spec = ENEMY_SPECS[e.kind];
+          const preferred = spec.preferredDist * rangeScale;
           const nx = dx / Math.max(1, dist);
           const ny = dy / Math.max(1, dist);
           const px = -ny * e.aiStrafeDir;
@@ -40,10 +49,10 @@
 
           let desiredX = nx;
           let desiredY = ny;
-          if (dist < spec.preferredDist * 0.72) {
+          if (dist < preferred * 0.72) {
             desiredX = -nx * 0.7 + px * 0.7;
             desiredY = -ny * 0.7 + py * 0.7;
-          } else if (dist < spec.preferredDist * 1.25) {
+          } else if (dist < preferred * 1.25 && inSight) {
             desiredX = px * 0.9 + nx * 0.2;
             desiredY = py * 0.9 + ny * 0.2;
           }
@@ -52,12 +61,13 @@
           for (const obs of this.world.colliders) {
             const ox = this.world.deltaX(obs.x, e.x);
             const oy = this.world.deltaY(obs.y, e.y);
-            const od = Math.hypot(ox, oy);
-            const clearance = od - obs.radius - e.radius;
-            if (clearance > 90 || od < 1) continue;
+            if (Math.hypot(ox, oy) - obs.radius - e.radius > 90) continue;
+            const s = this.world.surfaceGap(obs, e.x, e.y);
+            const clearance = s.gap - e.radius;
+            if (clearance > 90) continue;
             const push = (1 - Math.max(0, clearance) / 90) * 1.6;
-            desiredX += (ox / od) * push;
-            desiredY += (oy / od) * push;
+            desiredX += s.nx * push;
+            desiredY += s.ny * push;
           }
 
           const desiredAng = Math.atan2(desiredY, desiredX);
@@ -71,12 +81,12 @@
 
         e.stepPhysics(throttle, steer, dt, null);
 
-        if (!idle && tgt.alive && dist < 760) {
+        if (!idle && tgt.alive && inSight && dist < 760 * rangeScale) {
           // Lead the target using actual velocity (correct in both tank & directional control modes)
           const leadX = this.world.wrapX(tgt.x + tgt._velX * 0.25);
           const leadY = this.world.wrapY(tgt.y + tgt._velY * 0.25);
           e.aimAtWorldPoint(leadX, leadY, dt);
-          if (!reacting && e.reloadTimer <= 0 && dist < 620) {
+          if (!reacting && e.reloadTimer <= 0 && dist < 620 * rangeScale) {
             this.fireMainCannon(e, leadX, leadY);
           }
         } else {
@@ -103,6 +113,29 @@
       }
 
       this._separateEnemies();
+    }
+
+    // Reinforcements falling back once the area has been held: drive away from the platoon
+    // (around obstacles), turret straight, no firing
+    _retreat(e, dx, dy, dist, dt) {
+      let desiredX = -dx / Math.max(1, dist);
+      let desiredY = -dy / Math.max(1, dist);
+      for (const obs of this.world.colliders) {
+        const ox = this.world.deltaX(obs.x, e.x);
+        const oy = this.world.deltaY(obs.y, e.y);
+        if (Math.hypot(ox, oy) - obs.radius - e.radius > 90) continue;
+        const s = this.world.surfaceGap(obs, e.x, e.y);
+        const clearance = s.gap - e.radius;
+        if (clearance > 90) continue;
+        const push = (1 - Math.max(0, clearance) / 90) * 1.6;
+        desiredX += s.nx * push;
+        desiredY += s.ny * push;
+      }
+      let angDiff = Math.atan2(desiredY, desiredX) - e.hullAngle;
+      while (angDiff > Math.PI) angDiff -= Math.PI * 2;
+      while (angDiff < -Math.PI) angDiff += Math.PI * 2;
+      e.stepPhysics(Math.abs(angDiff) < 1.8 ? 0.9 : -0.3, Math.max(-1, Math.min(1, angDiff * 2.2)), dt, null);
+      e.returnTurretStraight(dt);
     }
 
     // Prevent enemy tanks from stacking on top of each other

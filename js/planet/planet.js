@@ -7,6 +7,8 @@
   //   terrain.js  world generation          ground.js  ground texture build + draw
   //   sky.js      sky / backdrop / haze      night.js   darkness + headlight cone
   //   props.js    flags, crates, rocks, jump pads    hq.js      operations HQ (作戦本部)
+  //   zones.js    per-operation compounds, salt flat / old town, collision helpers
+  //   weather.js  sandstorm overlay
 
   // World size: 4800 x 4800 (4x the original 2400 x 2400 area). Content counts below are scaled by
   // AREA_SCALE so the density of rocks, terrain detail, crates and jump pads stays the same.
@@ -207,12 +209,22 @@
       this.maxScorchMarks = 90;
 
       this.revealedBases = new Set(); // compounds whose ground pad is drawn (garrisoned this sortie)
+      // Set per operation by applyOperation (js/planet/zones.js)
+      this.sites = []; // compound layouts of the current operation (index == compound id)
+      this.zones = []; // salt flat / old town areas laid over the map
+      this.structures = []; // buildings of an old town (solid boxes: block tanks and shells)
+      this.storm = 0; // sandstorm strength 0..1 (js/game/hazards.js)
+      this.mirage = 0; // mirage strength 0..1 (daytime on a salt flat operation)
 
       this._initBackdrop();
       this._initTerrainAndProps();
       this._initEnemyBases();
       this._initHeadquarters();
+      // Full sets as generated; an operation can clear the rocks / jump pads of some areas
+      this.allObstacles = this.obstacles;
+      this.allRamps = this.ramps;
       // Everything a tank can't drive through: boulders + the solid parts of the HQ
+      // (+ the buildings of an old town, see applyOperation)
       this.colliders = [...this.obstacles, ...this.hq.colliders];
       // Destructible ground props (crates / crystals / fuel barrels) are disabled. They are still
       // generated above so the shared RNG sequence — and thus the rest of the map layout — is unchanged.
@@ -379,15 +391,14 @@
     revealBase(id) {
       if (this.revealedBases.has(id)) return;
       this.revealedBases.add(id);
-      const b = (this.enemyBases || []).find((s) => s.id === id);
+      const b = this.sites.find((s) => s.id === id);
       if (b) this._stampGround(b.x, b.y, b.radius + 40, (g) => this._drawBasePad(g, b));
     }
 
-    // New sortie: remove every compound from the ground again (rebuilds the baked texture)
+    // New sortie: forget the garrisoned compounds. Their pads stay baked into the ground until the
+    // next operation is set up (applyOperation in js/planet/zones.js rebuilds the texture).
     hideAllBases() {
-      if (this.revealedBases.size === 0) return;
       this.revealedBases.clear();
-      this._buildGroundTexture();
     }
 
     addTreadMark(x, y, angle) {

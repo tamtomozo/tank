@@ -132,9 +132,12 @@
 
   // Report scripts (original lines for this game's HQ operator, Mio)
   RadioComms.script = {
-    missionStart(baseCount, planetName) {
-      if (!baseCount) return 'こちら作戦本部、オペレーターのミオです。周辺に敵影はありません。自由に走行してください。';
-      return `こちら作戦本部、オペレーターのミオです。作戦を開始します。${planetName}の敵拠点は全${baseCount}か所、すべて制圧してください。攻略の順番は隊長に任せます。`;
+    // Sortie begins (selection = { planet, operation }): the operation's own lines, in order
+    missionStart(selection) {
+      const op = selection && selection.operation;
+      if (op && op.radio && op.radio.start) return op.radio.start;
+      const n = op && op.sites ? op.sites.length : 0;
+      return [`こちら作戦本部、オペレーターのミオです。作戦を開始します。敵拠点は全${n}か所、すべて制圧してください。`];
     },
 
     controlMode(isDirect) {
@@ -160,13 +163,62 @@
       return `制圧した拠点では、白旗まわりの円に入ると補給と僚機の補充が可能です。拠点${baseName}も利用できます。`;
     },
 
-    // Every compound captured: separate transmissions, in order (returns an array of lines).
+    // Objective done: separate transmissions, in order (returns an array of lines).
     // The platoon is ordered back to the operations HQ.
-    areaSecured(planetName) {
+    areaSecured(selection, planetName) {
+      const op = selection && selection.operation;
+      if (op && op.radio && op.radio.complete) return op.radio.complete;
       return [
-        `${planetName}は全拠点制圧です。現刻をもって作戦行動完了です。`,
+        `${planetName}の目標は全拠点制圧です。現刻をもって作戦行動完了です。`,
         '作戦本部へ帰還してください、隊長。本部の位置を送ります。'
       ];
+    },
+
+    // ---- hold the area (operation.hold) ----
+    holdStart(selection, hold) {
+      const op = selection && selection.operation;
+      if (op && op.radio && op.radio.holdStart) return op.radio.holdStart;
+      return [`拠点を確保しました。${hold.duration}秒間、まわりの円から離れずに守り抜いてください！`];
+    },
+
+    holdLeft() {
+      return '封鎖線から離れています！ 黄色い円の中に戻ってください。カウントが止まっています！';
+    },
+
+    holdBack() {
+      return '封鎖線に戻りました。カウントを再開します。';
+    },
+
+    holdHalf(left) {
+      return `あと${left}秒です！ 持ちこたえてください！`;
+    },
+
+    holdWave() {
+      return '敵の増援を確認！ 四方から接近してきます！';
+    },
+
+    // ---- environment (js/game/hazards.js) ----
+    stormIncoming() {
+      return pick([
+        '砂嵐が来ます！ 視界がほぼなくなります。敵からもこちらは見えません、接近するなら今です。',
+        '砂嵐、接近中です！ 嵐の中なら気づかれずに拠点へ近づけます。'
+      ]);
+    },
+
+    stormPassing() {
+      return '砂嵐が抜けていきます。視界が戻ります。敵にも見つかりやすくなりますよ。';
+    },
+
+    heatWarning() {
+      return 'エンジン温度が上がっています。少し速度を落としてください。';
+    },
+
+    overheat() {
+      return 'オーバーヒートです！ エンジンが冷えるまで速度が落ちます！';
+    },
+
+    heatRecovered() {
+      return 'エンジン温度、正常に戻りました。';
     },
 
     // The player has driven back onto the HQ pad after securing the planet

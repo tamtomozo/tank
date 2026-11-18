@@ -239,28 +239,10 @@
         placed.push(...sites);
       }
 
+      // Generated compound sites ("slots"): an operation garrisons some of them (js/planet/zones.js)
       this.enemyBases = placed.map((s, i) => {
         const rot = rand() * Math.PI * 2;
-        const bunkerSlots = [];
-        for (let k = 0; k < 2; k++) {
-          const a = rot + k * Math.PI + 0.4;
-          bunkerSlots.push({ x: this.wrapX(s.x + Math.cos(a) * 70), y: this.wrapY(s.y + Math.sin(a) * 70), angle: a });
-        }
-        const parkingSlots = [];
-        for (let k = 0; k < 6; k++) {
-          const a = rot + (k / 6) * Math.PI * 2 + 0.52;
-          parkingSlots.push({ x: this.wrapX(s.x + Math.cos(a) * 158), y: this.wrapY(s.y + Math.sin(a) * 158), angle: a });
-        }
-        return {
-          id: i,
-          name: names[i] || String(i + 1),
-          x: s.x,
-          y: s.y,
-          radius: 200,
-          rot,
-          bunkerSlots,
-          parkingSlots
-        };
+        return { id: i, name: names[i] || String(i + 1), ...this._siteLayout(s.x, s.y, rot) };
       });
 
       // Keep crates/barrels out of the compounds

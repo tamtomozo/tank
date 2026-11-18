@@ -318,6 +318,46 @@ dialog.sortie-dialog {
   color: #0b111c;
 }
 
+/* Stage cards: completed / not yet unlocked */
+.op-card-badge {
+  margin-inline-start: 0.6rem;
+  padding-inline: 0.45rem;
+  padding-block: 0.05rem;
+  border-radius: 0.3rem;
+  background: rgb(34 197 94 / 0.2);
+  border: 1px solid rgb(74 222 128 / 0.6);
+  color: #bbf7d0;
+  letter-spacing: 0.06em;
+}
+
+.op-card.is-cleared {
+  border-inline-start-color: #22c55e;
+}
+
+.op-card.is-locked {
+  cursor: not-allowed;
+  opacity: 0.6;
+  background: rgb(2 6 23 / 0.45);
+  border-style: dashed;
+  border-inline-start-style: solid;
+  border-inline-start-color: rgb(148 163 184 / 0.5);
+}
+
+.op-card.is-locked:hover {
+  border-color: rgb(148 180 218 / 0.3);
+  background-color: rgb(2 6 23 / 0.45);
+}
+
+.op-card.is-locked .op-card-name {
+  color: var(--text-muted);
+  text-shadow: none;
+}
+
+.op-card.is-locked .op-card-go {
+  background: rgb(148 163 184 / 0.2);
+  color: var(--text-muted);
+}
+
 /* Footer: the back button sits on the left */
 .sortie-footer {
   justify-content: flex-start;

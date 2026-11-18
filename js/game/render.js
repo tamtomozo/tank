@@ -16,7 +16,8 @@
 
     function drawAimReticleAndArc(drawCamX, drawCamY) {
       const activeTarget = game.activeTarget;
-      const targetPos = activeTarget ? { x: activeTarget.x, y: activeTarget.y } : game.controls.barrelForwardTarget(340);
+      // Locked on: the point the turret is aimed at (where the target appears to be, see the mirage)
+      const targetPos = activeTarget ? game.activeTargetPoint : game.controls.barrelForwardTarget(340);
       const rp = world.project(targetPos.x, targetPos.y, 0, drawCamX, drawCamY, viewW, viewH);
       if (rp) {
         ctx.save();
@@ -249,6 +250,53 @@
       ctx.restore();
     }
 
+    // One enemy at its apparent position (ap); shimmering while a mirage shifts it
+    function drawEnemy(e, ap, drawCamX, drawCamY, timeSec, nightFactor) {
+      if (ap.shift <= 0) {
+        e.draw(ctx, drawCamX, drawCamY, viewW, viewH, nightFactor);
+        return;
+      }
+      const realX = e.x;
+      const realY = e.y;
+      e.x = ap.x;
+      e.y = ap.y;
+      const prevAlpha = ctx.globalAlpha;
+      ctx.globalAlpha = prevAlpha * (1 - ap.shift * (0.3 + 0.2 * Math.sin(timeSec * 9 + e.miragePhase * 3)));
+      e.draw(ctx, drawCamX, drawCamY, viewW, viewH, nightFactor);
+      ctx.globalAlpha = prevAlpha;
+      e.x = realX;
+      e.y = realY;
+    }
+
+    // Circle the platoon must hold (operation `hold`), amber, with the share already held
+    function drawHoldZone(timeSec, drawCamX, drawCamY, offView) {
+      const h = combat.hold;
+      if (!h || !h.active || h.done) return;
+      const b = combat.bases[h.site];
+      const p = world.project(b.x, b.y, 0, drawCamX, drawCamY, viewW, viewH);
+      if (!p || offView(p, h.radius * p.scale + 40)) return;
+      const pulse = 0.5 + 0.5 * Math.sin(timeSec * (h.inside ? 3.2 : 8));
+      ctx.save();
+      ctx.translate(p.sx, p.sy);
+      ctx.scale(p.scale, p.scale * p.tiltCos);
+      ctx.fillStyle = `rgba(251, 191, 36, ${0.06 + 0.05 * pulse})`;
+      ctx.strokeStyle = `rgba(253, 224, 71, ${0.45 + 0.35 * pulse})`;
+      ctx.lineWidth = 4;
+      ctx.setLineDash([16, 10]);
+      ctx.lineDashOffset = -timeSec * 18;
+      ctx.beginPath();
+      ctx.arc(0, 0, h.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.strokeStyle = 'rgba(253, 224, 71, 0.9)';
+      ctx.lineWidth = 9;
+      ctx.beginPath();
+      ctx.arc(0, 0, h.radius, -Math.PI / 2, -Math.PI / 2 + (h.progress / h.duration) * Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     function render(timeSec, timeInfo) {
       player = game.player;
       viewW = game.view.w;
@@ -283,11 +331,21 @@
         renderQueue.push({ dy: p.dy, draw: () => world.drawObstacle(ctx, obs, p, drawCamX, drawCamY, viewW, viewH) });
       }
 
+      // Old-town buildings (same low-poly solids as the rocks)
+      for (const st of world.structures) {
+        const p = world.project(st.x, st.y, 0, drawCamX, drawCamY, viewW, viewH);
+        if (!p || offView(p, st.radius * 1.25 * p.scale + 30)) continue;
+        renderQueue.push({ dy: p.dy, draw: () => world.drawObstacle(ctx, st, p, drawCamX, drawCamY, viewW, viewH) });
+      }
+
+      // Enemies are drawn where they appear to be: a mirage shifts distant ones off their real
+      // position and makes them shimmer (CombatManager.apparentPos)
       for (const e of combat.enemies) {
         if (!e.alive) continue;
-        const p = world.project(e.x, e.y, 0, drawCamX, drawCamY, viewW, viewH);
+        const ap = combat.apparentPos(e);
+        const p = world.project(ap.x, ap.y, 0, drawCamX, drawCamY, viewW, viewH);
         if (!p || offView(p, 120)) continue;
-        renderQueue.push({ dy: p.dy, draw: () => e.draw(ctx, drawCamX, drawCamY, viewW, viewH, timeInfo.nightFactor) });
+        renderQueue.push({ dy: p.dy, draw: () => drawEnemy(e, ap, drawCamX, drawCamY, timeSec, timeInfo.nightFactor) });
       }
 
       for (const a of combat.allies) {
@@ -300,6 +358,7 @@
       // Operations HQ: tent, crates, flag and radio mast (its pad is part of the ground texture);
       // the return circle is drawn now so it lies under everything in the depth-sorted queue
       if (isReturning()) drawHqReturnZone(timeSec, drawCamX, drawCamY, offView);
+      drawHoldZone(timeSec, drawCamX, drawCamY, offView);
       for (const part of world.hq.parts) {
         const p = world.project(part.x, part.y, 0, drawCamX, drawCamY, viewW, viewH);
         if (!p || offView(p, 150 * p.scale + 20)) continue;
@@ -354,6 +413,8 @@
         ctx, playerGroundProj, player.hullAngle, player.cannonRange,
         player.x, player.y, drawCamX, drawCamY, viewW, viewH, combat.allies
       );
+      world.drawSandstorm(ctx, playerGroundProj, viewW, viewH, timeSec);
+      if (player.alive) game.hazards.drawHeatGauge(ctx, playerGroundProj, timeSec);
 
       // Fort icons floating over enemy-held compounds (UI layer: above the night darkness)
       for (const b of combat.bases) {

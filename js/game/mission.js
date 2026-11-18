@@ -15,23 +15,27 @@
   const SCENE_SWITCH_DELAY_MS = 250;
 
   function create(game) {
-    const { world, combat, tuning, depot, squad, radio, results, sortieSelect, briefing, backdrop, audio } = game;
+    const { world, combat, tuning, depot, squad, radio, results, sortieSelect, briefing, backdrop, audio, hazards } = game;
     const { start: startDialog, garage: garageDialog, gameover: gameoverDialog } = game.dialogs;
 
     // Radar-chart tuning (js/tuning.js) → the player's tank and every wingman. refill: fresh tanks
     // waiting on the HQ pad (full armour). Re-run on every change on the briefing.
     function applyTuning(refill = true) {
       game.player.applyStats(tuning.playerStats(), refill);
+      // Long-range operation: the lock-on (and headlight) reach is extended
+      const op = game.operation ? game.operation.operation : null;
+      if (op && op.longRange) game.player.cannonRange += op.longRange.player || 0;
       combat.magnetRadius = tuning.pickupRadius();
       squad.applyTuning(refill);
       game.hud.update();
     }
 
-    // New sortie: fresh tank on the HQ pad, world, platoon and clock, then the sortie-select
-    // screens (planet → operation) and the briefing (where the tanks are tuned). The tuning itself
-    // is kept from the previous sortie.
-    function start() {
-      audio.init();
+    // Fresh tank on the HQ pad, platoon, compounds and clock for `selection` ({ planet, operation },
+    // or null before one is picked: no compounds). The map is set up for the operation first
+    // (its compounds, salt flat / old town areas: js/planet/zones.js).
+    function resetSortie(selection) {
+      const op = selection ? selection.operation : null;
+      if (op) world.applyOperation(op);
       const player = new global.Tank2D(world, {
         isPlayer: true,
         x: world.hq.x,
@@ -41,17 +45,29 @@
       game.player = player;
       // Respawn destroyed crates/barrels and clear old decals so a restart is a genuinely fresh run
       world.resetDynamic();
-      combat.reset(player);
+      combat.reset(player, selection);
       radio.clear();
       squad.reset(player);
+      hazards.reset(selection);
       applyTuning(true);
-      world.dayTime = 0.30;
+      world.dayTime = op && op.startTime != null ? op.startTime : 0.30;
       world.dayCount = 1;
       game.cam.x = player.x;
       game.cam.y = player.y;
       game.cam.lookX = 0;
       game.cam.lookY = 0;
       game.cam.starOffsetX = 0;
+      game.activeTarget = null;
+      const bossTitle = document.querySelector('#boss-banner .boss-title');
+      if (bossTitle) bossTitle.textContent = (op && op.bossName) || '⚠ 敵指揮官車';
+    }
+
+    // New sortie: the sortie-select screens (planet → operation) and the briefing (where the tanks
+    // are tuned). The tuning itself is kept from the previous sortie.
+    function start() {
+      audio.init();
+      game.operation = null;
+      resetSortie(null);
       game.started = true;
       game.overShown = false;
       game.returnedToHq = false;
@@ -63,15 +79,17 @@
       sortieSelect.open(openBriefing);
     }
 
-    // Briefing for the picked { planet, operation }; 作戦選択へ goes back to that planet's operation list
+    // Briefing for the picked { planet, operation }; 作戦選択へ goes back to that planet's operation list.
+    // The battlefield is set up for the operation right away (the briefing shows its compounds).
     function openBriefing(selection) {
       game.operation = selection;
+      resetSortie(selection);
       backdrop.show('map', selection);
       briefing.open(selection, {
         delayMs: SCENE_SWITCH_DELAY_MS,
         onStart: () => {
           backdrop.hide(); // fade out to the battlefield
-          radio.say(global.RadioComms.script.missionStart(combat.bases.length, selection.planet.name));
+          for (const line of global.RadioComms.script.missionStart(selection)) radio.say(line);
         },
         onBack: () => {
           backdrop.show('room');
@@ -152,11 +170,24 @@
             radio.say(global.RadioComms.script.supplyAvailable(ev.base.name));
           }
         } else if (ev.type === 'areaSecured') {
-          // Last compound captured: Mio reports the planet secured and orders the platoon home
-          // (controls locked until she has finished)
-          for (const line of global.RadioComms.script.areaSecured(planetName())) {
+          // Objective done: Mio reports it and orders the platoon home (controls locked until she
+          // has finished)
+          for (const line of global.RadioComms.script.areaSecured(game.operation, planetName())) {
             radio.say(line, { lockControls: true });
           }
+        } else if (ev.type === 'holdStart') {
+          for (const line of global.RadioComms.script.holdStart(game.operation, combat.hold)) {
+            radio.say(line, { priority: 'high' });
+          }
+        } else if (ev.type === 'holdLeft') {
+          radio.say(global.RadioComms.script.holdLeft(), { key: 'hold-zone', priority: 'high' });
+        } else if (ev.type === 'holdBack') {
+          radio.say(global.RadioComms.script.holdBack(), { key: 'hold-zone' });
+        } else if (ev.type === 'holdHalf') {
+          radio.say(global.RadioComms.script.holdHalf(ev.left), { key: 'hold-half' });
+        } else if (ev.type === 'holdWave' && !combat.hold.waveReported) {
+          combat.hold.waveReported = true;
+          radio.say(global.RadioComms.script.holdWave(), { key: 'hold-wave' });
         }
       }
     }
@@ -185,6 +216,8 @@
       if (game.started && !game.overShown && player.alive && game.returnedToHq && radio.isIdle) {
         game.overShown = true;
         game.input.release();
+        // The next stage of the planet's campaign opens (js/campaign.js)
+        if (game.operation) global.Campaign.markCleared(game.operation.operation.id);
         results.open({ stats: combat.stats, combat, squad, player, world, audio, planetName: planetName() }, () => start());
       }
 

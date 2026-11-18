@@ -331,6 +331,15 @@
           }
         }
 
+        // Building impact (old town): walls stop shells below the roof line
+        if (!hit && this.world.structures.length > 0 && this.world.structureHit(p.x, p.y, p.z)) {
+          hit = true;
+          if (this.explodeAt(p.x, p.y, p.splashRadius, p.damage, p.fromPlayer, player, false, p.source) > 0 &&
+              p.source === 'player') {
+            this.stats.shotsHit += 1;
+          }
+        }
+
         // Ground impact
         if (!hit && p.z <= 0) {
           hit = true;

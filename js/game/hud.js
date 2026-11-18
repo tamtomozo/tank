@@ -28,6 +28,7 @@
       '--hp-hue': [styleOf('hud-hp-fill')],
       '--reload-ratio': touchBtn('fire'),
       '--boss-hp-ratio': [styleOf('boss-hp-fill')],
+      '--hold-ratio': [styleOf('hold-fill')],
       '--damage-alpha': [styleOf('damage-vignette')]
     };
 
@@ -38,7 +39,9 @@
       coords: document.getElementById('hud-coords'),
       hpText: document.getElementById('hud-hp-text'),
       scrap: document.getElementById('hud-scrap'),
-      bossBanner: document.getElementById('boss-banner')
+      bossBanner: document.getElementById('boss-banner'),
+      holdBanner: document.getElementById('hold-banner'),
+      holdText: document.getElementById('hold-text')
     };
     const lastText = new Map();
     const setText = (el, text) => {
@@ -105,6 +108,12 @@
       } else if (!hudEl.bossBanner.hidden) {
         hudEl.bossBanner.hidden = true;
       }
+
+      // Hold-the-area objective: time held so far
+      const hold = combat.hold;
+      const holding = !!(hold && hold.active && !hold.done);
+      if (hudEl.holdBanner.hidden === holding) hudEl.holdBanner.hidden = !holding;
+      if (holding) setVar('--hold-ratio', (hold.progress / hold.duration).toFixed(3));
     }
 
     function updateTexts(timeInfo) {
@@ -118,6 +127,13 @@
       setText(hudEl.coords, `X: ${Math.round(player.x)} / Y: ${Math.round(player.y)}`);
       setText(hudEl.hpText, `${Math.ceil(player.hp)} / ${player.maxHp}`);
       setText(hudEl.scrap, String(combat.scrap));
+
+      const hold = combat.hold;
+      if (hold && hold.active && !hold.done) {
+        const left = Math.ceil(hold.duration - hold.progress);
+        setText(hudEl.holdText, hold.inside ? `封鎖中 — 突入完了まで ${left} 秒` : `封鎖線の外！ 円に戻れ（残り ${left} 秒で停止中）`);
+        hudEl.holdBanner.classList.toggle('is-outside', !hold.inside);
+      }
     }
 
     return { update, frame };
