@@ -91,6 +91,7 @@
       this.ammoMax = null;
       this.rules = {}; // the planet's environment rules (planet.hazards)
       this.hold = null; // "hold the area" objective state (js/combat/bases.js)
+      this.sweep = null; // waves of a sweep operation (js/combat/sweep.js), null otherwise
       this.time = 0; // seconds of battle (drives the mirage shimmer)
     }
 
@@ -139,6 +140,8 @@
       this.time += dt;
       if (!this.stats.startClock) this.stats.startClock = this._clockStamp();
       if (countTime && !this.missionComplete) this.stats.elapsed += dt;
+      // Sweep operation: the lap runs while a wave's compounds stand (js/combat/sweep.js)
+      if (countTime && this.sweep && this.sweep.phase === 'fight') this.sweep.lap += dt;
       this.shakeIntensity = Math.max(0, this.shakeIntensity - dt * 2.0);
       this.damageFlash = Math.max(0, this.damageFlash - dt * 2.8);
 

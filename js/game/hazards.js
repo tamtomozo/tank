@@ -223,17 +223,17 @@
         bars.push({
           v: heat.value,
           color: `hsl(${hue}, 95%, 55%)`,
-          label: heat.overheated ? 'オーバーヒート' : 'エンジン温度',
+          label: heat.overheated ? L('オーバーヒート', 'OVERHEAT') : L('エンジン温度', 'Engine temp'),
           alert: heat.overheated,
           fade: Math.min(1, (heat.value - 0.2) / 0.15)
         });
       }
       if (coldOn && cold.value > 0.12) {
-        bars.push({ v: cold.value, color: '#7dd3fc', label: cold.value > 0.5 ? '低温 — 砲塔旋回低下' : '低温', alert: false, fade: 1 });
+        bars.push({ v: cold.value, color: '#7dd3fc', label: cold.value > 0.5 ? L('低温 — 砲塔旋回低下', 'Cold — slow turret') : L('低温', 'Cold'), alert: false, fade: 1 });
       }
       const iceLoad = combat.iceLoad(player);
       if (iceLoad > 0.1) {
-        bars.push({ v: iceLoad, color: iceLoad > 0.55 ? '#f87171' : '#bae6fd', label: iceLoad > 0.55 ? '氷が割れる！ 動け' : '氷にひび', alert: iceLoad > 0.55, fade: 1 });
+        bars.push({ v: iceLoad, color: iceLoad > 0.55 ? '#f87171' : '#bae6fd', label: iceLoad > 0.55 ? L('氷が割れる！ 動け', 'Ice breaking! Move!') : L('氷にひび', 'Ice cracking'), alert: iceLoad > 0.55, fade: 1 });
       }
       const w = 54;
       const h = 6;
@@ -261,7 +261,7 @@
       if (combat.ammo != null) {
         ctx.globalAlpha = 1;
         const low = combat.ammo <= 8;
-        const text = `残弾 ${combat.ammo}`;
+        const text = L(`残弾 ${combat.ammo}`, `Ammo ${combat.ammo}`);
         ctx.font = '800 11px system-ui, "Segoe UI", sans-serif';
         ctx.strokeStyle = 'rgba(15, 23, 42, 0.9)';
         ctx.strokeText(text, p.sx, y + 6);

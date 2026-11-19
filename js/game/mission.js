@@ -16,7 +16,7 @@
 
   function create(game) {
     const { world, combat, tuning, depot, squad, radio, results, sortieSelect, briefing, backdrop, audio, hazards } = game;
-    const { start: startDialog, garage: garageDialog, gameover: gameoverDialog } = game.dialogs;
+    const { start: startDialog, garage: garageDialog, gameover: gameoverDialog, pause: pauseDialog } = game.dialogs;
 
     // Radar-chart tuning (js/tuning.js) → the player's tank and every wingman. refill: fresh tanks
     // waiting on the HQ pad (full armour). Re-run on every change on the briefing.
@@ -36,6 +36,8 @@
     // is set up for the operation first (planet look, compounds, areas: js/planet/zones.js).
     function resetSortie(selection) {
       const op = selection ? selection.operation : null;
+      // Sweep operation: lay out its first wave of compounds (js/sweep.js)
+      if (op && op.sweep) global.Sweep.planRound(op, selection.planet, 0, world, [world.hq]);
       if (op) world.applyOperation(op, selection.planet.theme);
       const start = op && op.startAt ? op.startAt : { x: world.hq.x, y: world.hq.y, angle: -Math.PI * 0.5 };
       const player = new global.Tank2D(world, {
@@ -46,15 +48,17 @@
       });
       game.player = player;
       // What the campaign carries in: equipment, wear, crew level (tuning points), platoon, scrap
+      // (a sweep takes only the equipment and the crew level: fresh tank, full platoon, no scrap)
       const campaign = global.Campaign;
-      global.GameLoadout.set(selection ? campaign.equipment(selection.planet) : [], campaign.wear);
+      const sweep = !!(op && op.sweep);
+      global.GameLoadout.set(selection ? campaign.equipment(selection.planet) : [], sweep ? 0 : campaign.wear);
       tuning.setBonus(campaign.tuningBonus);
       // Respawn destroyed crates/barrels and clear old decals so a restart is a genuinely fresh run
       world.resetDynamic();
       combat.reset(player, selection);
-      combat.scrap = campaign.scrap;
+      combat.scrap = sweep ? 0 : campaign.scrap;
       radio.clear();
-      squad.reset(player, campaign.allies);
+      squad.reset(player, sweep ? campaign.maxAllies : campaign.allies);
       hazards.reset(selection);
       applyTuning(true);
       world.dayTime = op && op.startTime != null ? op.startTime : 0.30;
@@ -66,13 +70,14 @@
       game.cam.starOffsetX = 0;
       game.activeTarget = null;
       const bossTitle = document.querySelector('#boss-banner .boss-title');
-      if (bossTitle) bossTitle.textContent = (op && op.bossName) || '⚠ 敵指揮官車';
+      if (bossTitle) bossTitle.textContent = (op && op.bossName) || L('⚠ 敵指揮官車', '⚠ Enemy Command Tank');
     }
 
     // New sortie: the sortie-select screens (planet → operation) and the briefing (where the tanks
     // are tuned). The tuning itself is kept from the previous sortie.
     // options.award: the medal earned by the operation just completed, presented when the planet
     // select opens (js/medalAward.js)
+    // options.planetId: reopen straight on that planet's operation list (after a sweep)
     function start(options = {}) {
       audio.init();
       game.operation = null;
@@ -85,7 +90,7 @@
       // phase and Mio's mission-start report begin once the briefing is closed with 作戦開始.
       // Behind them the battlefield is hidden: the operations room, then the planet's tactical map.
       backdrop.show('room');
-      sortieSelect.open(openBriefing, { award: options.award || null });
+      sortieSelect.open(openBriefing, { award: options.award || null, planetId: options.planetId || null });
     }
 
     // Briefing for the picked { planet, operation }; 作戦選択へ goes back to that planet's operation list.
@@ -112,11 +117,15 @@
       if (!game.started) start();
     });
 
+    // After a sweep or a withdrawal the operation list of its planet opens again (returnPlanetId)
+    let returnPlanetId = null;
     gameoverDialog.addEventListener('close', () => {
       const val = gameoverDialog.returnValue;
       gameoverDialog.returnValue = '';
+      const planetId = returnPlanetId;
+      returnPlanetId = null;
       if (val === 'restart') {
-        start();
+        start({ planetId });
       }
     });
 
@@ -128,6 +137,10 @@
 
     function checkSupplyDepots() {
       const player = game.player;
+      if (combat.sweep) {
+        checkSweepRest();
+        return;
+      }
       if (game.operation && game.operation.operation.noSupply) return; // cut off: no depots at all
       // In combat (same condition as the HUD's "散開・交戦": sortied enemies near the platoon)
       // no prompt is offered; the visit stays armed so it appears once the fight is over.
@@ -147,7 +160,7 @@
             continue;
           }
           b.supplyArmed = false; // once per visit
-          openDepotMenu(`拠点 ${b.name}（制圧済み）— 補給・僚機補充`);
+          openDepotMenu(L(`拠点 ${b.name}（制圧済み）— 補給・僚機補充`, `${b.name} (captured) — Resupply & Reinforce`));
         }
       }
     }
@@ -161,9 +174,174 @@
       depot.open(player, combat, squad, () => game.hud.update());
     }
 
+    // ---- Sweep operation: between two waves (js/sweep.js) ----------------------------------------
+    // Once a wave has fallen, only the white flag of the compound captured last offers the menu:
+    // recover and go on, or go on as is. Closing it (✕) leaves the choice for the next visit.
+    function checkSweepRest() {
+      const s = combat.sweep;
+      const b = s.restBase;
+      if (s.phase !== 'rest' || !b) return;
+      const player = game.player;
+      const d = Math.hypot(world.deltaX(player.x, b.x), world.deltaY(player.y, b.y));
+      if (d > SUPPLY_REARM_RADIUS) {
+        b.supplyArmed = true;
+      } else if (d < SUPPLY_PROMPT_RADIUS && b.supplyArmed) {
+        if (!player.alive || garageDialog.open || gameoverDialog.open) return; // (offered once it has closed)
+        b.supplyArmed = false; // once per visit
+        game.input.release();
+        document.getElementById('garage-title').textContent = L(`拠点 ${b.name} — 第${s.round + 1}波 制圧完了`, `${b.name} — Wave ${s.round + 1} cleared`);
+        depot.openSweep(player, combat, squad, {
+          wave: s.round + 1,
+          rounds: s.rounds,
+          onChoose: (recover) => {
+            if (recover) combat.sweepRecover(game.player, squad);
+            sweepNextRound();
+          },
+          onChange: () => game.hud.update()
+        });
+      }
+    }
+
+    // Lay out the next wave away from the platoon and garrison it (the captured compounds go)
+    function sweepNextRound() {
+      const sel = game.operation;
+      const avoid = [game.player, ...combat.allies.filter((a) => a.alive)];
+      global.Sweep.planRound(sel.operation, sel.planet, combat.sweep.round + 1, world, avoid);
+      world.replaceSites(sel.operation.sites, avoid);
+      combat.startSweepRound();
+      game.hud.update();
+    }
+
+    // End of a sweep run: the last wave fell (complete) or the tank was lost. The best run per
+    // planet is kept; nothing else carries over to the campaign.
+    function showSweepResult(complete) {
+      const player = game.player;
+      const s = combat.sweep;
+      const planet = game.operation.planet;
+      const time = combat.sweepTime;
+      const rec = global.Campaign.recordSweep(planet.id, { captured: s.captured, time, laps: s.laps });
+      const fmt = global.Sweep.formatTime;
+      returnPlanetId = planet.id;
+      game.overShown = true;
+      game.input.release();
+
+      const badge = document.getElementById('gameover-badge');
+      badge.textContent = complete ? 'SWEEP COMPLETE' : player.sunk ? 'TANK LOST' : 'TANK DESTROYED';
+      badge.classList.toggle('danger', !complete);
+      badge.classList.toggle('success', complete);
+      document.getElementById('gameover-title').textContent = complete
+        ? L(`${planet.name} 掃討完了 — 全${s.total}拠点を制圧`, `${planet.name} swept — all ${s.total} compounds captured`)
+        : L('掃討作戦 終了', 'Sweep over');
+      const notes = [];
+      if (rec.newBest) notes.push(L('自己ベスト更新！', 'New personal best!'));
+      if (rec.newBestLap) notes.push(L('ベストラップ更新！', 'New best lap!'));
+      document.getElementById('gameover-summary').textContent =
+        L(`制圧した拠点: ${s.captured} / ${s.total} ／ 合計タイム: ${fmt(time)} ／ 撃破した敵: ${combat.kills} 両`,
+          `Compounds captured: ${s.captured} / ${s.total} · Total time: ${fmt(time)} · Enemies destroyed: ${combat.kills}`)
+        + (notes.length ? `\n${notes.join(L('　', ' '))}` : '');
+
+      // Lap times, the best of the run marked; an unfinished wave shows how far it got
+      const lapsEl = document.getElementById('gameover-laps');
+      const best = s.laps.length ? Math.min(...s.laps) : null;
+      const items = s.laps.map((t, i) => {
+        const li = document.createElement('li');
+        li.textContent = L(`第${i + 1}波　${fmt(t)}`, `Wave ${i + 1}  ${fmt(t)}`);
+        if (t === best) li.classList.add('is-best');
+        return li;
+      });
+      if (!complete && s.phase === 'fight') {
+        const li = document.createElement('li');
+        li.className = 'is-unfinished';
+        const done = combat.bases.filter((b) => b.cleared).length;
+        li.textContent = L(`第${s.round + 1}波　${fmt(s.lap)}（${done} / ${combat.bases.length} で中断）`,
+          `Wave ${s.round + 1}  ${fmt(s.lap)} (stopped at ${done} / ${combat.bases.length})`);
+        items.push(li);
+      }
+      lapsEl.replaceChildren(...items);
+      lapsEl.hidden = items.length === 0;
+      if (rec.record && rec.record.bestLap != null) {
+        lapsEl.dataset.record = L(`この惑星の記録: ${rec.record.captured} / ${s.total} 拠点 ${fmt(rec.record.time)} ／ ベストラップ ${fmt(rec.record.bestLap)}`,
+          `Planet record: ${rec.record.captured} / ${s.total} in ${fmt(rec.record.time)} · Best lap ${fmt(rec.record.bestLap)}`);
+      } else {
+        delete lapsEl.dataset.record;
+      }
+      document.getElementById('btn-restart').textContent = L('作戦選択へ戻る', 'Back to operations');
+      gameoverDialog.showModal();
+    }
+
+    // ---- Pause (HUD ⏸ / Esc / P): back to the operation, or withdraw ----------------------------
+    // The game stands still while the window is open (main.js). Withdrawing ends the sortie as a
+    // failure (nothing changes in the campaign, like a lost tank); a sweep keeps its record so far.
+    // Once the objective is met, withdrawing is no longer offered.
+    function canPause() {
+      return game.started && !!game.operation && !game.overShown && game.player.alive
+        && !startDialog.open && !garageDialog.open && !gameoverDialog.open && !pauseDialog.open
+        && !sortieSelect.isOpen && !briefing.isOpen && !results.isOpen;
+    }
+
+    function openPause() {
+      if (!canPause()) return;
+      game.input.release();
+      const s = combat.sweep;
+      const canWithdraw = !combat.missionComplete;
+      const fmt = global.Sweep.formatTime;
+      const name = game.operation.operation.name;
+      document.getElementById('pause-title').textContent = L(`作戦「${name}」`, `Op. "${name}"`);
+      document.getElementById('btn-pause-withdraw').hidden = !canWithdraw;
+      let text;
+      if (!canWithdraw) {
+        text = L('目標は達成済みです。作戦本部へ帰還してください。', 'The objective is met. Return to HQ.');
+      } else if (s) {
+        text = L(`撤退すると、ここまでの記録（制圧 ${s.captured} / ${s.total} 拠点・合計タイム ${fmt(combat.sweepTime)}）で作戦を終了します。`,
+          `Withdraw and the run ends with the record so far (${s.captured} / ${s.total} compounds, total time ${fmt(combat.sweepTime)}).`);
+      } else {
+        text = L('撤退すると作戦失敗となり、作戦選択に戻ります。キャンペーンの進行は変わりません。',
+          'Withdraw and the operation fails; you return to the operation select. Campaign progress does not change.');
+      }
+      document.getElementById('pause-summary').textContent = text;
+      pauseDialog.showModal();
+    }
+
+    // HUD button and keys (js/game/input.js): P also closes the window again
+    function togglePause() {
+      if (pauseDialog.open) pauseDialog.close('resume');
+      else openPause();
+    }
+
+    const btnPause = document.getElementById('btn-pause');
+    btnPause.addEventListener('click', () => {
+      btnPause.blur();
+      openPause();
+    });
+
+    pauseDialog.addEventListener('close', () => {
+      const val = pauseDialog.returnValue;
+      pauseDialog.returnValue = '';
+      game.input.release();
+      if (val !== 'withdraw' || game.overShown || combat.missionComplete || !game.player.alive) return;
+      withdraw();
+    });
+
+    // Withdraw: straight back to the planet's operation select, no report. An ordinary operation
+    // is a failed sortie (the campaign is unchanged); a sweep keeps its record so far.
+    function withdraw() {
+      const s = combat.sweep;
+      const planet = game.operation.planet;
+      if (s) global.Campaign.recordSweep(planet.id, { captured: s.captured, time: combat.sweepTime, laps: s.laps });
+      game.overShown = true;
+      start({ planetId: planet.id });
+    }
+
+    // What the platoon achieved before the tank was lost
+    function failureSummary() {
+      const taken = combat.bases.filter((b) => b.cleared).length;
+      return L(`制圧した拠点: ${taken} / ${combat.bases.length} ／ 撃破した敵戦車: ${combat.kills} 両 ／ 残存僚機: ${combat.allies.length} 両 ／ 獲得スクラップ残高: ${combat.scrap}`,
+        `Compounds captured: ${taken} / ${combat.bases.length} · Enemy tanks destroyed: ${combat.kills} · Wingmen left: ${combat.allies.length} · Scrap: ${combat.scrap}`);
+    }
+
     // Name of the planet this sortie is fought on (picked on the sortie-select screens)
     function planetName() {
-      return game.operation ? game.operation.planet.name : '作戦区域';
+      return game.operation ? game.operation.planet.name : L('作戦区域', 'the operation area');
     }
 
     // Radio reports for what happened in combat this frame (compound alerted / captured, area secured)
@@ -171,6 +349,23 @@
       for (const ev of combat.drainEvents()) {
         if (ev.type === 'alert') {
           radio.say(global.RadioComms.script.baseAlert(ev.base.name), { priority: 'high' });
+        } else if (ev.type === 'cleared' && combat.sweep) {
+          // Sweep: a short count of what is left of the wave (the last one gets the wave report)
+          ev.base.supplyArmed = false;
+          const left = combat.bases.filter((b) => !b.cleared).length;
+          if (left > 0) radio.say(global.RadioComms.script.sweepCaptured(ev.base.name, left), { key: 'sweep-capture' });
+        } else if (ev.type === 'sweepRoundClear') {
+          // Already on the flag when it fell: the menu opens straight away
+          ev.base.supplyArmed = true;
+          for (const line of global.RadioComms.script.sweepRoundClear(ev.round + 1, combat.sweep.rounds, global.Sweep.formatTime(ev.lap), ev.base.name)) {
+            radio.say(line, { priority: 'high' });
+          }
+        } else if (ev.type === 'sweepRoundStart') {
+          radio.say(global.RadioComms.script.sweepRoundStart(ev.round + 1, combat.sweep.rounds, combat.bases.length), { priority: 'high' });
+        } else if (ev.type === 'sweepComplete') {
+          for (const line of global.RadioComms.script.sweepComplete(combat.sweep.total, global.Sweep.formatTime(ev.time))) {
+            radio.say(line, { lockControls: true });
+          }
         } else if (ev.type === 'cleared') {
           // Capture hauls in every scattered item (done in CombatManager); no automatic resupply
           ev.base.supplyArmed = false; // the depot menu is offered on the next visit (leave and return)
@@ -246,6 +441,7 @@
     // while Mio confirms), and the after-action report follows (checkEnd).
     function checkReturnToHq() {
       const player = game.player;
+      if (combat.sweep) return; // a sweep ends where the last compound falls (checkEnd)
       if (!combat.missionComplete || game.returnedToHq || !player.alive) return;
       if (radio.controlsLocked) return; // Mio is still reporting the secured planet
       // An operation that ends where it is fought (operation.endInPlace: e.g. holding a captured
@@ -267,6 +463,13 @@
     // End of the sortie, checked every frame
     function checkEnd() {
       const player = game.player;
+      // Sweep: the record of the run once Mio has reported the last wave, or as soon as the tank is lost
+      if (combat.sweep) {
+        if (!game.started || game.overShown) return;
+        if (!player.alive) showSweepResult(false);
+        else if (combat.sweep.phase === 'done' && radio.isIdle) showSweepResult(true);
+        return;
+      }
       // Back at the HQ with the planet secured: the after-action report, once Mio has finished
       if (game.started && !game.overShown && player.alive && game.returnedToHq && radio.isIdle) {
         game.overShown = true;
@@ -307,11 +510,11 @@
         badge.classList.toggle('danger', !victory);
         badge.classList.toggle('success', victory);
         document.getElementById('gameover-title').textContent = victory
-          ? `${planetName()} 制圧 — 全${combat.bases.length}拠点を制圧`
-          : player.sunk ? '氷が割れて水没 — MISSION FAILED' : '車体大破 — MISSION FAILED';
-        document.getElementById('gameover-summary').textContent =
-          `制圧した拠点: ${combat.bases.filter((b) => b.cleared).length} / ${combat.bases.length} ／ 撃破した敵戦車: ${combat.kills} 両 ／ 残存僚機: ${combat.allies.length} 両 ／ 獲得スクラップ残高: ${combat.scrap}`;
-        document.getElementById('btn-restart').textContent = victory ? 'もう一度出撃する' : '新車両で再出撃する';
+          ? L(`${planetName()} 制圧 — 全${combat.bases.length}拠点を制圧`, `${planetName()} secured — all ${combat.bases.length} compounds taken`)
+          : player.sunk ? L('氷が割れて水没 — MISSION FAILED', 'Sank through the ice — MISSION FAILED') : L('車体大破 — MISSION FAILED', 'Tank Destroyed — MISSION FAILED');
+        document.getElementById('gameover-summary').textContent = failureSummary();
+        document.getElementById('btn-restart').textContent = victory ? L('もう一度出撃する', 'Sortie again') : L('新車両で再出撃する', 'Sortie again in a new tank');
+        document.getElementById('gameover-laps').hidden = true; // (sweep lap times only)
         gameoverDialog.showModal();
       }
     }
@@ -320,13 +523,16 @@
     function refitPlatoon() {
       const selection = game.operation;
       const campaign = global.Campaign;
-      global.GameLoadout.set(selection ? campaign.equipment(selection.planet) : [], campaign.wear);
-      combat.scrap = campaign.scrap;
-      if (squad.allies.length !== campaign.allies) squad.reset(game.player, campaign.allies);
+      // (a sweep: fresh tank, full platoon, no scrap — see resetSortie)
+      const sweep = !!(selection && selection.operation.sweep);
+      const allies = sweep ? campaign.maxAllies : campaign.allies;
+      global.GameLoadout.set(selection ? campaign.equipment(selection.planet) : [], sweep ? 0 : campaign.wear);
+      combat.scrap = sweep ? 0 : campaign.scrap;
+      if (squad.allies.length !== allies) squad.reset(game.player, allies);
       applyTuning(true);
     }
 
-    return { start, applyTuning, refitPlatoon, handleCombatEvents, checkSupplyDepots, checkReturnToHq, checkEnd };
+    return { start, applyTuning, refitPlatoon, handleCombatEvents, checkSupplyDepots, checkReturnToHq, checkEnd, togglePause };
   }
 
   global.GameMission = { create, SUPPLY_ZONE };

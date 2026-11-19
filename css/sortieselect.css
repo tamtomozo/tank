@@ -359,3 +359,16 @@ dialog.sortie-dialog {
     transition: none;
   }
 }
+
+/* Sweep operation (js/sweep.js): the extra card after the planet's stages */
+.op-card.is-sweep:not(.is-locked) {
+  border-inline-start-color: #38bdf8;
+}
+
+.op-card-record {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #7dd3fc;
+  font-variant-numeric: tabular-nums;
+}

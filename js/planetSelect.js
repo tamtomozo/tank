@@ -29,8 +29,8 @@
         const guide = (delay) => {
           const focus = this.list.querySelector(`[data-planet-id="${this.focusId}"]`);
           if (focus) focus.focus();
-          const ready = PLANETS.filter((p) => p.available).map((p) => p.name).join('、');
-          this.say(`隊長、出撃する惑星を選択してください。現在、出撃可能なのは${ready}です。`, delay);
+          const ready = PLANETS.filter((p) => p.available).map((p) => p.name).join(L('、', ', '));
+          this.say(L(`隊長、出撃する惑星を選択してください。現在、出撃可能なのは${ready}です。`, `Commander, please choose a planet to deploy to. Currently available: ${ready}.`), delay);
         };
         if (award) this.award.show(award, sayDelayMs, () => guide(300));
         else guide(sayDelayMs);
@@ -46,15 +46,15 @@
       const head = el('div', 'planet-card-head');
       head.append(
         el('span', 'sortie-code', planet.code),
-        el('span', `planet-card-state${planet.available ? '' : ' is-locked'}`, planet.available ? '出撃可能' : '未解放')
+        el('span', `planet-card-state${planet.available ? '' : ' is-locked'}`, planet.available ? L('出撃可能', 'Available') : L('未解放', 'Locked'))
       );
       const info = el('div', 'planet-card-info');
       info.append(
         head,
         el('strong', 'planet-card-name', planet.name),
-        el('span', 'planet-card-terrain', `地形: ${planet.terrain}`),
+        el('span', 'planet-card-terrain', L(`地形: ${planet.terrain}`, `Terrain: ${planet.terrain}`)),
         el('p', 'planet-card-summary', planet.summary),
-        el('p', 'planet-card-ops', planet.available ? `作戦 ${planet.operations.length} 件` : '作戦なし')
+        el('p', 'planet-card-ops', planet.available ? L(`作戦 ${planet.operations.length} 件`, `${planet.operations.length} operations`) : L('作戦なし', 'No operations'))
       );
       card.append(global.PlanetGlobe.create(planet), info);
 

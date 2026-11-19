@@ -76,7 +76,7 @@
         if (selection) {
           const { planet, operation } = selection;
           this.captionPlanet.textContent = `${planet.code} — ${planet.name}（${planet.terrain}）`;
-          this.captionOp.textContent = `作戦「${operation.name}」 TACTICAL MAP`;
+          this.captionOp.textContent = L(`作戦「${operation.name}」 TACTICAL MAP`, `Op. "${operation.name}" TACTICAL MAP`);
         }
       }
       this.root.dataset.mode = mode;

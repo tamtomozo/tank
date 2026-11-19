@@ -12,7 +12,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <title>PLANET PANZER — 2D惑星戦車バトル</title>
+  <title data-en="PLANET PANZER — 2D Planetary Tank Battle">PLANET PANZER — 2D惑星戦車バトル</title>
   <!-- order matters (later files win on equal specificity) -->
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/overlays.css">
@@ -32,6 +32,8 @@
   <!-- phones: on-screen controls + compact HUD / dialogs (last: overrides the rules above) -->
   <link rel="stylesheet" href="css/touch.css">
   <!-- shared helpers & data first: every later script reads them at load time -->
+  <!-- language first (?lang=en: English): every later script picks its texts through it -->
+  <script src="js/i18n.js" defer></script>
   <script src="js/util.js" defer></script>
   <script src="js/game/quality.js" defer></script>
   <script src="js/typewriter.js" defer></script>
@@ -39,6 +41,7 @@
   <script src="js/data/enemies.js" defer></script>
   <script src="js/data/tuning.js" defer></script>
   <script src="js/data/operations.js" defer></script>
+  <script src="js/data/operations.en.js" defer></script>
   <script src="js/data/equipment.js" defer></script>
   <script src="js/audio.js" defer></script>
   <script src="js/bgm.js" defer></script>
@@ -59,6 +62,7 @@
   <script src="js/combat/effects.js" defer></script>
   <script src="js/combat/ice.js" defer></script>
   <script src="js/combat/city.js" defer></script>
+  <script src="js/combat/sweep.js" defer></script>
   <script src="js/squad.js" defer></script>
   <script src="js/hudframe.js" defer></script>
   <script src="js/radio.js" defer></script>
@@ -76,6 +80,7 @@
   <script src="js/medal.js" defer></script>
   <script src="js/medalAward.js" defer></script>
   <script src="js/campaign.js" defer></script>
+  <script src="js/sweep.js" defer></script>
   <script src="js/operationSelect.js" defer></script>
   <script src="js/briefing.js" defer></script>
   <script src="js/results.js" defer></script>
@@ -94,7 +99,7 @@
 </head>
 <body>
   <main class="game-viewport">
-    <canvas id="game-canvas" aria-label="惑星戦車バトル 見下ろし2Dフィールド"></canvas>
+    <canvas id="game-canvas" aria-label="惑星戦車バトル 見下ろし2Dフィールド" data-en-aria-label="Planetary tank battle, top-down 2D field"></canvas>
 
     <!-- Damage / Low HP Screen Vignette -->
     <div id="damage-vignette" class="damage-vignette" aria-hidden="true"></div>
@@ -115,17 +120,17 @@
           <strong id="hud-clock" class="tabular-num">DAY 1 07:00</strong>
         </div>
         <div class="hud-sub-row">
-          <span>小隊 <strong id="hud-squad" class="tabular-num">5/5</strong></span>
+          <span><span data-en="Platoon">小隊</span> <strong id="hud-squad" class="tabular-num">5/5</strong></span>
         </div>
         <div class="hud-sub-row">
-          <span>座標 <strong id="hud-coords" class="tabular-num">X: 1200 / Y: 1200</strong></span>
+          <span><span data-en="Coords">座標</span> <strong id="hud-coords" class="tabular-num">X: 1200 / Y: 1200</strong></span>
         </div>
       </div>
 
       <div class="hud-panel hud-vital">
         <div class="stat-meter">
           <div class="meter-label">
-            <span>車体装甲 (HP)</span>
+            <span data-en="Hull Armor (HP)">車体装甲 (HP)</span>
             <strong id="hud-hp-text" class="tabular-num">120 / 120</strong>
           </div>
           <div class="meter-track">
@@ -141,27 +146,31 @@
         <div class="scrap-display">
           <span class="scrap-icon" aria-hidden="true">⚙</span>
           <div>
-            <div class="scrap-label">スクラップ</div>
+            <div class="scrap-label" data-en="Scrap">スクラップ</div>
             <strong id="hud-scrap" class="scrap-value tabular-num">0</strong>
           </div>
         </div>
         <div class="hud-actions">
-          <button id="btn-control-mode" type="button" class="btn-hud" aria-pressed="false" title="操縦モード切替 (C)">
-            🎮<span class="btn-label"> 戦車操縦</span> <kbd>C</kbd>
+          <button id="btn-control-mode" type="button" class="btn-hud" aria-pressed="false" title="操縦モード切替 (C)" data-en-title="Switch control mode (C)">
+            🎮<span class="btn-label" data-en=" Tank Drive"> 戦車操縦</span> <kbd>C</kbd>
           </button>
-          <button id="btn-mute" type="button" class="btn-hud" aria-pressed="false" title="音声オン/オフ (M)">
-            🔊<span class="btn-label"> 音声</span>
+          <button id="btn-mute" type="button" class="btn-hud" aria-pressed="false" title="音声オン/オフ (M)" data-en-title="Sound on / off (M)">
+            🔊<span class="btn-label" data-en=" Sound"> 音声</span>
           </button>
-          <button id="btn-fullscreen" type="button" class="btn-hud" aria-pressed="false" title="全画面表示" aria-label="全画面表示" hidden>
+          <!-- Pause: back to the operation / withdraw (js/game/mission.js) -->
+          <button id="btn-pause" type="button" class="btn-hud" title="一時停止 (Esc / P)" aria-label="一時停止" data-en-title="Pause (Esc / P)" data-en-aria-label="Pause">
+            ⏸<span class="btn-label" data-en=" Pause"> 一時停止</span>
+          </button>
+          <button id="btn-fullscreen" type="button" class="btn-hud" aria-pressed="false" title="全画面表示" aria-label="全画面表示" data-en-title="Full screen" data-en-aria-label="Full screen" hidden>
             ⛶
           </button>
         </div>
       </div>
 
-      <div class="hud-panel hud-controls-hint" aria-label="操作ガイド">
-        <div id="hud-move-hint"><kbd>W</kbd><kbd>S</kbd> 前後進 / <kbd>A</kbd><kbd>D</kbd> 超信地旋回</div>
-        <div><kbd>C</kbd> 操縦モード切替</div>
-        <div><kbd>マウス</kbd> 360° 砲塔照準</div>
+      <div class="hud-panel hud-controls-hint" aria-label="操作ガイド" data-en-aria-label="Controls">
+        <div id="hud-move-hint" data-en-html="&lt;kbd&gt;W&lt;/kbd&gt;&lt;kbd&gt;S&lt;/kbd&gt; Forward / Back · &lt;kbd&gt;A&lt;/kbd&gt;&lt;kbd&gt;D&lt;/kbd&gt; Pivot turn"><kbd>W</kbd><kbd>S</kbd> 前後進 / <kbd>A</kbd><kbd>D</kbd> 超信地旋回</div>
+        <div><kbd>C</kbd> <span data-en="Control mode">操縦モード切替</span></div>
+        <div><kbd data-en="Mouse">マウス</kbd> <span data-en="360° turret aim">360° 砲塔照準</span></div>
       </div>
       </div>
     </header>
@@ -176,14 +185,14 @@
 
     <!-- Hold-the-area objective (hidden unless one is running) -->
     <section id="hold-banner" class="hold-banner" hidden aria-live="polite">
-      <div id="hold-text" class="hold-title">封鎖中</div>
+      <div id="hold-text" class="hold-title" data-en="Holding">封鎖中</div>
       <div class="meter-track hold-track">
         <div id="hold-fill" class="meter-fill hold-fill"></div>
       </div>
     </section>
 
     <!-- HQ operator radio: every on-screen report, typed out at upper centre by js/radio.js -->
-    <section id="radio-panel" class="radio-panel has-hud-frame" aria-label="オペレーター無線">
+    <section id="radio-panel" class="radio-panel has-hud-frame" aria-label="オペレーター無線" data-en-aria-label="Operator radio">
       <div class="hud-frame" aria-hidden="true">
         <span class="bf-scan"></span>
         <span class="bf-edge bf-top"></span>
@@ -208,8 +217,8 @@
       <div class="radio-body hud-boot" style="--boot-i: 1">
         <div class="radio-header">
           <span class="radio-callsign">HQ</span>
-          <span class="radio-name">オペレーター ミオ</span>
-          <span class="radio-lock" aria-hidden="true">操作ロック中</span>
+          <span class="radio-name" data-en="Operator Mio">オペレーター ミオ</span>
+          <span class="radio-lock" aria-hidden="true" data-en="Controls locked">操作ロック中</span>
           <span class="radio-signal" aria-hidden="true"><i></i><i></i><i></i></span>
         </div>
         <p class="radio-text" aria-hidden="true"></p>
@@ -221,20 +230,20 @@
     <!-- Bottom Radar HUD -->
     <footer class="hud-bottom">
       <div class="hud-panel hud-radar">
-        <canvas id="radar-canvas" width="136" height="136" aria-label="自機周辺レーダー（半径1200）"></canvas>
+        <canvas id="radar-canvas" width="136" height="136" aria-label="自機周辺レーダー（半径1200）" data-en-aria-label="Local radar (radius 1200)"></canvas>
         <div class="radar-caption">LOCAL RADAR 1200</div>
       </div>
     </footer>
 
     <!-- Phones / tablets: on-screen stick + buttons (js/game/touchControls.js, css/touch.css) -->
     <div id="touch-controls" class="touch-controls" hidden>
-      <div id="touch-stick-zone" class="touch-stick-zone" aria-label="移動スティック">
+      <div id="touch-stick-zone" class="touch-stick-zone" aria-label="移動スティック" data-en-aria-label="Move stick">
         <div id="touch-stick" class="touch-stick" aria-hidden="true">
           <div id="touch-stick-knob" class="touch-stick-knob"></div>
         </div>
       </div>
       <div class="touch-buttons">
-        <button type="button" class="touch-btn touch-btn-fire" data-touch="fire" aria-label="主砲発射">主砲</button>
+        <button type="button" class="touch-btn touch-btn-fire" data-touch="fire" aria-label="主砲発射" data-en-aria-label="Fire main gun" data-en="FIRE">主砲</button>
       </div>
     </div>
 
@@ -333,7 +342,7 @@
     </div>
 
     <!-- Medals earned so far, under the tank (best rank per operation; js/titleScreen.js) -->
-    <div class="title-medals" role="group" aria-label="獲得した勲章" hidden></div>
+    <div class="title-medals" role="group" aria-label="獲得した勲章" data-en-aria-label="Medals earned" hidden></div>
 
     <div class="title-head">
       <div class="title-badge">PLANETARY ARMORED CORPS</div>
@@ -341,7 +350,7 @@
         <span class="title-logo-top">PLANET</span>
         <span class="title-logo-main">PANZER</span>
       </h1>
-      <p class="title-sub">惑星戦車バトル</p>
+      <p class="title-sub" data-en="PLANETARY TANK BATTLE">惑星戦車バトル</p>
       <!-- The four parts, scrolling up through the box on a loop (js/titleScreen.js) -->
       <div class="title-scenario">
         <div class="title-sc-viewport">
@@ -349,28 +358,28 @@
             <div class="title-sc-group">
               <!-- Told by a narrator. pre-head: who it is about -->
               <div class="title-sc-part is-prehead">
-                <p>三つの惑星を、ひとつずつ落としていく遠征。</p>
-                <p>その先陣を切って降下する部隊を率いるのは、ひとりの小隊長である。</p>
+                <p data-en="A campaign to take three planets, one at a time.">三つの惑星を、ひとつずつ落としていく遠征。</p>
+                <p data-en="The unit that lands first is led by a single platoon commander.">その先陣を切って降下する部隊を率いるのは、ひとりの小隊長である。</p>
               </div>
               <!-- catch copy: the headline -->
               <div class="title-sc-part is-catch">
-                <p>三つの星を落とす。</p>
-                <p>その最初の一歩を刻むのは、司令部ではない。</p>
-                <p>小隊長の「前進」の号令だ。</p>
+                <p data-en="Three worlds to take.">三つの星を落とす。</p>
+                <p data-en="The first step is not taken by headquarters.">その最初の一歩を刻むのは、司令部ではない。</p>
+                <p data-en="It is taken by a platoon commander&#39;s order: &quot;Advance.&quot;">小隊長の「前進」の号令だ。</p>
               </div>
               <!-- deck copy: backs up the headline, sparks curiosity (globes added by js/titleScreen.js) -->
               <div class="title-sc-part is-deck">
-                <p>目標は、三つの惑星。</p>
+                <p data-en="The objective: three planets.">目標は、三つの惑星。</p>
                 <div class="title-sc-planets" aria-hidden="true"></div>
-                <p>砂嵐の吹く辺境ザハル、吹雪と極夜に閉ざされたヴェルグ、<wbr>そして工場と都市に覆われた敵の本星カストラ。</p>
-                <p>ひとつの星を落とすたびに、次の星への道が開く。<wbr>どこかで足が止まれば、遠征はそこで終わる。</p>
-                <p>この作戦が求めているのは、迷わず前へ出る指揮官だった。</p>
+                <p data-en="Zahar, a frontier swept by sandstorms. Verg, locked in blizzards and polar night. And Castra, the enemy&#39;s home world, buried under factories and cities.">砂嵐の吹く辺境ザハル、吹雪と極夜に閉ざされたヴェルグ、<wbr>そして工場と都市に覆われた敵の本星カストラ。</p>
+                <p data-en="Each world that falls opens the way to the next. Stall anywhere, and the campaign ends there.">ひとつの星を落とすたびに、次の星への道が開く。<wbr>どこかで足が止まれば、遠征はそこで終わる。</p>
+                <p data-en="What this operation needed was a commander who would move forward without hesitation.">この作戦が求めているのは、迷わず前へ出る指揮官だった。</p>
               </div>
               <!-- lead: what the commanders were given, and what they did with it -->
               <div class="title-sc-part is-lead">
-                <p>作戦発動を目前にして、方面軍司令官から小隊長たちへ、一通の司令書が届けられた。</p>
-                <p>そこに記されていたのは三つのこと。<wbr>攻略する拠点と、その配置。<wbr>拠点を一つずつ制圧し、作戦本部へ生きて帰るまでの手順。<wbr>そして、部下を前へ進ませるために、小隊長が掲げるべき一言。</p>
-                <p>読み終えた者から順に、彼らは格納庫へ向かい、戦車の調整と装備の点検を始めた。</p>
+                <p data-en="On the eve of the operation, the theater commander sent a single order to the platoon commanders.">作戦発動を目前にして、方面軍司令官から小隊長たちへ、一通の司令書が届けられた。</p>
+                <p data-en="It held three things. The compounds to be taken, and where they stood. How to capture them one by one and make it back to HQ alive. And the one word a commander must give to move the troops forward.">そこに記されていたのは三つのこと。<wbr>攻略する拠点と、その配置。<wbr>拠点を一つずつ制圧し、作戦本部へ生きて帰るまでの手順。<wbr>そして、部下を前へ進ませるために、小隊長が掲げるべき一言。</p>
+                <p data-en="One by one, as they finished reading, they headed for the hangar to tune their tanks and check their gear.">読み終えた者から順に、彼らは格納庫へ向かい、戦車の調整と装備の点検を始めた。</p>
               </div>
             </div>
           </div>
@@ -381,8 +390,8 @@
     <p class="title-prompt">
       <span class="title-prompt-main">PRESS START</span>
       <span class="title-prompt-hint">
-        <span class="only-pointer">クリック または いずれかのキーで開始</span>
-        <span class="only-touch">画面をタップして開始</span>
+        <span class="only-pointer" data-en="Click or press any key to start">クリック または いずれかのキーで開始</span>
+        <span class="only-touch" data-en="Tap the screen to start">画面をタップして開始</span>
       </span>
     </p>
   </div>
@@ -397,8 +406,8 @@
         <path d="M36 50l2 4.5 4.5-2" fill="none" stroke="#fbbf24" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </div>
-    <p class="rotate-notice-title">端末を横向きにしてください</p>
-    <p class="rotate-notice-hint">このゲームは横向き専用です。横にすると再開します。</p>
+    <p class="rotate-notice-title" data-en="Please turn your device sideways">端末を横向きにしてください</p>
+    <p class="rotate-notice-hint" data-en="This game plays in landscape only. It resumes once the device is sideways.">このゲームは横向き専用です。横にすると再開します。</p>
   </div>
 
   <!-- Sortie select ①: planet select (cards built by js/planetSelect.js, flow in js/sortieSelect.js) -->
@@ -418,18 +427,18 @@
       <header class="sortie-header hud-boot" style="--boot-i: 0">
         <div>
           <div class="dialog-badge">OPERATIONS HQ — PLANET SELECT</div>
-          <h2 id="planet-title" class="briefing-title">惑星選択</h2>
+          <h2 id="planet-title" class="briefing-title" data-en="Planet Select">惑星選択</h2>
         </div>
       </header>
 
       <div class="sortie-body hud-boot" style="--boot-i: 1">
-        <div id="planet-list" class="planet-list" aria-label="惑星一覧"></div>
+        <div id="planet-list" class="planet-list" aria-label="惑星一覧" data-en-aria-label="Planets"></div>
       </div>
 
       <!-- Mio's call floats at the centre of the screen until clicked (js/mioCall.js) -->
       <span class="briefing-mio-sr sr-only" aria-live="polite"></span>
       <div class="briefing-mio-layer" hidden>
-      <div class="briefing-mio briefing-mio-float" tabindex="-1" role="button" aria-label="ミオの連絡（クリックで閉じる）">
+      <div class="briefing-mio briefing-mio-float" tabindex="-1" role="button" aria-label="ミオの連絡（クリックで閉じる）" data-en-aria-label="Message from Mio (click to close)">
         <div class="radio-avatar" aria-hidden="true">
           <svg viewBox="0 0 40 40">
             <circle cx="20" cy="17" r="8" fill="currentColor"/>
@@ -443,10 +452,10 @@
         <div class="briefing-mio-body">
           <div class="radio-header">
             <span class="radio-callsign">HQ</span>
-            <span class="radio-name">オペレーター ミオ</span>
+            <span class="radio-name" data-en="Operator Mio">オペレーター ミオ</span>
           </div>
           <p class="briefing-mio-text" aria-hidden="true"></p>
-          <p class="briefing-mio-hint" aria-hidden="true">クリックで閉じる ▼</p>
+          <p class="briefing-mio-hint" aria-hidden="true" data-en="Click to close ▼">クリックで閉じる ▼</p>
         </div>
       </div>
       </div>
@@ -470,19 +479,19 @@
       <header class="sortie-header hud-boot" style="--boot-i: 0">
         <div>
           <div class="dialog-badge">OPERATIONS HQ — SORTIE SELECT</div>
-          <h2 id="operation-title" class="briefing-title">作戦選択</h2>
+          <h2 id="operation-title" class="briefing-title" data-en="Operation Select">作戦選択</h2>
         </div>
       </header>
 
       <div class="sortie-body hud-boot" style="--boot-i: 1">
         <div id="operation-planet" class="operation-planet"></div>
-        <div id="op-list" class="op-list" aria-label="作戦一覧"></div>
+        <div id="op-list" class="op-list" aria-label="作戦一覧" data-en-aria-label="Operations"></div>
       </div>
 
       <!-- Mio's call floats at the centre of the screen until clicked (js/mioCall.js) -->
       <span class="briefing-mio-sr sr-only" aria-live="polite"></span>
       <div class="briefing-mio-layer" hidden>
-      <div class="briefing-mio briefing-mio-float" tabindex="-1" role="button" aria-label="ミオの連絡（クリックで閉じる）">
+      <div class="briefing-mio briefing-mio-float" tabindex="-1" role="button" aria-label="ミオの連絡（クリックで閉じる）" data-en-aria-label="Message from Mio (click to close)">
         <div class="radio-avatar" aria-hidden="true">
           <svg viewBox="0 0 40 40">
             <circle cx="20" cy="17" r="8" fill="currentColor"/>
@@ -496,16 +505,16 @@
         <div class="briefing-mio-body">
           <div class="radio-header">
             <span class="radio-callsign">HQ</span>
-            <span class="radio-name">オペレーター ミオ</span>
+            <span class="radio-name" data-en="Operator Mio">オペレーター ミオ</span>
           </div>
           <p class="briefing-mio-text" aria-hidden="true"></p>
-          <p class="briefing-mio-hint" aria-hidden="true">クリックで閉じる ▼</p>
+          <p class="briefing-mio-hint" aria-hidden="true" data-en="Click to close ▼">クリックで閉じる ▼</p>
         </div>
       </div>
       </div>
 
       <div class="dialog-footer-actions sortie-footer hud-boot" style="--boot-i: 3">
-        <button type="button" id="operation-back" class="btn-hud">◀ 惑星選択に戻る <kbd>ESC</kbd></button>
+        <button type="button" id="operation-back" class="btn-hud" data-en-html="◀ Back to Planets &lt;kbd&gt;ESC&lt;/kbd&gt;">◀ 惑星選択に戻る <kbd>ESC</kbd></button>
       </div>
     </div>
   </dialog>
@@ -528,65 +537,65 @@
       <header class="briefing-header hud-boot" style="--boot-i: 0">
         <div>
           <div class="dialog-badge">OPERATIONS HQ — BRIEFING</div>
-          <h2 id="briefing-title" class="briefing-title">作戦本部 ブリーフィング</h2>
+          <h2 id="briefing-title" class="briefing-title" data-en="HQ Briefing">作戦本部 ブリーフィング</h2>
         </div>
-        <nav class="briefing-steps" aria-label="ブリーフィング項目">
-          <button type="button" class="briefing-step" aria-selected="true">① 司令書</button>
-          <button type="button" class="briefing-step" aria-selected="false">② 司令内容</button>
-          <button type="button" class="briefing-step" aria-selected="false">③ 車両調整</button>
-          <button type="button" class="briefing-step" aria-selected="false">④ 装備・整備</button>
-          <button type="button" class="briefing-step" aria-selected="false">⑤ 敵機情報</button>
-          <button type="button" class="briefing-step" aria-selected="false">⑥ 地理情報</button>
+        <nav class="briefing-steps" aria-label="ブリーフィング項目" data-en-aria-label="Briefing sections">
+          <button type="button" class="briefing-step" aria-selected="true" data-en="① Orders">① 司令書</button>
+          <button type="button" class="briefing-step" aria-selected="false" data-en="② Mission">② 司令内容</button>
+          <button type="button" class="briefing-step" aria-selected="false" data-en="③ Tuning">③ 車両調整</button>
+          <button type="button" class="briefing-step" aria-selected="false" data-en="④ Gear &amp; Repair">④ 装備・整備</button>
+          <button type="button" class="briefing-step" aria-selected="false" data-en="⑤ Enemies">⑤ 敵機情報</button>
+          <button type="button" class="briefing-step" aria-selected="false" data-en="⑥ Terrain">⑥ 地理情報</button>
         </nav>
       </header>
 
       <div class="briefing-main">
         <div class="briefing-map-wrap hud-boot" style="--boot-i: 1">
-          <canvas id="briefing-map" aria-label="作戦区域マップ（拠点・地形）"></canvas>
+          <canvas id="briefing-map" aria-label="作戦区域マップ（拠点・地形）" data-en-aria-label="Operation area map (compounds, terrain)"></canvas>
           <div class="briefing-legend" aria-hidden="true">
-            <span><i class="briefing-swatch is-fort"></i>敵拠点</span>
-            <span><i class="briefing-swatch is-hq"></i>作戦本部</span>
-            <span><i class="briefing-swatch is-own"></i>自軍小隊</span>
-            <span><i class="briefing-swatch is-rock"></i>岩</span>
-            <span><i class="briefing-swatch is-ramp"></i>ジャンプ台</span>
-            <span><i class="briefing-swatch is-gully"></i>涸れ川</span>
+            <span data-en-html="&lt;i class=&quot;briefing-swatch is-fort&quot;&gt;&lt;/i&gt;Enemy compound"><i class="briefing-swatch is-fort"></i>敵拠点</span>
+            <span data-en-html="&lt;i class=&quot;briefing-swatch is-hq&quot;&gt;&lt;/i&gt;HQ"><i class="briefing-swatch is-hq"></i>作戦本部</span>
+            <span data-en-html="&lt;i class=&quot;briefing-swatch is-own&quot;&gt;&lt;/i&gt;Our platoon"><i class="briefing-swatch is-own"></i>自軍小隊</span>
+            <span data-en-html="&lt;i class=&quot;briefing-swatch is-rock&quot;&gt;&lt;/i&gt;Rock"><i class="briefing-swatch is-rock"></i>岩</span>
+            <span data-en-html="&lt;i class=&quot;briefing-swatch is-ramp&quot;&gt;&lt;/i&gt;Ramp"><i class="briefing-swatch is-ramp"></i>ジャンプ台</span>
+            <span data-en-html="&lt;i class=&quot;briefing-swatch is-gully&quot;&gt;&lt;/i&gt;Dry gully"><i class="briefing-swatch is-gully"></i>涸れ川</span>
           </div>
         </div>
 
         <div class="briefing-panels hud-boot" style="--boot-i: 2">
           <section class="briefing-panel">
-            <h3>司令書 — 司令官より</h3>
+            <h3 data-en="Orders — from the General">司令書 — 司令官より</h3>
             <article id="briefing-status" class="briefing-scenario"></article>
-            <h4 id="briefing-power-head" class="briefing-subhead" hidden>両軍のパワーバランス</h4>
+            <h4 id="briefing-power-head" class="briefing-subhead" hidden data-en="Balance of forces">両軍のパワーバランス</h4>
             <div id="briefing-power" class="briefing-power" hidden></div>
           </section>
           <section class="briefing-panel" hidden>
-            <h3>司令内容</h3>
-            <h4 class="briefing-subhead">作戦名・目標</h4>
+            <h3 data-en="Mission">司令内容</h3>
+            <h4 class="briefing-subhead" data-en="Operation &amp; objective">作戦名・目標</h4>
             <div id="briefing-operation" class="briefing-kv-list"></div>
-            <h4 class="briefing-subhead">戦術行動開始時刻</h4>
+            <h4 class="briefing-subhead" data-en="Start of tactical action">戦術行動開始時刻</h4>
             <div id="briefing-time" class="briefing-time"></div>
-            <h4 class="briefing-subhead">拠点の配置</h4>
+            <h4 class="briefing-subhead" data-en="Compounds">拠点の配置</h4>
             <table id="briefing-bases" class="briefing-table"></table>
-            <p class="briefing-note">全拠点が最初から稼働しており、攻略の順番は自由。制圧した拠点では補給と僚機の補充ができる。</p>
-            <p class="briefing-note">作戦本部（マップ中央）から出撃。全拠点を制圧した瞬間に作戦時間が確定し、作戦本部の円内まで自走で帰還すると作戦終了。</p>
+            <p class="briefing-note" data-en="Every compound is active from the start; take them in any order. Captured compounds offer resupply and replacement wingmen.">全拠点が最初から稼働しており、攻略の順番は自由。制圧した拠点では補給と僚機の補充ができる。</p>
+            <p class="briefing-note" data-en="Sortie from HQ (map center). The mission time is fixed the moment every compound is captured; the operation ends when you drive back into the HQ circle.">作戦本部（マップ中央）から出撃。全拠点を制圧した瞬間に作戦時間が確定し、作戦本部の円内まで自走で帰還すると作戦終了。</p>
           </section>
           <section class="briefing-panel" hidden>
-            <h3>車両調整</h3>
-            <p class="briefing-note tuning-lead">チャートの軸をタップ（クリック）／ドラッグ、または −／＋ で調整。合計ポイントは固定（上げるなら他を下げる）。出撃後は変更不可。</p>
+            <h3 data-en="Tank Tuning">車両調整</h3>
+            <p class="briefing-note tuning-lead" data-en="Tap (click) or drag a chart axis, or use − / +. The total is fixed: raising one stat lowers another. No changes after the sortie.">チャートの軸をタップ（クリック）／ドラッグ、または −／＋ で調整。合計ポイントは固定（上げるなら他を下げる）。出撃後は変更不可。</p>
             <div id="briefing-tuning" class="tuning-grid"></div>
           </section>
           <section class="briefing-panel" hidden>
-            <h3>装備・整備</h3>
+            <h3 data-en="Gear &amp; Repair">装備・整備</h3>
             <div id="briefing-loadout" class="loadout-grid"></div>
           </section>
           <section class="briefing-panel" hidden>
-            <h3>敵機情報</h3>
+            <h3 data-en="Enemy Intel">敵機情報</h3>
             <div id="briefing-enemies" class="briefing-enemies"></div>
-            <p class="briefing-note">敵は拠点で待機。拠点に約650まで近づくか、拠点の車両を攻撃すると警戒態勢となり出撃してくる。</p>
+            <p class="briefing-note" data-en="Enemies wait at their compounds. Come within about 650 of one, or attack its vehicles, and it goes on alert and sorties.">敵は拠点で待機。拠点に約650まで近づくか、拠点の車両を攻撃すると警戒態勢となり出撃してくる。</p>
           </section>
           <section class="briefing-panel" hidden>
-            <h3>地理情報</h3>
+            <h3 data-en="Terrain">地理情報</h3>
             <ul id="briefing-terrain" class="briefing-terrain"></ul>
           </section>
         </div>
@@ -596,7 +605,7 @@
            is still typing, then dismisses it (js/mioCall.js) -->
       <span class="briefing-mio-sr sr-only" aria-live="polite"></span>
       <div class="briefing-mio-layer" hidden>
-      <div class="briefing-mio briefing-mio-float" tabindex="-1" role="button" aria-label="ミオの連絡（クリックで閉じる）">
+      <div class="briefing-mio briefing-mio-float" tabindex="-1" role="button" aria-label="ミオの連絡（クリックで閉じる）" data-en-aria-label="Message from Mio (click to close)">
         <div class="radio-avatar" aria-hidden="true">
           <svg viewBox="0 0 40 40">
             <circle cx="20" cy="17" r="8" fill="currentColor"/>
@@ -610,19 +619,19 @@
         <div class="briefing-mio-body">
           <div class="radio-header">
             <span class="radio-callsign">HQ</span>
-            <span class="radio-name">オペレーター ミオ</span>
+            <span class="radio-name" data-en="Operator Mio">オペレーター ミオ</span>
           </div>
           <p class="briefing-mio-text" aria-hidden="true"></p>
-          <p class="briefing-mio-hint" aria-hidden="true">クリックで閉じる ▼</p>
+          <p class="briefing-mio-hint" aria-hidden="true" data-en="Click to close ▼">クリックで閉じる ▼</p>
         </div>
       </div>
       </div>
 
       <form method="dialog" class="dialog-footer-actions hud-boot" style="--boot-i: 4">
-        <button value="back" class="btn-hud briefing-back-select">◀ 作戦選択へ</button>
-        <button type="button" id="briefing-prev" class="btn-hud">戻る</button>
-        <button type="button" id="briefing-next" class="btn-hud btn-accent">次へ</button>
-        <button value="start" class="btn-primary-lg">作戦開始</button>
+        <button value="back" class="btn-hud briefing-back-select" data-en="◀ Operations">◀ 作戦選択へ</button>
+        <button type="button" id="briefing-prev" class="btn-hud" data-en="Back">戻る</button>
+        <button type="button" id="briefing-next" class="btn-hud btn-accent" data-en="Next">次へ</button>
+        <button value="start" class="btn-primary-lg" data-en="Begin Operation">作戦開始</button>
       </form>
     </div>
   </dialog>
@@ -645,14 +654,14 @@
       <header class="dialog-header garage-header hud-boot" style="--boot-i: 0">
         <div>
           <div class="dialog-badge">FIELD SUPPLY DEPOT</div>
-          <h2 id="garage-title">補給・僚機補充</h2>
+          <h2 id="garage-title" data-en="Resupply &amp; Reinforce">補給・僚機補充</h2>
         </div>
         <div class="garage-scrap-pill">
-          <span>保有スクラップ:</span>
+          <span data-en="Scrap on hand:">保有スクラップ:</span>
           <strong id="garage-scrap" class="tabular-num">0</strong>
         </div>
         <form method="dialog">
-          <button type="submit" value="close" class="btn-close-dialog" aria-label="補給メニューを閉じる">
+          <button type="submit" value="close" class="btn-close-dialog" aria-label="補給メニューを閉じる" data-en-aria-label="Close the supply menu" data-en-html="✕ Back to Battle &lt;kbd&gt;ESC&lt;/kbd&gt;">
             ✕ 戦闘へ戻る <kbd>ESC</kbd>
           </button>
         </form>
@@ -681,10 +690,10 @@
       <header class="results-header hud-boot" style="--boot-i: 0">
         <div>
           <div class="dialog-badge success">AFTER-ACTION REPORT</div>
-          <h2 id="results-title" class="results-title">戦果レポート</h2>
+          <h2 id="results-title" class="results-title" data-en="After-Action Report">戦果レポート</h2>
         </div>
-        <div class="results-rank-box" aria-label="総合評価">
-          <span class="results-rank-label">総合評価</span>
+        <div class="results-rank-box" aria-label="総合評価" data-en-aria-label="Overall rating">
+          <span class="results-rank-label" data-en="Overall">総合評価</span>
           <strong id="results-score" class="results-rank">0</strong>
           <span class="results-score">SCORE</span>
         </div>
@@ -695,7 +704,7 @@
       <!-- Mio's call floats at the centre of the screen until clicked (js/mioCall.js) -->
       <span class="briefing-mio-sr sr-only" aria-live="polite"></span>
       <div class="briefing-mio-layer" hidden>
-      <div class="briefing-mio briefing-mio-float" tabindex="-1" role="button" aria-label="ミオの連絡（クリックで閉じる）">
+      <div class="briefing-mio briefing-mio-float" tabindex="-1" role="button" aria-label="ミオの連絡（クリックで閉じる）" data-en-aria-label="Message from Mio (click to close)">
         <div class="radio-avatar" aria-hidden="true">
           <svg viewBox="0 0 40 40">
             <circle cx="20" cy="17" r="8" fill="currentColor"/>
@@ -709,16 +718,16 @@
         <div class="briefing-mio-body">
           <div class="radio-header">
             <span class="radio-callsign">HQ</span>
-            <span class="radio-name">オペレーター ミオ</span>
+            <span class="radio-name" data-en="Operator Mio">オペレーター ミオ</span>
           </div>
           <p class="briefing-mio-text" aria-hidden="true"></p>
-          <p class="briefing-mio-hint" aria-hidden="true">クリックで閉じる ▼</p>
+          <p class="briefing-mio-hint" aria-hidden="true" data-en="Click to close ▼">クリックで閉じる ▼</p>
         </div>
       </div>
       </div>
 
       <form method="dialog" class="dialog-footer-actions hud-boot" style="--boot-i: 7">
-        <button value="restart" class="btn-primary-lg" autofocus>了解</button>
+        <button value="restart" class="btn-primary-lg" autofocus data-en="Roger">了解</button>
       </form>
     </div>
   </dialog>
@@ -727,12 +736,27 @@
   <dialog id="gameover-dialog" class="game-dialog gameover-dialog" aria-labelledby="gameover-title">
     <div class="dialog-shell">
       <div id="gameover-badge" class="dialog-badge danger">TANK DESTROYED</div>
-      <h2 id="gameover-title" class="dialog-main-title">車体大破 — MISSION FAILED</h2>
+      <h2 id="gameover-title" class="dialog-main-title" data-en="Tank Destroyed — MISSION FAILED">車体大破 — MISSION FAILED</h2>
       <p id="gameover-summary" class="dialog-lead"></p>
+      <!-- Sweep operation: lap time of every wave (js/game/mission.js) -->
+      <ol id="gameover-laps" class="sweep-laps" hidden></ol>
       <form method="dialog" class="dialog-footer-actions">
-        <button id="btn-restart" value="restart" class="btn-primary-lg" autofocus>
+        <button id="btn-restart" value="restart" class="btn-primary-lg" autofocus data-en="Sortie again in a new tank">
           新車両で再出撃する
         </button>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- Pause: back to the operation, or withdraw (js/game/mission.js). Esc / P / 作戦に戻る resume. -->
+  <dialog id="pause-dialog" class="game-dialog gameover-dialog" aria-labelledby="pause-title">
+    <div class="dialog-shell">
+      <div class="dialog-badge">PAUSE</div>
+      <h2 id="pause-title" class="dialog-main-title" data-en="Paused">一時停止中</h2>
+      <p id="pause-summary" class="dialog-lead"></p>
+      <form method="dialog" class="dialog-footer-actions">
+        <button id="btn-pause-withdraw" value="withdraw" class="btn-hud" data-en="Withdraw">撤退</button>
+        <button value="resume" class="btn-primary-lg" autofocus data-en="Back to the operation">作戦に戻る</button>
       </form>
     </div>
   </dialog>

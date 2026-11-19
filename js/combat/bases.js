@@ -38,7 +38,14 @@
       this.survey = null;
       this.feint = null;
       this.pendingSites = []; // compounds that appear later (site.after)
+      this.sweep = null;
       if (!this.enemiesEnabled || !this.operation) {
+        this._setupCity();
+        return;
+      }
+      // Sweep operation: waves of compounds instead of the usual objectives (js/combat/sweep.js)
+      if (this.operation.sweep) {
+        this._setupSweep();
         this._setupCity();
         return;
       }
@@ -189,6 +196,10 @@
         if (!this.enemies.some((e) => e.alive && e.baseId === base.id)) {
           base.cleared = true;
           base.flagRaise = 0;
+          if (this.sweep) {
+            this.sweep.captured += 1;
+            this.sweep.lastBase = base;
+          }
           this.stats.baseClock[base.id] = this._clockStamp();
           this.scrap += BASE_CLEAR_BONUS;
           this.stats.scrapEarned += BASE_CLEAR_BONUS;
@@ -210,6 +221,10 @@
         this.events.push({ type: 'siteAppears', base: this._addBase(site) });
       }
 
+      if (this.sweep) {
+        this._updateSweep();
+        return;
+      }
       if (!this.operation || this.missionComplete) return;
       this._updateSurvey(player);
       this._updateFeint(player);

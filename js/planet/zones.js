@@ -163,6 +163,30 @@
       this._buildGroundTexture();
     }
 
+    // Sweep operation (js/sweep.js): the next wave's compounds replace the current ones mid-sortie.
+    // Only the compounds change (no areas on a sweep). Rocks and ramps come back where the old
+    // compounds had cleared them, except under a tank (keepClear: the platoon). Rebuilds the
+    // ground texture, which drops the old compound pads; the new ones are stamped as they are
+    // garrisoned (revealBase).
+    replaceSites(siteDefs, keepClear = []) {
+      const dist = (ax, ay, bx, by) => Math.hypot(this.deltaX(ax, bx), this.deltaY(ay, by));
+      this.sites = siteDefs.map((d, i) => {
+        const layout = this._siteLayout(this.wrapX(d.x), this.wrapY(d.y), d.rot || 0, d.parking || null);
+        return { ...layout, id: i, name: d.name, fixed: true };
+      });
+      const blocked = (x, y, r) => this.sites.some((s) => dist(x, y, s.x, s.y) < SITE_CLEAR_RADIUS + r);
+      const underTank = (o) => keepClear.some((t) => dist(o.x, o.y, t.x, t.y) < o.radius + 40);
+      const keep = (current, all) => {
+        const was = new Set(current);
+        return all.filter((o) => !blocked(o.x, o.y, o.radius) && (was.has(o) || !underTank(o)));
+      };
+      this.obstacles = keep(this.obstacles, this.allObstacles);
+      this.ramps = keep(this.ramps, this.allRamps);
+      this.colliders = [...this.obstacles, ...this.hq.colliders, ...this.structures];
+      this.revealedBases.clear();
+      this._buildGroundTexture();
+    }
+
     // Zone (if any) the point lies in
     zoneAt(x, y) {
       for (const z of this.zones) {

@@ -10,8 +10,8 @@
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
   const RANKS = ['S', 'A', 'B', 'C']; // best first
-  const NAMES = { S: '金勲章', A: '銀勲章', B: '銅勲章', C: '鉄勲章' };
-  const GRADES = { S: '最優秀', A: '優秀', B: '良好', C: '達成' };
+  const NAMES = L({ S: '金勲章', A: '銀勲章', B: '銅勲章', C: '鉄勲章' }, { S: 'Gold Medal', A: 'Silver Medal', B: 'Bronze Medal', C: 'Iron Medal' });
+  const GRADES = L({ S: '最優秀', A: '優秀', B: '良好', C: '達成' }, { S: 'Outstanding', A: 'Excellent', B: 'Good', C: 'Completed' });
 
   let uid = 0; // gradient ids must be unique per medal in the document
 
@@ -141,7 +141,7 @@
       svg.setAttribute('viewBox', '0 0 64 84');
       svg.setAttribute('class', `medal${extraClass ? ` ${extraClass}` : ''}`);
       svg.setAttribute('role', 'img');
-      svg.setAttribute('aria-label', `${NAMES[r]}（${GRADES[r]}）`);
+      svg.setAttribute('aria-label', L(`${NAMES[r]}（${GRADES[r]}）`, `${NAMES[r]} (${GRADES[r]})`));
       svg.dataset.rank = r;
       svg.innerHTML = `
         <defs>

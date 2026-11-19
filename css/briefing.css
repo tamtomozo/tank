@@ -147,6 +147,7 @@ dialog.briefing-dialog {
 .briefing-swatch.is-feint { border: 2px solid #f97316; }
 .briefing-swatch.is-ammo { background: #fbbf24; border-radius: 0.4rem 0.4rem 0.1rem 0.1rem; }
 .briefing-swatch.is-nosupply { border: 2px solid #f87171; background: linear-gradient(45deg, transparent 45%, #f87171 45% 55%, transparent 55%); }
+.briefing-swatch.is-sweep { border: 2px solid #38bdf8; background: repeating-linear-gradient(90deg, rgb(56 189 248 / 0.5) 0 3px, transparent 3px 6px); }
 
 .briefing-panels {
   min-inline-size: 0;

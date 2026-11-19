@@ -18,6 +18,8 @@
   //              building the platoon destroys costs SUPPORT_PER_BUILDING
   //   collaborator  whether the collaborator of the escort reached the tunnel (null = not yet)
   //              Both decide how many guerrillas the last stage meets (guerrillaThreat)
+  //   sweep      best sweep-operation run per planet id (js/sweep.js): { captured, time, bestLap,
+  //              laps }. More compounds wins, then the shorter time. A sweep changes nothing else.
   // Only a completed operation changes it (recordSuccess); a failed sortie is simply retried.
   // URL options: ?unlock opens every stage, ?reset starts a fresh campaign.
 
@@ -35,7 +37,7 @@
   const XP_NO_LOSSES = 10;
 
   function fresh() {
-    return { cleared: [], ranks: {}, xp: 0, wear: 0, allies: MAX_ALLIES, scrap: 0, equipment: {}, support: 100, collaborator: null };
+    return { cleared: [], ranks: {}, xp: 0, wear: 0, allies: MAX_ALLIES, scrap: 0, equipment: {}, support: 100, collaborator: null, sweep: {} };
   }
 
   class Campaign {
@@ -65,6 +67,9 @@
       }
       if (!this.state.equipment || typeof this.state.equipment !== 'object' || Array.isArray(this.state.equipment)) {
         this.state.equipment = {};
+      }
+      if (!this.state.sweep || typeof this.state.sweep !== 'object' || Array.isArray(this.state.sweep)) {
+        this.state.sweep = {};
       }
     }
 
@@ -193,6 +198,33 @@
     setEquipment(planet, ids) {
       this.state.equipment[planet.id] = ids.slice(0, global.GameData.EQUIP_SLOTS);
       this._save();
+    }
+
+    // ---- sweep operation (js/sweep.js) ----
+    // Best run on the planet (null: never played)
+    sweepRecord(planetId) {
+      const r = this.state.sweep[planetId];
+      return r && typeof r === 'object' ? r : null;
+    }
+
+    // A finished run (completed or the tank lost): { captured, time, laps }. Keeps the better run
+    // and the best single lap. Returns { newBest, newBestLap, record }.
+    recordSweep(planetId, run) {
+      const prev = this.sweepRecord(planetId);
+      const newBest = run.captured > 0 && (!prev || run.captured > prev.captured
+        || (run.captured === prev.captured && run.time < prev.time));
+      const lap = run.laps.length ? Math.min(...run.laps) : null;
+      const newBestLap = lap != null && (!prev || prev.bestLap == null || lap < prev.bestLap);
+      if (!newBest && !newBestLap) return { newBest: false, newBestLap: false, record: prev };
+      const record = {
+        captured: newBest ? run.captured : prev.captured,
+        time: newBest ? run.time : prev.time,
+        laps: newBest ? run.laps.slice() : prev.laps,
+        bestLap: newBestLap ? lap : prev ? prev.bestLap : null
+      };
+      this.state.sweep[planetId] = record;
+      this._save();
+      return { newBest, newBestLap, record };
     }
 
     // ---- end of an operation ----

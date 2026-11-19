@@ -565,6 +565,13 @@
     }
 
     getTimeInfo() {
+      const PHASE_NAMES = {
+        night: L('夜', 'night'),
+        dawn: L('夜明け', 'dawn'),
+        morning: L('朝', 'morning'),
+        day: L('昼', 'midday'),
+        evening: L('夕方', 'evening')
+      };
       const totalMins = Math.floor(this.dayTime * 24 * 60) % (24 * 60);
       const snappedMins = Math.floor(totalMins / 15) * 15;
       const hours = Math.floor(snappedMins / 60);
@@ -572,19 +579,19 @@
       const clockText = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
       const palette = this.getPalette();
 
-      let phaseName = '夜';
+      let phase = 'night';
       let phaseIcon = '🌙';
       if (hours >= 5 && hours < 7) {
-        phaseName = '夜明け';
+        phase = 'dawn';
         phaseIcon = '🌅';
       } else if (hours >= 7 && hours < 11) {
-        phaseName = '朝';
+        phase = 'morning';
         phaseIcon = '🌤';
       } else if (hours >= 11 && hours < 16) {
-        phaseName = '昼';
+        phase = 'day';
         phaseIcon = '☀';
       } else if (hours >= 16 && hours < 19) {
-        phaseName = '夕方';
+        phase = 'evening';
         phaseIcon = '🌇';
       }
 
@@ -592,7 +599,8 @@
         day: this.dayCount,
         hours,
         clockText,
-        phaseName,
+        phase, // night / dawn / morning / day / evening
+        phaseName: PHASE_NAMES[phase],
         phaseIcon,
         nightFactor: palette.nightFactor
       };

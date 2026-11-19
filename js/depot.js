@@ -48,6 +48,8 @@
     }
 
     open(player, combat, squad, onChange) {
+      this._sweepChoice = null;
+      this._showScrap(true);
       this.player = player;
       this.combat = combat;
       this.squad = squad;
@@ -61,6 +63,50 @@
         global.HudFrame.boot(this.dialog);
         this.dialog.showModal();
       }
+    }
+
+    // Sweep operation (js/sweep.js), on the flag of the compound captured last in a wave: recover
+    // and go on, or go on as is. onChoose(recover) runs, then the window closes. Closing it with ✕
+    // leaves the choice open (it is offered again on the next visit).
+    openSweep(player, combat, squad, { wave, rounds, onChoose, onChange = null }) {
+      this.player = player;
+      this.combat = combat;
+      this.squad = squad;
+      this.onChange = onChange;
+      this.cards = null; // (render() is for the field depot only)
+      this._sweepChoice = onChoose;
+      const recover = this._card('is-supply', L('回復して次へ', 'Recover & go on'),
+        L('自機と全僚機の装甲を全回復し、弾薬と主砲の装填も完了。撃破された僚機も補充して（最大4両）、次の10拠点へ進む。回復は波ごとに1回だけ。',
+          'Fully restores the armor of your tank and every wingman, refills ammo and reloads the gun, and replaces lost wingmen (up to 4). Then on to the next 10 compounds. One recovery per wave.'),
+        () => this._chooseSweep(true));
+      const skip = this._card('is-squad', L('回復せずに次へ', 'Go on as is'),
+        L('今の状態のまま、次の10拠点へ進む。', 'Go on to the next 10 compounds as you are.'),
+        () => this._chooseSweep(false));
+      recover.badge.textContent = `HP ${Math.ceil(player.hp)}/${player.maxHp}`;
+      recover.btn.textContent = L('回復して進む', 'Recover & go on');
+      skip.badge.textContent = L(`第${wave + 1}波 / 全${rounds}波`, `Wave ${wave + 1} of ${rounds}`);
+      skip.btn.textContent = L('このまま進む', 'Go on as is');
+      this.gridEl.replaceChildren(recover.card, skip.card);
+      this._showScrap(false); // (scrap buys nothing on a sweep)
+      if (!this.dialog.open) {
+        if (this.bodyEl) this.bodyEl.scrollTop = 0;
+        global.HudFrame.boot(this.dialog);
+        this.dialog.showModal();
+      }
+    }
+
+    _showScrap(on) {
+      const pill = this.dialog.querySelector('.garage-scrap-pill');
+      if (pill) pill.hidden = !on;
+    }
+
+    _chooseSweep(recover) {
+      const cb = this._sweepChoice;
+      this._sweepChoice = null;
+      if (!cb) return;
+      cb(recover);
+      if (this.onChange) this.onChange();
+      this.close();
     }
 
     close() {
@@ -82,11 +128,12 @@
     }
 
     _build() {
-      const supply = this._card('is-supply', '補給（全回復）',
-        '自機と全僚機の装甲を全回復し、主砲の装填も完了する。スクラップ不要。',
+      const supply = this._card('is-supply', L('補給（全回復）', 'Resupply (full)'),
+        L('自機と全僚機の装甲を全回復し、主砲の装填も完了する。スクラップ不要。', 'Fully restores the armor of your tank and every wingman, and reloads the main gun. Free.'),
         () => this._resupply());
-      const reinforce = this._card('is-squad', '僚機補充',
-        `撃破された僚機を1両補充する（⚙ ${REINFORCE_COST}）。小隊は自機を含め最大5両。補充機も僚機の車両調整を引き継ぐ。`,
+      const reinforce = this._card('is-squad', L('僚機補充', 'Reinforce'),
+        L(`撃破された僚機を1両補充する（⚙ ${REINFORCE_COST}）。小隊は自機を含め最大5両。補充機も僚機の車両調整を引き継ぐ。`,
+          `Replace one destroyed wingman (⚙ ${REINFORCE_COST}). Up to 5 tanks including yours. Replacements keep the wingmen's tuning.`),
         () => this._reinforce());
       this.cards = { supply, reinforce };
       this.gridEl.replaceChildren(supply.card, reinforce.card);
@@ -120,12 +167,12 @@
       const needs = combat.needsResupply(player);
       cards.supply.badge.textContent = `HP ${Math.ceil(player.hp)}/${player.maxHp}`;
       cards.supply.btn.disabled = !needs;
-      cards.supply.btn.textContent = needs ? '補給する（無料）' : '全車両 満タンです';
+      cards.supply.btn.textContent = needs ? L('補給する（無料）', 'Resupply (free)') : L('全車両 満タンです', 'All tanks are full');
 
       const canAdd = squad.canReinforce();
-      cards.reinforce.badge.textContent = `小隊 ${squad.size}/${squad.maxSize}`;
+      cards.reinforce.badge.textContent = L(`小隊 ${squad.size}/${squad.maxSize}`, `Platoon ${squad.size}/${squad.maxSize}`);
       cards.reinforce.btn.disabled = !canAdd || combat.scrap < REINFORCE_COST;
-      cards.reinforce.btn.textContent = canAdd ? `補充する (⚙ ${REINFORCE_COST})` : '小隊は満員です';
+      cards.reinforce.btn.textContent = canAdd ? L(`補充する (⚙ ${REINFORCE_COST})`, `Reinforce (⚙ ${REINFORCE_COST})`) : L('小隊は満員です', 'Platoon is full');
     }
   }
 

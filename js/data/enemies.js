@@ -194,16 +194,16 @@
 
   // Display names + one-line role descriptions (briefing enemy intel, results kill breakdown)
   const ENEMY_INFO = {
-    infantry: { name: '対戦車歩兵', role: '民兵とゲリラ。携行ロケットで戦車を狙う。脆く、戦車で轢けば倒せるが、建物の陰やマンホールから突然現れる。' },
-    light: { name: '軽戦車', role: '高速で接近してくる突撃型。装甲は薄いが数が多い。' },
-    medium: { name: '中戦車', role: '火力と装甲のバランスが取れた主力。正面からの撃ち合いに強い。' },
-    modern: { name: '新型主力戦車', role: '本国軍の最新鋭戦車。中戦車より速く、装甲も厚い。装填も早い。' },
-    heavy: { name: '重戦車', role: '鈍重だが装甲が厚く、一撃が重い。距離を取って確実に削ること。' },
-    bunker: { name: 'トーチカ', role: '拠点の固定砲台。移動しないが耐久が高く、射程も長い。' },
-    turret: { name: '高架砲台', role: '高架道路の上に据えられた砲台。高い位置から撃ち下ろしてくる。高架には登れないので、下から撃ち返すこと。' },
-    boss: { name: '司令官車', role: '敵指揮官が乗る大型戦車。装甲・火力ともに桁違いで、装填も速い。' },
-    ace: { name: 'エース重戦車', role: '雪原迷彩をまとったエースの重戦車。遠くからは雪に溶けて見えにくい。速く、正確に撃ってくる。' },
-    proto: { name: '試作超重戦車', role: '工場で開発中だった超重戦車。装甲も主砲も桁違い。正面から撃ち合わず、僚機と囲んで削ること。' }
+    infantry: { name: L('対戦車歩兵', 'Anti-tank infantry'), role: L('民兵とゲリラ。携行ロケットで戦車を狙う。脆く、戦車で轢けば倒せるが、建物の陰やマンホールから突然現れる。', 'Militia and guerrillas who hunt tanks with handheld rockets. Fragile, and a tank can run them over, but they appear suddenly from behind buildings and out of manholes.') },
+    light: { name: L('軽戦車', 'Light tank'), role: L('高速で接近してくる突撃型。装甲は薄いが数が多い。', 'Fast assault type that rushes in. Thin armor, but there are many of them.') },
+    medium: { name: L('中戦車', 'Medium tank'), role: L('火力と装甲のバランスが取れた主力。正面からの撃ち合いに強い。', 'The balanced mainstay of firepower and armor. Strong in a head-on exchange.') },
+    modern: { name: L('新型主力戦車', 'New main battle tank'), role: L('本国軍の最新鋭戦車。中戦車より速く、装甲も厚い。装填も早い。', 'The homeland army\'s newest tank. Faster than a medium tank, with thicker armor and a quicker reload.') },
+    heavy: { name: L('重戦車', 'Heavy tank'), role: L('鈍重だが装甲が厚く、一撃が重い。距離を取って確実に削ること。', 'Slow, but heavily armored and hard-hitting. Keep your distance and wear it down.') },
+    bunker: { name: L('トーチカ', 'Pillbox'), role: L('拠点の固定砲台。移動しないが耐久が高く、射程も長い。', 'A fixed gun emplacement at a compound. It cannot move, but it is tough and has long range.') },
+    turret: { name: L('高架砲台', 'Overpass turret'), role: L('高架道路の上に据えられた砲台。高い位置から撃ち下ろしてくる。高架には登れないので、下から撃ち返すこと。', 'A gun mounted on the elevated highway, firing down from above. You cannot climb the overpass, so shoot back from below.') },
+    boss: { name: L('司令官車', 'Command tank'), role: L('敵指揮官が乗る大型戦車。装甲・火力ともに桁違いで、装填も速い。', 'A large tank carrying an enemy commander. Its armor and firepower are on another level, and it reloads fast.') },
+    ace: { name: L('エース重戦車', 'Ace heavy tank'), role: L('雪原迷彩をまとったエースの重戦車。遠くからは雪に溶けて見えにくい。速く、正確に撃ってくる。', 'An ace\'s heavy tank in snow camouflage. From afar it melts into the snow. It is fast and fires accurately.') },
+    proto: { name: L('試作超重戦車', 'Prototype super-heavy tank'), role: L('工場で開発中だった超重戦車。装甲も主砲も桁違い。正面から撃ち合わず、僚機と囲んで削ること。', 'The super-heavy tank under development at the factory. Its armor and main gun are on another level. Do not trade fire head-on: surround it with your wingmen and wear it down.') }
   };
 
   // Briefing / report order of the enemy kinds

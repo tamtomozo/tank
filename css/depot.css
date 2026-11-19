@@ -51,6 +51,10 @@ dialog.garage-dialog {
   font-size: 0.9rem;
 }
 
+.garage-scrap-pill[hidden] {
+  display: none; /* sweep recovery menu (js/depot.js openSweep) */
+}
+
 .garage-scrap-pill strong {
   font-size: 1.15rem;
   color: var(--accent-bright);

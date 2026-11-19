@@ -257,7 +257,8 @@
         this.explodeAt(enemy.x, enemy.y, 68 * enemy.scale, 0, true, this._playerRef, true);
         this.spawnPickup(enemy.x, enemy.y, 'scrap', enemy.scrapValue);
         // No repair kits on an operation without supply (operation.noSupply)
-        const noSupply = this.operation && this.operation.noSupply;
+        // (none on a sweep either: it recovers once per wave, js/sweep.js)
+        const noSupply = this.operation && (this.operation.noSupply || this.operation.sweep);
         if (!noSupply && (Math.random() < 0.35 || enemy.isBoss)) {
           this.spawnPickup(enemy.x, enemy.y, 'repair', enemy.isBoss ? 45 : 22);
         }

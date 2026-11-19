@@ -249,6 +249,16 @@
   margin-inline-start: -0.5em; /* the trailing letter-spacing sits before it */
 }
 
+/* English (?lang=en, js/i18n.js): Latin capitals need less spacing than the Japanese subtitle */
+html[lang="en"] .title-sub {
+  letter-spacing: 0.3em;
+  margin-inline-end: -0.3em;
+}
+
+html[lang="en"] .title-sub::after {
+  margin-inline-start: -0.3em;
+}
+
 /* ---- "press any key" ------------------------------------------------------------------------ */
 .title-prompt {
   position: absolute;

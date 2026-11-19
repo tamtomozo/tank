@@ -90,24 +90,25 @@
       medal.append(el('span', 'award-rays'), Medal.create(a.rank, 'is-award'));
 
       const improved = a.prevRank && Medal.isBetter(a.rank, a.prevRank);
-      const ok = el('button', 'btn-primary-lg award-ok', '了解');
+      const ok = el('button', 'btn-primary-lg award-ok', L('了解', 'Roger'));
       ok.type = 'button';
       ok.addEventListener('click', () => this.dismiss());
 
       const heading = el('h3', 'award-name', name);
       heading.id = 'award-heading';
-      const text = el('p', 'award-text', `${a.planetName}「${a.operationName}」作戦の完遂を称え、\nここに${name}を授与する。`);
+      const text = el('p', 'award-text', L(`${a.planetName}「${a.operationName}」作戦の完遂を称え、\nここに${name}を授与する。`,
+        `For completing Operation "${a.operationName}" on ${a.planetName},\nyou are hereby awarded the ${name}.`));
       text.id = 'award-text';
 
       this.panel.replaceChildren(
-        el('div', 'dialog-badge success award-badge', 'DECORATION — 勲章授与'),
+        el('div', 'dialog-badge success award-badge', L('DECORATION — 勲章授与', 'DECORATION')),
         medal,
         heading,
         el('p', 'award-grade', `${Medal.grade(a.rank)}　SCORE ${a.score}`),
         text,
         // First medal of this operation, or a better one than before
-        ...(!a.prevRank ? [el('p', 'award-note is-first', '★ 初受章')] : []),
-        ...(improved ? [el('p', 'award-note', `▲ 最高評価を更新（${Medal.name(a.prevRank)} → ${name}）`)] : []),
+        ...(!a.prevRank ? [el('p', 'award-note is-first', L('★ 初受章', '★ First decoration'))] : []),
+        ...(improved ? [el('p', 'award-note', L(`▲ 最高評価を更新（${Medal.name(a.prevRank)} → ${name}）`, `▲ New best (${Medal.name(a.prevRank)} → ${name})`))] : []),
         ok
       );
     }

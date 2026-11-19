@@ -15,10 +15,10 @@
 
   // Mio's closing comment per rank (planet: name of the planet the sortie was fought on)
   const MIO_COMMENTS = {
-    S: () => '見事な指揮でした、隊長。損害を最小限に抑えた、完璧な作戦です。',
-    A: () => '作戦成功です。小隊の連携も上々でした。お疲れさまでした、隊長。',
-    B: (planet) => `${planet}での作戦目標の達成を確認しました。課題は残りますが、任務は完遂です。`,
-    C: () => 'なんとか制圧できましたね……次は損害をもっと抑えましょう、隊長。'
+    S: () => L('見事な指揮でした、隊長。損害を最小限に抑えた、完璧な作戦です。', 'Superb command, Commander. Minimal losses: a flawless operation.'),
+    A: () => L('作戦成功です。小隊の連携も上々でした。お疲れさまでした、隊長。', 'Operation successful. The platoon worked well together. Good work, Commander.'),
+    B: (planet) => L(`${planet}での作戦目標の達成を確認しました。課題は残りますが、任務は完遂です。`, `Objectives on ${planet} confirmed complete. There is room to improve, but the mission is accomplished.`),
+    C: () => L('なんとか制圧できましたね……次は損害をもっと抑えましょう、隊長。', 'We made it through... Let\'s keep the losses down next time, Commander.')
   };
 
   // Tactical play time (real seconds) expressed as in-game time: one in-game day lasts
@@ -28,7 +28,7 @@
     const days = Math.floor(totalMin / (24 * 60));
     const hours = Math.floor((totalMin % (24 * 60)) / 60);
     const mins = totalMin % 60;
-    return `${days > 0 ? `${days}日` : ''}${hours}時間${String(mins).padStart(2, '0')}分`;
+    return L(`${days > 0 ? `${days}日` : ''}${hours}時間${String(mins).padStart(2, '0')}分`, `${days > 0 ? `${days}d ` : ''}${hours}h ${String(mins).padStart(2, '0')}m`);
   }
 
   const stampText = (stamp) => (stamp ? `DAY ${stamp.day} ${stamp.clock}` : '—');
@@ -99,32 +99,35 @@
       const totalKills = kinds.reduce((sum, k) => sum + stats.killsByKind[k], 0);
       const capturedBases = combat.bases.filter((b) => b.cleared).length;
       // In-game clock time at which each compound was captured
-      const baseLines = combat.bases.map((b) => `拠点${b.name}　${b.cleared ? stampText(stats.baseClock[b.id]) : '未制圧'}`);
+      const baseLines = combat.bases.map((b) => L(`拠点${b.name}　${b.cleared ? stampText(stats.baseClock[b.id]) : '未制圧'}`, `${b.name}: ${b.cleared ? stampText(stats.baseClock[b.id]) : 'not captured'}`));
       const endStamp = stats.endClock || { day: t.day, clock: t.clockText }; // moment the planet was secured
       const accuracyPct = Math.round(r.accuracy * 100);
       const aliveAllies = combat.allies.filter((a) => a.alive).length;
       const op = combat.operation;
 
       this.body.replaceChildren(
-        card('作戦時間（ゲーム内）', formatGameDuration(stats.elapsed, world.dayDuration), [
-          `開始 ${stampText(stats.startClock)} → 制圧完了 ${stampText(endStamp)}`,
-          op && op.endInPlace ? '現地で作戦終了（帰還なし）' : `作戦本部へ帰還 ${stampText(stats.returnClock)}（作戦時間に含まず）`
+        card(L('作戦時間（ゲーム内）', 'Mission time (in-game)'), formatGameDuration(stats.elapsed, world.dayDuration), [
+          L(`開始 ${stampText(stats.startClock)} → 制圧完了 ${stampText(endStamp)}`, `Start ${stampText(stats.startClock)} → secured ${stampText(endStamp)}`),
+          op && op.endInPlace
+            ? L('現地で作戦終了（帰還なし）', 'Ended in the field (no return)')
+            : L(`作戦本部へ帰還 ${stampText(stats.returnClock)}（作戦時間に含まず）`, `Back at HQ ${stampText(stats.returnClock)} (not counted)`)
         ]),
         combat.bases.length > 0
-          ? card('拠点制圧時刻（ゲーム内）', `${capturedBases} / ${combat.bases.length} 拠点`, baseLines)
-          : card('作戦目標', '達成', [op && op.goal ? op.goal : '']),
-        card('回収アイテム', `${stats.itemsCollected} 個`),
-        card('撃破数', `${totalKills} 両`, [
-          kinds.length ? kinds.map((k) => `${ENEMY_INFO[k].name} ${stats.killsByKind[k]}`).join(' ／ ') : '—',
-          `自機 ${stats.killsBy.player} ／ 僚機 ${stats.killsBy.ally}${stats.killsBy.other ? ` ／ その他 ${stats.killsBy.other}` : ''}`
+          ? card(L('拠点制圧時刻（ゲーム内）', 'Capture times (in-game)'), L(`${capturedBases} / ${combat.bases.length} 拠点`, `${capturedBases} / ${combat.bases.length} compounds`), baseLines)
+          : card(L('作戦目標', 'Objective'), L('達成', 'Complete'), [op && op.goal ? op.goal : '']),
+        card(L('回収アイテム', 'Items collected'), L(`${stats.itemsCollected} 個`, `${stats.itemsCollected}`)),
+        card(L('撃破数', 'Kills'), L(`${totalKills} 両`, `${totalKills}`), [
+          kinds.length ? kinds.map((k) => `${ENEMY_INFO[k].name} ${stats.killsByKind[k]}`).join(L(' ／ ', ' · ')) : '—',
+          L(`自機 ${stats.killsBy.player} ／ 僚機 ${stats.killsBy.ally}${stats.killsBy.other ? ` ／ その他 ${stats.killsBy.other}` : ''}`,
+            `You ${stats.killsBy.player} · Wingmen ${stats.killsBy.ally}${stats.killsBy.other ? ` · Other ${stats.killsBy.other}` : ''}`)
         ]),
-        card('命中率', `${accuracyPct}%`, [`命中 ${stats.shotsHit} ／ 発射 ${stats.shotsFired}`]),
-        card('自機の被ダメージ', `${Math.round(stats.damageTaken)}`, [`残り装甲　${Math.ceil(player.hp)} / ${player.maxHp}`]),
-        card('小隊', `${1 + aliveAllies} / ${squad.maxSize} 両`, [
-          `僚機の損失　${stats.alliesLost} 両`,
-          `補充　${squad.reinforcements || 0} 両`
+        card(L('命中率', 'Accuracy'), `${accuracyPct}%`, [L(`命中 ${stats.shotsHit} ／ 発射 ${stats.shotsFired}`, `Hits ${stats.shotsHit} · Shots ${stats.shotsFired}`)]),
+        card(L('自機の被ダメージ', 'Damage taken'), `${Math.round(stats.damageTaken)}`, [L(`残り装甲　${Math.ceil(player.hp)} / ${player.maxHp}`, `Armor left ${Math.ceil(player.hp)} / ${player.maxHp}`)]),
+        card(L('小隊', 'Platoon'), L(`${1 + aliveAllies} / ${squad.maxSize} 両`, `${1 + aliveAllies} / ${squad.maxSize}`), [
+          L(`僚機の損失　${stats.alliesLost} 両`, `Wingmen lost ${stats.alliesLost}`),
+          L(`補充　${squad.reinforcements || 0} 両`, `Replacements ${squad.reinforcements || 0}`)
         ]),
-        card('スクラップ', `⚙ ${stats.scrapEarned}`, [`獲得合計 ／ 残高 ⚙ ${combat.scrap}`]),
+        card(L('スクラップ', 'Scrap'), `⚙ ${stats.scrapEarned}`, [L(`獲得合計 ／ 残高 ⚙ ${combat.scrap}`, `Earned in total · Balance ⚙ ${combat.scrap}`)]),
         ...(data.carry ? [this._carryCard(card, data.carry)] : [])
       );
 
@@ -145,18 +148,20 @@
     // What the platoon takes into the next operation (js/campaign.js recordSuccess)
     _carryCard(card, c) {
       const up = c.level > c.levelBefore;
-      const c2 = card('小隊の記録（次の作戦へ）', `練度 Lv${c.level}${up ? ' ▲' : ''}`, [
-        `経験値 +${c.xpGain}（${c.xp}${c.nextLevelXp ? ` / 次のLv ${c.nextLevelXp}` : '・最大'}）`
+      const c2 = card(L('小隊の記録（次の作戦へ）', 'Platoon record (to the next operation)'), L(`練度 Lv${c.level}${up ? ' ▲' : ''}`, `Crew Lv${c.level}${up ? ' ▲' : ''}`), [
+        L(`経験値 +${c.xpGain}（${c.xp}${c.nextLevelXp ? ` / 次のLv ${c.nextLevelXp}` : '・最大'}）`
           + (up ? ` 車両調整ポイント +${c.level - c.levelBefore}` : ''),
-        `自機の損耗 ${Math.round(c.wearBefore * 100)}% → ${Math.round(c.wear * 100)}%`,
-        `僚機 ${c.allies} 両 ／ スクラップ ⚙ ${c.scrap} を持ち越し`,
+        `XP +${c.xpGain} (${c.xp}${c.nextLevelXp ? ` / next Lv ${c.nextLevelXp}` : ', max'})`
+          + (up ? ` · Tuning points +${c.level - c.levelBefore}` : '')),
+        L(`自機の損耗 ${Math.round(c.wearBefore * 100)}% → ${Math.round(c.wear * 100)}%`, `Wear on your tank ${Math.round(c.wearBefore * 100)}% → ${Math.round(c.wear * 100)}%`),
+        L(`僚機 ${c.allies} 両 ／ スクラップ ⚙ ${c.scrap} を持ち越し`, `Carried over: ${c.allies} wingmen · scrap ⚙ ${c.scrap}`),
         // Industrial planet: the people and the collaborator
         ...(c.civilLost > 0 || c.support < 100
-          ? [`住民の協力度 ${c.supportBefore}% → ${c.support}%（民間の建物 ${c.civilLost} 棟を損壊）`]
+          ? [L(`住民の協力度 ${c.supportBefore}% → ${c.support}%（民間の建物 ${c.civilLost} 棟を損壊）`, `Civilian support ${c.supportBefore}% → ${c.support}% (${c.civilLost} civilian buildings destroyed)`)]
           : []),
-        ...(c.collaborator === true ? ['協力者を護衛 — 地下トンネルの地図を入手'] : []),
-        ...(c.collaborator === false ? ['協力者を失った — トンネルの地図なし'] : []),
-        ...(c.campaignDone ? ['★ 惑星カストラ解放 — 全作戦完了'] : [])
+        ...(c.collaborator === true ? [L('協力者を護衛 — 地下トンネルの地図を入手', 'Collaborator escorted — tunnel map obtained')] : []),
+        ...(c.collaborator === false ? [L('協力者を失った — トンネルの地図なし', 'Collaborator lost — no tunnel map')] : []),
+        ...(c.campaignDone ? [L('★ 惑星カストラ解放 — 全作戦完了', '★ Planet Castra liberated — every operation complete')] : [])
       ]);
       c2.classList.add('is-carry');
       return c2;

@@ -11,27 +11,27 @@
   const TUNING_AXES = [
     {
       id: 'cannon',
-      name: '主砲・砲身強化',
-      short: '主砲',
-      desc: '主砲ダメージ・弾速・爆風半径・射程。自機はLv4で連装砲、Lv5でプラズマレール砲。'
+      name: L('主砲・砲身強化', 'Main gun & barrel'),
+      short: L('主砲', 'Gun'),
+      desc: L('主砲ダメージ・弾速・爆風半径・射程。自機はLv4で連装砲、Lv5でプラズマレール砲。', 'Gun damage, shell speed, blast radius and range. Your tank gets twin guns at Lv4 and a plasma railgun at Lv5.')
     },
     {
       id: 'reload',
-      name: '自動装填機構',
-      short: '装填',
-      desc: '次弾装填時間を短縮し、連続砲撃による制圧力を高める。'
+      name: L('自動装填機構', 'Autoloader'),
+      short: L('装填', 'Reload'),
+      desc: L('次弾装填時間を短縮し、連続砲撃による制圧力を高める。', 'Shortens the reload time for more sustained fire.')
     },
     {
       id: 'engine',
-      name: '高出力エンジン & 履帯',
-      short: '機動',
-      desc: '最高速度・加速・旋回性を向上させる。'
+      name: L('高出力エンジン & 履帯', 'Engine & tracks'),
+      short: L('機動', 'Mobility'),
+      desc: L('最高速度・加速・旋回性を向上させる。', 'Raises top speed, acceleration and turning.')
     },
     {
       id: 'armor',
-      name: '複合装甲 & ERA',
-      short: '装甲',
-      desc: '最大HPと被弾軽減率を強化する。'
+      name: L('複合装甲 & ERA', 'Composite armor & ERA'),
+      short: L('装甲', 'Armor'),
+      desc: L('最大HPと被弾軽減率を強化する。', 'Raises max HP and damage reduction.')
     }
   ];
 
@@ -43,12 +43,13 @@
   };
 
   const TUNING_UNITS = [
-    { id: 'player', name: '自機', note: '隊長車' },
-    { id: 'ally', name: '僚機', note: '全僚機（補充機を含む）' }
+    { id: 'player', name: L('自機', 'Your tank'), note: L('隊長車', 'Commander\'s tank') },
+    { id: 'ally', name: L('僚機', 'Wingmen'), note: L('全僚機（補充機を含む）', 'All wingmen (replacements included)') }
   ];
 
   // Player's main gun per cannon level (HUD)
-  const CANNON_TITLES = ['105mm 戦車砲', '120mm 長砲身', '150mm 制退重砲', '連装 150mm 重砲', 'プラズマ・レール砲'];
+  const CANNON_TITLES = L(['105mm 戦車砲', '120mm 長砲身', '150mm 制退重砲', '連装 150mm 重砲', 'プラズマ・レール砲'],
+    ['105mm tank gun', '120mm long barrel', '150mm heavy gun', 'Twin 150mm heavy guns', 'Plasma railgun']);
 
   const GameData = global.GameData || (global.GameData = {});
   GameData.TUNING_AXES = TUNING_AXES;

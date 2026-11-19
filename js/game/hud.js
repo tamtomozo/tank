@@ -122,7 +122,7 @@
 
       // Operation picked on the sortie-select screen (js/data/operations.js)
       const op = game.operation ? game.operation.operation : null;
-      setText(hudEl.objective, op ? `作戦「${op.name}」` : '—');
+      setText(hudEl.objective, op ? L(`作戦「${op.name}」`, `Op. "${op.name}"`) : '—');
       setText(hudEl.clock, `DAY ${timeInfo.day} ${timeInfo.clockText}`);
       if (hudEl.squad) setText(hudEl.squad, `${squad.size}/${squad.maxSize}`);
       setText(hudEl.coords, `X: ${Math.round(player.x)} / Y: ${Math.round(player.y)}`);
@@ -133,8 +133,8 @@
       if (hold && hold.active && !hold.done) {
         const left = Math.ceil(hold.duration - hold.progress);
         setText(hudEl.holdText, hold.inside
-          ? `${hold.banner || '封鎖中 — 完了まで'} ${left} 秒`
-          : `円の外！ 戻れ（残り ${left} 秒で停止中）`);
+          ? L(`${hold.banner || '封鎖中 — 完了まで'} ${left} 秒`, `${hold.banner || 'Holding — until done'} ${left} s`)
+          : L(`円の外！ 戻れ（残り ${left} 秒で停止中）`, `Outside the circle! Get back (stopped at ${left} s)`));
         hudEl.holdBanner.classList.toggle('is-outside', !hold.inside);
       }
 
@@ -146,35 +146,56 @@
       if (!combat.operation) return '';
       const lines = [];
       const tick = (done, text) => lines.push(`${done ? '✔' : '□'} ${text}`);
+      // Sweep operation: the wave, the run so far and the lap clock (js/combat/sweep.js)
+      const s = combat.sweep;
+      if (s) {
+        const fmt = global.Sweep.formatTime;
+        const wave = s.round + 1;
+        if (s.phase === 'fight') {
+          const n = combat.bases.filter((b) => b.cleared).length;
+          tick(false, L(`第${wave}/${s.rounds}波 拠点制圧 ${n}/${combat.bases.length}`, `Wave ${wave}/${s.rounds}: compounds ${n}/${combat.bases.length}`));
+        } else {
+          tick(true, L(`第${wave}/${s.rounds}波 制圧完了`, `Wave ${wave}/${s.rounds} cleared`));
+        }
+        if (s.phase === 'rest' && s.restBase) {
+          tick(false, L(`${s.restBase.name}の白旗で 回復／次の波へ`, `Recover / next wave at ${s.restBase.name}'s flag`));
+        }
+        lines.push(L(`総制圧 ${s.captured}/${s.total}`, `Total ${s.captured}/${s.total}`));
+        const lap = s.phase === 'fight' ? s.lap : s.laps[s.laps.length - 1] || 0;
+        lines.push(`LAP ${fmt(lap)} ／ TOTAL ${fmt(combat.sweepTime)}`);
+        return lines.join('\n');
+      }
       const required = combat.bases.filter((b) => !b.optional);
       if (required.length > 0) {
         const n = required.filter((b) => b.cleared).length;
-        tick(n === required.length, `拠点制圧 ${n}/${required.length}`);
+        tick(n === required.length, L(`拠点制圧 ${n}/${required.length}`, `Compounds ${n}/${required.length}`));
       }
       const f = combat.feint;
       if (f) {
         const name = combat.bases[f.site].name;
-        tick(f.done, f.spotted || f.done ? `陽動：${name}から${f.distance}引き離す` : `陽動：${name}に発見される`);
+        tick(f.done, f.spotted || f.done
+          ? L(`陽動：${name}から${f.distance}引き離す`, `Feint: pull ${f.distance} away from ${name}`)
+          : L(`陽動：${name}に発見される`, `Feint: get spotted by ${name}`));
       }
       if (combat.survey) {
         const n = combat.survey.filter((p) => p.done).length;
-        const label = combat.operation.surveyKind === 'patrol' ? '市街の巡回' : '氷上偵察';
+        const label = combat.operation.surveyKind === 'patrol' ? L('市街の巡回', 'City patrol') : L('氷上偵察', 'Ice survey');
         tick(n === combat.survey.length, `${label} ${n}/${combat.survey.length}`);
       }
       const esc = combat.escort;
       if (esc) {
-        if (esc.stage === 'lost') lines.push(`✖ ${esc.name}を失った`);
-        else if (esc.stage === 'meet') tick(false, `${esc.name}と合流（${esc.meet.name}）`);
-        else tick(esc.stage === 'done', `${esc.name}を${esc.to.name}へ護衛`);
+        if (esc.stage === 'lost') lines.push(L(`✖ ${esc.name}を失った`, `✖ Lost ${esc.name}`));
+        else if (esc.stage === 'meet') tick(false, L(`${esc.name}と合流（${esc.meet.name}）`, `Meet ${esc.name} (${esc.meet.name})`));
+        else tick(esc.stage === 'done', L(`${esc.name}を${esc.to.name}へ護衛`, `Escort ${esc.name} to the ${esc.to.name}`));
       }
       const fin = combat.finale;
-      if (fin) tick(fin.done, `${global.GameData.ENEMY_INFO[fin.kind].name}の撃破`);
+      if (fin) tick(fin.done, L(`${global.GameData.ENEMY_INFO[fin.kind].name}の撃破`, `Destroy the ${global.GameData.ENEMY_INFO[fin.kind].name}`));
       const hold = combat.hold;
-      if (hold) tick(hold.done, `${hold.label || '周囲の封鎖'} ${hold.duration}秒`);
+      if (hold) tick(hold.done, L(`${hold.label || '周囲の封鎖'} ${hold.duration}秒`, `${hold.label || 'Hold the area'} ${hold.duration} s`));
       // Industrial planet: the people's cooperation, live (js/campaign.js)
       const planet = game.operation && game.operation.planet;
       if (planet && planet.hazards && planet.hazards.civilians) {
-        lines.push(`住民の協力度 ${global.Campaign.supportAfter(combat.civilLost || 0)}%`);
+        lines.push(L(`住民の協力度 ${global.Campaign.supportAfter(combat.civilLost || 0)}%`, `Civilian support ${global.Campaign.supportAfter(combat.civilLost || 0)}%`));
       }
       return lines.join('\n');
     }

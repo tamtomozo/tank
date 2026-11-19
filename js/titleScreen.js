@@ -24,9 +24,9 @@
   const REDUCED_MOTION = global.matchMedia && global.matchMedia('(prefers-reduced-motion: reduce)').matches;
   // The planets of the story, with how the title describes them
   const STORY_PLANETS = [
-    { id: 1, label: '砂嵐の辺境' },
-    { id: 2, label: '吹雪と極夜' },
-    { id: 3, label: '敵の本星' }
+    { id: 1, label: L('砂嵐の辺境', 'Sandstorm frontier') },
+    { id: 2, label: L('吹雪と極夜', 'Blizzard & polar night') },
+    { id: 3, label: L('敵の本星', 'Enemy home world') }
   ];
 
   class TitleScreen {
@@ -136,7 +136,7 @@
           if (!rank) continue;
           const item = document.createElement('span');
           item.className = 'title-medal';
-          item.title = `${planet.name}「${op.name}」— ${global.Medal.name(rank)}`;
+          item.title = L(`${planet.name}「${op.name}」— ${global.Medal.name(rank)}`, `${planet.name} "${op.name}" — ${global.Medal.name(rank)}`);
           item.style.setProperty('--i', i++);
           const medal = global.Medal.create(rank);
           medal.setAttribute('aria-label', item.title);

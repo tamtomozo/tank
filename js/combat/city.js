@@ -84,7 +84,7 @@
       if (op.escort) {
         const e = op.escort;
         this.escort = {
-          name: e.name || '協力者',
+          name: e.name || L('協力者', 'the collaborator'),
           meet: { x: this.world.wrapX(e.meet.x), y: this.world.wrapY(e.meet.y), name: e.meet.name },
           to: { x: this.world.wrapX(e.to.x), y: this.world.wrapY(e.to.y), name: e.to.name },
           stage: 'meet', // → 'follow' → 'done' | 'lost'

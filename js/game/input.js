@@ -56,20 +56,20 @@
         btnControlMode.classList.toggle('is-active', isDirect);
         // label in a span: phones show only the icon (css/touch.css)
         btnControlMode.innerHTML = isDirect
-          ? '🧭<span class="btn-label"> 方向移動</span> <kbd>C</kbd>'
-          : '🎮<span class="btn-label"> 戦車操縦</span> <kbd>C</kbd>';
+          ? L('🧭<span class="btn-label"> 方向移動</span> <kbd>C</kbd>', '🧭<span class="btn-label"> Direct Move</span> <kbd>C</kbd>')
+          : L('🎮<span class="btn-label"> 戦車操縦</span> <kbd>C</kbd>', '🎮<span class="btn-label"> Tank Drive</span> <kbd>C</kbd>');
       }
       if (btnStartMode) {
         btnStartMode.setAttribute('aria-pressed', String(isDirect));
         btnStartMode.classList.toggle('is-active', isDirect);
         btnStartMode.textContent = isDirect
-          ? '🧭 操縦: 押した方向移動'
-          : '🎮 操縦: 戦車操縦';
+          ? L('🧭 操縦: 押した方向移動', '🧭 Control: direct move')
+          : L('🎮 操縦: 戦車操縦', '🎮 Control: tank drive');
       }
       if (hudMoveHint) {
         hudMoveHint.innerHTML = isDirect
-          ? '<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 押した方向へ移動'
-          : '<kbd>W</kbd><kbd>S</kbd> 前後進 / <kbd>A</kbd><kbd>D</kbd> 超信地旋回';
+          ? L('<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 押した方向へ移動', '<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move in that direction')
+          : L('<kbd>W</kbd><kbd>S</kbd> 前後進 / <kbd>A</kbd><kbd>D</kbd> 超信地旋回', '<kbd>W</kbd><kbd>S</kbd> Forward / Back · <kbd>A</kbd><kbd>D</kbd> Pivot turn');
       }
     }
 
@@ -101,7 +101,9 @@
       const nextMuted = !audio.muted;
       audio.setMuted(nextMuted);
       btnMute.setAttribute('aria-pressed', String(nextMuted));
-      btnMute.innerHTML = nextMuted ? '🔇<span class="btn-label"> 消音</span>' : '🔊<span class="btn-label"> 音声</span>';
+      btnMute.innerHTML = nextMuted
+        ? L('🔇<span class="btn-label"> 消音</span>', '🔇<span class="btn-label"> Muted</span>')
+        : L('🔊<span class="btn-label"> 音声</span>', '🔊<span class="btn-label"> Sound</span>');
       btnMute.blur();
     });
 
@@ -116,6 +118,16 @@
       if (code === 'KeyC' && radio.controlsLocked) return; // don't cut into Mio's area-secured report
       if (code === 'KeyC' && !garageDialog.open && !gameoverDialog.open) {
         toggleControlMode();
+        return;
+      }
+      // Pause window (js/game/mission.js): Esc opens it (Esc inside an open window closes that
+      // one instead), P opens and closes it
+      if ((code === 'Escape' || code === 'KeyP') && !e.repeat && game.mission) {
+        if (code === 'KeyP' || !game.dialogs.pause.open) {
+          // (the same Esc would otherwise close the window it has just opened)
+          if (code === 'Escape') e.preventDefault();
+          game.mission.togglePause();
+        }
         return;
       }
       if (code === 'KeyM' && !garageDialog.open) {

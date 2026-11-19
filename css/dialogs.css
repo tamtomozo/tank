@@ -141,3 +141,53 @@ dialog.game-dialog::backdrop {
 .btn-primary-lg:active {
   transform: translateY(1px);
 }
+
+/* Sweep operation result (js/game/mission.js showSweepResult): lap time of every wave */
+#gameover-summary {
+  white-space: pre-line;
+}
+
+.sweep-laps {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 0.3rem 0.9rem;
+  margin: 0;
+  padding: 0.7rem 0.9rem;
+  list-style: none;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  border-radius: 0.5rem;
+  background: rgb(255 255 255 / 0.04);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9rem;
+}
+
+.sweep-laps[hidden] {
+  display: none;
+}
+
+.sweep-laps li.is-best {
+  color: #fde047;
+  font-weight: 800;
+}
+
+.sweep-laps li.is-best::after {
+  content: " ★";
+}
+
+.sweep-laps li.is-unfinished {
+  grid-column: 1 / -1;
+  color: #fca5a5;
+}
+
+.sweep-laps[data-record]::after {
+  content: attr(data-record);
+  grid-column: 1 / -1;
+  margin-top: 0.3rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* Pause window: withdrawing is not offered once the objective is met */
+#btn-pause-withdraw[hidden] {
+  display: none;
+}

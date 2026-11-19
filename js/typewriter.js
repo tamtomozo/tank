@@ -7,7 +7,8 @@
   //   textEl: element that shows the visible (typed) text, gets `.is-typing` while typing
   //   srEl:   optional visually hidden element that receives the full line at once (screen readers)
 
-  const CHARS_PER_SEC = 34;
+  // English runs 2–3× the characters of the same Japanese line, so it types faster
+  const CHARS_PER_SEC = L(34, 80);
   const TICK_MS = 30;
 
   class Typewriter {

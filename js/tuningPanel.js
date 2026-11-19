@@ -101,11 +101,11 @@
         const ctrl = el('div', 'tuning-axis-ctrl');
         const minus = el('button', 'tuning-step', '−');
         minus.type = 'button';
-        minus.setAttribute('aria-label', `${unit.name} ${ax.name} を下げる`);
+        minus.setAttribute('aria-label', L(`${unit.name} ${ax.name} を下げる`, `Lower ${ax.name} (${unit.name})`));
         const value = el('span', 'tuning-axis-lv');
         const plus = el('button', 'tuning-step', '＋');
         plus.type = 'button';
-        plus.setAttribute('aria-label', `${unit.name} ${ax.name} を上げる`);
+        plus.setAttribute('aria-label', L(`${unit.name} ${ax.name} を上げる`, `Raise ${ax.name} (${unit.name})`));
         minus.addEventListener('click', () => this._set(unit.id, ax.id, this.tuning.levels[unit.id][ax.id] - 1));
         plus.addEventListener('click', () => this._set(unit.id, ax.id, this.tuning.levels[unit.id][ax.id] + 1));
         ctrl.append(minus, value, plus);
@@ -116,9 +116,9 @@
 
       // ---- resulting stats + reset (in the chart's corner)
       const stats = el('dl', 'tuning-stats');
-      const reset = el('button', 'btn-hud tuning-reset', '標準に戻す');
+      const reset = el('button', 'btn-hud tuning-reset', L('標準に戻す', 'Reset'));
       reset.type = 'button';
-      reset.title = `${unit.name}を標準配分（全項目Lv${TUNING_RULES.standard.cannon}）に戻す`;
+      reset.title = L(`${unit.name}を標準配分（全項目Lv${TUNING_RULES.standard.cannon}）に戻す`, `Reset ${unit.name} to the standard spread (Lv${TUNING_RULES.standard.cannon} on every stat)`);
       reset.addEventListener('click', () => {
         if (this.tuning.reset(unit.id)) this._changed(unit.id);
       });
@@ -195,7 +195,7 @@
       const tuning = this.tuning;
       const levels = tuning.levels[id];
       const left = tuning.remaining(id);
-      u.points.textContent = `配分 ${tuning.used(id)} / ${tuning.budget}　残り ${left}`;
+      u.points.textContent = L(`配分 ${tuning.used(id)} / ${tuning.budget}　残り ${left}`, `Points ${tuning.used(id)} / ${tuning.budget} · ${left} left`);
       u.points.classList.toggle('has-left', left > 0);
 
       u.shape.setAttribute('d', polygonPath(levels));
@@ -206,7 +206,7 @@
         u.handles[i].setAttribute('cy', (d.y * r).toFixed(1));
       });
       u.chart.setAttribute('aria-label',
-        `${u.unit.name}の車両調整 ` + TUNING_AXES.map((ax) => `${ax.short} Lv${levels[ax.id]}`).join('、'));
+        L(`${u.unit.name}の車両調整 `, `Tuning of ${u.unit.name}: `) + TUNING_AXES.map((ax) => `${ax.short} Lv${levels[ax.id]}`).join(L('、', ', ')));
 
       for (const row of u.rows) {
         const lv = levels[row.ax.id];
@@ -219,13 +219,13 @@
       const st = tuning.stats(id);
       // [label, full name (tooltip), value]
       const items = [
-        ['火力', '主砲ダメージ', String(st.damage)],
-        ['装填', '装填時間', `${st.reloadTime.toFixed(2)}s`],
-        ['速度', '最高速度', String(Math.round(st.maxSpeed))],
-        ['耐久', '最大装甲（HP）', String(st.maxHp)],
-        ['軽減', '被弾軽減率', `${Math.round(st.armorReduction * 100)}%`]
+        [L('火力', 'Firepower'), L('主砲ダメージ', 'Main gun damage'), String(st.damage)],
+        [L('装填', 'Reload'), L('装填時間', 'Reload time'), `${st.reloadTime.toFixed(2)}s`],
+        [L('速度', 'Speed'), L('最高速度', 'Top speed'), String(Math.round(st.maxSpeed))],
+        [L('耐久', 'Durability'), L('最大装甲（HP）', 'Max armor (HP)'), String(st.maxHp)],
+        [L('軽減', 'Reduction'), L('被弾軽減率', 'Damage reduction'), `${Math.round(st.armorReduction * 100)}%`]
       ];
-      if (id === 'player') u.note.textContent = `主砲 ${tuning.cannonName()}`;
+      if (id === 'player') u.note.textContent = L(`主砲 ${tuning.cannonName()}`, `Main gun: ${tuning.cannonName()}`);
       u.stats.replaceChildren(...items.map(([label, full, value]) => {
         const item = el('div', 'tuning-stat');
         item.title = full;

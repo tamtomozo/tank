@@ -119,7 +119,7 @@
       const crateA = at(110, 2);
       const crateB = at(132, 26);
       this.hq = {
-        name: '作戦本部',
+        name: L('作戦本部', 'HQ'),
         x: HQ_X,
         y: HQ_Y,
         radius: HQ_RADIUS,

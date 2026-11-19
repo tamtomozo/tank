@@ -16,7 +16,8 @@
     const dialogs = {
       start: document.getElementById('start-dialog'),
       garage: document.getElementById('garage-dialog'),
-      gameover: document.getElementById('gameover-dialog')
+      gameover: document.getElementById('gameover-dialog'),
+      pause: document.getElementById('pause-dialog') // pause: back to the operation / withdraw
     };
 
     // Canvas pixels per CSS pixel follow what the device keeps up with (js/game/quality.js)
@@ -151,7 +152,7 @@
       lastTime = now;
       frameNo += 1;
 
-      const menuOpen = !game.started || dialogs.start.open || sortieSelect.isOpen || briefing.isOpen || dialogs.garage.open || dialogs.gameover.open || results.isOpen;
+      const menuOpen = !game.started || dialogs.start.open || sortieSelect.isOpen || briefing.isOpen || dialogs.garage.open || dialogs.gameover.open || dialogs.pause.open || results.isOpen;
       // Phones held upright: everything waits behind the "turn sideways" screen (landscape only)
       const paused = game.touchUi.update(menuOpen) || menuOpen;
       // While Mio reports the secured area (controls locked) the in-game clock and the mission

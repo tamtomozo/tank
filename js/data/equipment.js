@@ -15,12 +15,12 @@
   // How they are applied: js/loadout.js.
 
   const EQUIPMENT = [
-    { id: 'cooler', name: '冷却装置', icon: '❄', desc: 'エンジンの過熱が半分の速さになり、冷えるのも1.5倍速い。' },
-    { id: 'filter', name: '防塵フィルター', icon: '◎', desc: '砂嵐の中でも照準できる距離が1.6倍。砂煙で見つかる距離も15%短くなる。' },
-    { id: 'heater', name: 'エンジンヒーター', icon: '♨', desc: '止まっていても車体が冷えにくい（低温の進み方が1/4）。' },
-    { id: 'wideTracks', name: '幅広の履帯', icon: '≡', desc: '氷にかかる重さが半分になり、止まっても割れにくい（小隊全車）。' },
-    { id: 'addArmor', name: '増加装甲', icon: '▣', desc: '最大装甲+25%（小隊全車）。重くなるため最高速度−8%。' },
-    { id: 'cage', name: 'ケージ装甲', icon: '#', desc: '至近弾の爆風ダメージ−35%、歩兵のロケットは直撃でも−55%（小隊全車）。戦車砲の直撃には効かない。' }
+    { id: 'cooler', name: L('冷却装置', 'Cooling unit'), icon: '❄', desc: L('エンジンの過熱が半分の速さになり、冷えるのも1.5倍速い。', 'The engine heats up half as fast and cools 1.5× faster.') },
+    { id: 'filter', name: L('防塵フィルター', 'Dust filter'), icon: '◎', desc: L('砂嵐の中でも照準できる距離が1.6倍。砂煙で見つかる距離も15%短くなる。', 'Aim 1.6× farther inside sandstorms. Your dust gives you away from 15% less far.') },
+    { id: 'heater', name: L('エンジンヒーター', 'Engine heater'), icon: '♨', desc: L('止まっていても車体が冷えにくい（低温の進み方が1/4）。', 'The tank stays warm while standing still (chills at 1/4 the rate).') },
+    { id: 'wideTracks', name: L('幅広の履帯', 'Wide tracks'), icon: '≡', desc: L('氷にかかる重さが半分になり、止まっても割れにくい（小隊全車）。', 'Halves the load on the ice, so it cracks less when you stop (whole platoon).') },
+    { id: 'addArmor', name: L('増加装甲', 'Add-on armor'), icon: '▣', desc: L('最大装甲+25%（小隊全車）。重くなるため最高速度−8%。', 'Max armor +25% (whole platoon). The extra weight costs 8% top speed.') },
+    { id: 'cage', name: L('ケージ装甲', 'Cage armor'), icon: '#', desc: L('至近弾の爆風ダメージ−35%、歩兵のロケットは直撃でも−55%（小隊全車）。戦車砲の直撃には効かない。', 'Blast damage from near misses −35%, infantry rockets −55% even on a direct hit (whole platoon). No help against direct tank-gun hits.') }
   ];
 
   const EQUIP_SLOTS = 2;
