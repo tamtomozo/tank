@@ -96,6 +96,18 @@
   <script src="js/game/radar.js" defer></script>
   <script src="js/game/render.js" defer></script>
   <script src="js/main.js" defer></script>
+  <!-- PWA: register the Service Worker (sw.js) after load; hand it the files this first visit
+       loaded so the game also starts offline. Skipped on file:// (unsupported there). -->
+  <script>
+    if ('serviceWorker' in navigator && window.isSecureContext) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').then(() => navigator.serviceWorker.ready).then((reg) => {
+          const urls = [location.href].concat(performance.getEntriesByType('resource').map((e) => e.name));
+          if (reg.active) reg.active.postMessage({ type: 'cache-urls', urls });
+        }).catch(() => {});
+      });
+    }
+  </script>
 </head>
 <body>
   <main class="game-viewport">
