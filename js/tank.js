@@ -202,8 +202,18 @@
       this._traverseTurretTowardLocal(0, dt);
     }
 
+    // Design of this enemy kind (js/enemyLooks.js), or null for the player / wingmen look
+    _look() {
+      if (this._lookCache === undefined) {
+        const looks = global.EnemyLooks && global.EnemyLooks.LOOKS;
+        this._lookCache = (!this.isPlayer && !this.isAlly && looks && looks[this.kind]) || null;
+      }
+      return this._lookCache;
+    }
+
     getMuzzleWorld() {
-      const barrelLen = (34 + (this.cannonLevel - 1) * 4) * this.scale;
+      const look = this._look();
+      const barrelLen = (look ? look.muzzle : 34 + (this.cannonLevel - 1) * 4) * this.scale;
       const cos = Math.cos(this.turretAngle);
       const sin = Math.sin(this.turretAngle);
       return {
@@ -487,16 +497,17 @@
       // The still parts (track bases, hull, turret) come from sprites, see _spriteSet()
       this._drawScale = s;
       const sprites = this._spriteSet();
+      const boxes = sprites.boxes;
       const vib = this._engineVibration();
       if (this.isBunker) {
         this._drawBunkerBase(ctx);
       } else {
         ctx.save();
         ctx.rotate(this.hullAngle);
-        stamp(ctx, sprites.tracks, TRACKS_BOX);
+        stamp(ctx, sprites.tracks, boxes.tracks);
         this._paintTrackMotion(ctx);
         this._shakeWithEngine(ctx, vib);
-        stamp(ctx, sprites.hull, HULL_BOX);
+        stamp(ctx, sprites.hull, boxes.hull);
         ctx.restore();
       }
 
@@ -511,7 +522,7 @@
         this._drawTurret(ctx);
       } else {
         ctx.rotate(this.turretAngle);
-        stamp(ctx, sprites.turret, TURRET_BOX);
+        stamp(ctx, sprites.turret, boxes.turret);
         this._paintAntenna(ctx);
       }
       ctx.restore();
@@ -633,6 +644,11 @@
     }
 
     _drawBunkerBase(ctx) {
+      const look = this._look();
+      if (look && look.base) {
+        look.base(ctx, this);
+        return;
+      }
       ctx.fillStyle = '#334155';
       ctx.strokeStyle = '#64748b';
       ctx.lineWidth = 2.5;
@@ -741,6 +757,11 @@
 
     // The hull itself: nothing here moves, it only depends on the tank's colours and armour level
     _paintHull(ctx) {
+      const look = this._look();
+      if (look) {
+        if (look.hull) look.hull(ctx, this); // fixed emplacements have none (base instead)
+        return;
+      }
       // Main armored hull
       ctx.fillStyle = this.hullColor;
       ctx.strokeStyle = '#111827';
@@ -801,6 +822,11 @@
     // Turret in its own axes (barrel along +x). live: with what changes from frame to frame (barrel
     // recoil, muzzle flash, antenna); without it this is the still picture kept as a sprite.
     _paintTurret(ctx, live) {
+      const look = this._look();
+      if (look) {
+        this._paintLookTurret(ctx, look, live);
+        return;
+      }
       // Turret shadow on hull
       ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
       ctx.beginPath();
@@ -885,14 +911,53 @@
       if (live) this._paintAntenna(ctx);
     }
 
+    // Enemy turret from its kind's design: gun (with recoil) under the turret body
+    _paintLookTurret(ctx, look, live) {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.beginPath();
+      ctx.ellipse(-2, 3, 16, 14, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.save();
+      ctx.translate(live ? -this.recoil : 0, 0);
+      look.barrel(ctx, this);
+      if (live && this.muzzleFlashTimer > 0) {
+        for (const y of look.muzzleYs) {
+          ctx.fillStyle = 'rgba(254, 240, 138, 0.92)';
+          ctx.beginPath();
+          ctx.ellipse(look.muzzle + 6, y, 11, 6, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+          ctx.beginPath();
+          ctx.ellipse(look.muzzle + 3, y, 5, 3, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+
+      look.turret(ctx, this);
+      if (live) this._paintAntenna(ctx);
+    }
+
     // Swaying whip antenna
     _paintAntenna(ctx) {
+      const look = this._look();
+      const foot = look ? look.antenna : [-9, -6];
+      if (!foot) return;
+      const [ax, ay] = foot;
       ctx.strokeStyle = '#cbd5e1';
       ctx.lineWidth = 1.2;
       ctx.beginPath();
-      ctx.moveTo(-9, -6);
-      ctx.lineTo(-16 - this.antennaLag, -9);
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(ax - 7 - this.antennaLag, ay - 3);
       ctx.stroke();
+      if (look) {
+        // Base of the antenna
+        ctx.fillStyle = '#111827';
+        ctx.beginPath();
+        ctx.arc(ax, ay, 1.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
 
     // ---- Sprites (battlefield drawing) ----------------------------------------------------------
@@ -912,18 +977,21 @@
       }
       const key = [
         res, this.hullColor, this.hullDark, this.turretColor, this.accentColor, this.isPlayer ? 1 : 0,
+        this._look() ? this.kind : '',
         this.cannonLevel, this.armorLevel, this.engineLevel
       ].join('|');
       let set = spriteCache.get(key);
       if (!set) {
+        const boxes = this._look() ? LOOK_BOXES : DEFAULT_BOXES;
         set = {
           res,
+          boxes,
           cannon: this.cannonLevel,
           armor: this.armorLevel,
           engine: this.engineLevel,
-          tracks: makeSprite(TRACKS_BOX, res, (g) => this._paintTrackBases(g)),
-          hull: makeSprite(HULL_BOX, res, (g) => this._paintHull(g)),
-          turret: makeSprite(TURRET_BOX, res, (g) => this._paintTurret(g, false))
+          tracks: makeSprite(boxes.tracks, res, (g) => this._paintTrackBases(g)),
+          hull: makeSprite(boxes.hull, res, (g) => this._paintHull(g)),
+          turret: makeSprite(boxes.turret, res, (g) => this._paintTurret(g, false))
         };
         spriteCache.set(key, set);
       }
@@ -936,9 +1004,17 @@
   const TRACK_OFFSET_Y = 16;
 
   // Sprite bounds in tank units (the painted shapes plus a little margin for their outlines)
-  const TRACKS_BOX = { x: -26, y: -26, w: 52, h: 52 };
-  const HULL_BOX = { x: -27, y: -19, w: 55, h: 38 };
-  const TURRET_BOX = { x: -18, y: -17, w: 65, h: 35 };
+  const DEFAULT_BOXES = {
+    tracks: { x: -26, y: -26, w: 52, h: 52 },
+    hull: { x: -27, y: -19, w: 55, h: 38 },
+    turret: { x: -18, y: -17, w: 65, h: 35 }
+  };
+  // Enemy designs (js/enemyLooks.js) reach further: track guards, longer guns, rear antennas
+  const LOOK_BOXES = {
+    tracks: DEFAULT_BOXES.tracks,
+    hull: { x: -30, y: -26, w: 62, h: 52 },
+    turret: { x: -30, y: -18, w: 86, h: 36 }
+  };
   const spriteCache = new Map(); // look + resolution -> { tracks, hull, turret }
 
   function makeSprite(box, res, paint) {
