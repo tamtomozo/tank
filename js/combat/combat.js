@@ -7,6 +7,7 @@
   //   enemyAI.js  enemy tank behaviour            effects.js  particles, pickups, resupply
   //   ice.js      frozen lakes                    city.js     turrets, tunnels, IEDs, escort,
   //                                                           finale boss, destructible buildings
+  //   wreck.js    the player's tank lost: the burning wreck before the game-over window
 
   const { ENEMY_SPECS } = global.GameData; // js/data/enemies.js
 
@@ -93,6 +94,11 @@
       this.hold = null; // "hold the area" objective state (js/combat/bases.js)
       this.sweep = null; // waves of a sweep operation (js/combat/sweep.js), null otherwise
       this.time = 0; // seconds of battle (drives the mirage shimmer)
+      // Player's tank lost: seconds of the loss sequence so far (null while it fights on), and the
+      // burning wreck (js/combat/wreck.js)
+      this.lossTime = null;
+      this.lossSunk = false;
+      this.wreck = null;
     }
 
     // selection: { planet, operation } picked on the sortie-select screens, or null (no compounds)
@@ -123,6 +129,9 @@
       this.damageFlash = 0;
       this.magnetRadius = 110;
       this.repairBonus = 1.0;
+      this.lossTime = null;
+      this.lossSunk = false;
+      this.wreck = null;
 
       this.spawnBases();
     }

@@ -318,6 +318,13 @@
         : L('敵車両が氷を踏み抜きました！ 重い戦車ほど、薄い氷に弱いようです。', 'An enemy vehicle broke through the ice! The heavier the tank, the worse it does on thin ice.');
     },
 
+    // The player's tank lost (js/combat/wreck.js)
+    playerDown(sunk) {
+      return sunk
+        ? L('小隊長の車両が氷の下に……！ 小隊長、応答してください！', 'Your tank went under the ice...! Platoon leader, please respond!')
+        : L('小隊長車、被弾……大破！ 小隊長、応答してください！ 小隊長！', 'Your tank is hit... It is destroyed! Platoon leader, please respond! Platoon leader!');
+    },
+
     outOfAmmo() {
       return L('砲弾が尽きました！ 敵を撃破すれば、残骸から砲弾を回収できます。僚機の援護を頼ってください！', 'Out of shells! Destroy enemies to recover shells from the wrecks. Lean on your wingmen!');
     },

@@ -184,8 +184,15 @@
             true
           );
         }
-      } else if (frameNo % 3 === 0) {
-        audio.updateEngine(0, false);
+      } else {
+        if (!paused && game.started && !game.overShown && !player.alive) {
+          // Tank lost: the blast and the burning wreck play out before the game-over window
+          // (js/combat/wreck.js; mission.checkEnd waits for it)
+          if (combat.lossTime == null) radio.say(global.RadioComms.script.playerDown(!!player.sunk), { priority: 'high' });
+          combat.updateAfterLoss(dt, player);
+          radio.update(dt);
+        }
+        if (frameNo % 3 === 0) audio.updateEngine(0, false);
       }
 
       mission.checkEnd();

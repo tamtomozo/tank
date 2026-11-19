@@ -468,7 +468,9 @@
       // Sweep: the record of the run once Mio has reported the last wave, or as soon as the tank is lost
       if (combat.sweep) {
         if (!game.started || game.overShown) return;
-        if (!player.alive) showSweepResult(false);
+        if (!player.alive) {
+          if (combat.lossSequenceDone()) showSweepResult(false);
+        }
         else if (combat.sweep.phase === 'done' && radio.isIdle) showSweepResult(true);
         return;
       }
@@ -503,8 +505,8 @@
         results.open({ stats, combat, squad, player, world, audio, planetName: planetName(), carry }, () => start({ award }));
       }
 
-      // Tank destroyed
-      if (game.started && !game.overShown && !player.alive) {
+      // Tank destroyed (once the blast and the burning wreck have played out, js/combat/wreck.js)
+      if (game.started && !game.overShown && !player.alive && combat.lossSequenceDone()) {
         game.overShown = true;
         const victory = false;
         const badge = document.getElementById('gameover-badge');

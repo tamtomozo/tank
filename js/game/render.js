@@ -600,6 +600,9 @@
         if (p) {
           renderQueue.push({ dy: p.dy, draw: () => player.draw(ctx, drawCamX, drawCamY, viewW, viewH, timeInfo.nightFactor) });
         }
+      } else {
+        // Tank lost: the burning hull and the blown-off turret (js/combat/wreck.js)
+        for (const item of combat.wreckDrawItems(ctx, drawCamX, drawCamY, viewW, viewH)) renderQueue.push(item);
       }
 
       renderQueue.sort((a, b) => a.dy - b.dy);
