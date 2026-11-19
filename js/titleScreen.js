@@ -83,7 +83,8 @@
       this.el.hidden = false;
       const onGesture = (e) => {
         if (this.credits && this.credits.isOpen) return; // the credits handle their own input
-        if (e.target instanceof Element && e.target.closest('.title-credits-link')) return;
+        // The corner links (credits, landing page) do their own thing instead of starting the game
+        if (e.target instanceof Element && e.target.closest('.title-credits-link, .title-lp-link')) return;
         if (e.type === 'keydown') {
           if (e.repeat || IGNORED_KEYS.has(e.key)) return;
         } else if (e.button > 0) {

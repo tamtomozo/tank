@@ -3,8 +3,9 @@
    logo, story, medals and prompt step back (.title-screen.is-credits) and rolls the credits up over
    the starfield; the roll stops on THANK YOU FOR PLAYING and "back to title" comes up under it. */
 
-/* ---- link on the title ---------------------------------------------------------------------- */
-.title-credits-link {
+/* ---- corner links on the title: STAFF CREDITS (lower right), ABOUT THE GAME → lp/ (lower left) */
+.title-credits-link,
+.title-lp-link {
   position: absolute;
   inset-block-end: calc(6% + var(--safe-b, 0px));
   inset-inline-end: clamp(0.9rem, 3vmin, 1.8rem);
@@ -23,23 +24,34 @@
   animation: title-fade 0.8s ease-out 4.1s both;
 }
 
+.title-lp-link {
+  inset-inline-end: auto;
+  inset-inline-start: clamp(0.9rem, 3vmin, 1.8rem);
+  justify-items: start;
+  text-decoration: none;
+}
+
 .title-credits-link[hidden] {
   display: none;
 }
 
 .title-credits-link:hover,
-.title-credits-link:focus-visible {
+.title-credits-link:focus-visible,
+.title-lp-link:hover,
+.title-lp-link:focus-visible {
   color: var(--text-main);
   border-color: rgb(125 211 252 / 0.7);
   background: rgb(14 40 64 / 0.6);
 }
 
-.title-credits-link:focus-visible {
+.title-credits-link:focus-visible,
+.title-lp-link:focus-visible {
   outline: 2px solid var(--accent-cyan);
   outline-offset: 2px;
 }
 
-.title-credits-link-main {
+.title-credits-link-main,
+.title-corner-link-main {
   font-family: var(--font-mono);
   font-size: clamp(0.72rem, 1.9vmin, 0.88rem);
   font-weight: 700;
@@ -48,7 +60,8 @@
   color: #7dd3fc;
 }
 
-.title-credits-link-sub {
+.title-credits-link-sub,
+.title-corner-link-sub {
   font-size: clamp(0.6rem, 1.5vmin, 0.72rem);
   letter-spacing: 0.12em;
 }
@@ -56,7 +69,9 @@
 /* Out of the way once the game starts, or while the credits are up (through filter: the intro
    animation holds the opacity) */
 .title-screen.is-starting .title-credits-link,
-.title-screen.is-credits .title-credits-link {
+.title-screen.is-credits .title-credits-link,
+.title-screen.is-starting .title-lp-link,
+.title-screen.is-credits .title-lp-link {
   filter: opacity(0);
   pointer-events: none;
 }
@@ -414,12 +429,14 @@ html[lang="en"] .credits-heading::after {
 
 /* Landscape phones: shorter, tighter roll */
 @media (max-height: 560px) {
-  .title-credits-link {
+  .title-credits-link,
+  .title-lp-link {
     inset-block-end: calc(3% + var(--safe-b, 0px));
     padding: 0.3rem 0.55rem;
   }
 
-  .title-credits-link-sub {
+  .title-credits-link-sub,
+  .title-corner-link-sub {
     display: none;
   }
 
