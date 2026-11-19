@@ -6,7 +6,7 @@
   // (radar charts, js/tuningPanel.js), equipment & maintenance (js/loadoutPanel.js), enemy intel,
   // terrain.
   // ⑤ 地理情報 only: a tactical map of the whole battlefield on the left, the details on the right.
-  // Other steps: the details take the whole width. Bottom: Mio narrates each step.
+  // Other steps: the details take the whole width. Mio narrates each step the first time only.
 
   // 'tactical' = start time followed by the compounds (in that order)
   const STEP_IDS = ['status', 'tactical', 'tuning', 'loadout', 'enemies', 'terrain'];
@@ -135,7 +135,7 @@
       this.mainEl.classList.toggle('is-no-map', !showMap);
       this.mapWrap.hidden = !showMap;
       if (showMap) this._drawMap(STEP_IDS[this.step]);
-      this._say(this._mioLine(STEP_IDS[this.step]), sayDelayMs);
+      this._narrate(STEP_IDS[this.step], sayDelayMs);
     }
 
     // ------------------------------------------------------------------ data helpers
@@ -641,6 +641,19 @@
     }
 
     // ------------------------------------------------------------------ Mio narration
+    // Mio talks through each step only the first time it is shown for this operation
+    // (remembered in the campaign save, js/campaign.js); after that the step stays quiet
+    _narrate(stepId, delayMs = 0) {
+      const campaign = global.Campaign;
+      const opId = this.operation && this.operation.id;
+      if (campaign && opId != null && campaign.heardBriefing(String(opId), stepId)) {
+        this._stopTyping();
+        return;
+      }
+      this._say(this._mioLine(stepId), delayMs);
+      if (campaign && opId != null) campaign.markBriefingHeard(String(opId), stepId);
+    }
+
     // Mio narrates the current step (after `delayMs` while the window is still booting up);
     // her call pops up at the screen centre when she starts talking
     _say(text, delayMs = 0) {

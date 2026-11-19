@@ -20,6 +20,8 @@
   //              Both decide how many guerrillas the last stage meets (guerrillaThreat)
   //   sweep      best sweep-operation run per planet id (js/sweep.js): { captured, time, bestLap,
   //              laps }. More compounds wins, then the shorter time. A sweep changes nothing else.
+  //   briefingHeard  briefing steps whose line Mio has already given, per operation id
+  //              ({ opId: [stepId, ...] }): she talks through each step only the first time
   // Only a completed operation changes it (recordSuccess); a failed sortie is simply retried.
   // URL options: ?unlock opens every stage, ?reset starts a fresh campaign.
 
@@ -37,7 +39,7 @@
   const XP_NO_LOSSES = 10;
 
   function fresh() {
-    return { cleared: [], ranks: {}, xp: 0, wear: 0, allies: MAX_ALLIES, scrap: 0, equipment: {}, support: 100, collaborator: null, sweep: {} };
+    return { cleared: [], ranks: {}, xp: 0, wear: 0, allies: MAX_ALLIES, scrap: 0, equipment: {}, support: 100, collaborator: null, sweep: {}, briefingHeard: {} };
   }
 
   class Campaign {
@@ -70,6 +72,9 @@
       }
       if (!this.state.sweep || typeof this.state.sweep !== 'object' || Array.isArray(this.state.sweep)) {
         this.state.sweep = {};
+      }
+      if (!this.state.briefingHeard || typeof this.state.briefingHeard !== 'object' || Array.isArray(this.state.briefingHeard)) {
+        this.state.briefingHeard = {};
       }
     }
 
@@ -225,6 +230,20 @@
       this.state.sweep[planetId] = record;
       this._save();
       return { newBest, newBestLap, record };
+    }
+
+    // ---- briefing (js/briefing.js) ----
+    // Whether Mio has already given her line for this briefing step of the operation
+    heardBriefing(opId, stepId) {
+      const steps = this.state.briefingHeard[opId];
+      return Array.isArray(steps) && steps.includes(stepId);
+    }
+
+    markBriefingHeard(opId, stepId) {
+      if (this.heardBriefing(opId, stepId)) return;
+      const steps = this.state.briefingHeard[opId];
+      this.state.briefingHeard[opId] = Array.isArray(steps) ? [...steps, stepId] : [stepId];
+      this._save();
     }
 
     // ---- end of an operation ----
