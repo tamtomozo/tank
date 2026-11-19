@@ -22,6 +22,7 @@
   <link rel="stylesheet" href="css/hudframe.css">
   <link rel="stylesheet" href="css/briefing.css">
   <link rel="stylesheet" href="css/sortieselect.css">
+  <link rel="stylesheet" href="css/medal.css">
   <link rel="stylesheet" href="css/results.css">
   <link rel="stylesheet" href="css/depot.css">
   <link rel="stylesheet" href="css/tuning.css">
@@ -69,6 +70,7 @@
   <script src="js/planetGlobe.js" defer></script>
   <script src="js/sortieSelect.js" defer></script>
   <script src="js/planetSelect.js" defer></script>
+  <script src="js/medal.js" defer></script>
   <script src="js/campaign.js" defer></script>
   <script src="js/operationSelect.js" defer></script>
   <script src="js/briefing.js" defer></script>
@@ -340,11 +342,6 @@
           <div class="dialog-badge">OPERATIONS HQ — PLANET SELECT</div>
           <h2 id="planet-title" class="briefing-title">惑星選択</h2>
         </div>
-        <ol class="sortie-flow" aria-label="出撃までの手順">
-          <li class="sortie-flow-step is-active" aria-current="step">① 惑星選択</li>
-          <li class="sortie-flow-step">② 作戦選択</li>
-          <li class="sortie-flow-step">③ ブリーフィング</li>
-        </ol>
       </header>
 
       <div class="sortie-body hud-boot" style="--boot-i: 1">
@@ -397,11 +394,6 @@
           <div class="dialog-badge">OPERATIONS HQ — SORTIE SELECT</div>
           <h2 id="operation-title" class="briefing-title">作戦選択</h2>
         </div>
-        <ol class="sortie-flow" aria-label="出撃までの手順">
-          <li class="sortie-flow-step is-done">① 惑星選択</li>
-          <li class="sortie-flow-step is-active" aria-current="step">② 作戦選択</li>
-          <li class="sortie-flow-step">③ ブリーフィング</li>
-        </ol>
       </header>
 
       <div class="sortie-body hud-boot" style="--boot-i: 1">
@@ -614,9 +606,12 @@
           <h2 id="results-title" class="results-title">戦果レポート</h2>
         </div>
         <div class="results-rank-box" aria-label="総合評価">
-          <span class="results-rank-label">総合評価</span>
-          <strong id="results-rank" class="results-rank">S</strong>
-          <span id="results-score" class="results-score">SCORE 0</span>
+          <span id="results-medal" class="results-medal"></span>
+          <div class="results-rank-text">
+            <span class="results-rank-label">総合評価</span>
+            <strong id="results-rank" class="results-rank">金勲章</strong>
+            <span id="results-score" class="results-score">SCORE 0</span>
+          </div>
         </div>
       </header>
 
@@ -648,7 +643,7 @@
       </div>
 
       <form method="dialog" class="dialog-footer-actions hud-boot" style="--boot-i: 7">
-        <button value="restart" class="btn-primary-lg" autofocus>もう一度出撃する</button>
+        <button value="restart" class="btn-primary-lg" autofocus>了解</button>
       </form>
     </div>
   </dialog>

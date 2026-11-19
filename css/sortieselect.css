@@ -25,37 +25,6 @@ dialog.sortie-dialog {
   gap: 0.75rem;
 }
 
-/* ① → ② → ③ progress */
-.sortie-flow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.sortie-flow-step {
-  font-size: 0.82rem;
-  padding-block: 0.35rem;
-  padding-inline: 0.7rem;
-  border-radius: 999px;
-  border: 1px solid rgb(148 180 218 / 0.3);
-  background: rgb(255 255 255 / 0.04);
-  color: var(--text-muted);
-}
-
-.sortie-flow-step.is-active {
-  background: rgb(56 189 248 / 0.2);
-  border-color: rgb(56 189 248 / 0.7);
-  color: #e0f2fe;
-}
-
-.sortie-flow-step.is-done {
-  border-color: rgb(34 197 94 / 0.5);
-  color: #86efac;
-}
-
 .sortie-body {
   min-block-size: 14rem;
 }
@@ -277,13 +246,6 @@ dialog.sortie-dialog {
   min-inline-size: 0;
 }
 
-.op-card-label {
-  font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  color: #7dd3fc;
-}
-
 .op-card-name {
   font-size: clamp(1.3rem, 2.6vw, 1.7rem);
   font-weight: 900;
@@ -319,15 +281,34 @@ dialog.sortie-dialog {
 }
 
 /* Stage cards: completed / not yet unlocked */
-.op-card-badge {
-  margin-inline-start: 0.6rem;
-  padding-inline: 0.45rem;
-  padding-block: 0.05rem;
-  border-radius: 0.3rem;
-  background: rgb(34 197 94 / 0.2);
-  border: 1px solid rgb(74 222 128 / 0.6);
-  color: #bbf7d0;
-  letter-spacing: 0.06em;
+/* Completed stage: the medal of its best result (js/medal.js, css/medal.css) */
+.op-card-medal {
+  flex: none;
+  display: grid;
+  justify-items: center;
+  gap: 0.15rem;
+  order: -1;
+}
+
+.op-card-medal .medal {
+  inline-size: 2.6rem;
+}
+
+.op-card-medal-name {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+}
+
+.op-card-medal[data-rank="S"] .op-card-medal-name { color: #fde047; }
+.op-card-medal[data-rank="A"] .op-card-medal-name { color: #e2e8f0; }
+.op-card-medal[data-rank="B"] .op-card-medal-name { color: #fdba74; }
+
+/* Completed before ranks were kept: a dim medal */
+.medal.is-unranked {
+  opacity: 0.6;
+  filter: grayscale(1);
 }
 
 .op-card.is-cleared {

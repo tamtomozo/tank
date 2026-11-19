@@ -463,8 +463,7 @@
     font-size: 1.1rem;
   }
 
-  .briefing-step,
-  .sortie-flow-step {
+  .briefing-step {
     font-size: 0.74rem;
     padding-block: 0.3rem;
     padding-inline: 0.55rem;
@@ -582,7 +581,11 @@
   }
 
   .results-rank {
-    font-size: 2.6rem;
+    font-size: 1.4rem;
+  }
+
+  .results-medal .medal.is-large {
+    inline-size: 2.8rem;
   }
 
   .result-value {

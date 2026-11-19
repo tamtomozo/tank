@@ -274,6 +274,7 @@
         const stats = combat.stats;
         const carry = game.operation ? global.Campaign.recordSuccess({
           opId: game.operation.operation.id,
+          rank: global.ResultsReport.computeRank(stats, player.maxHp).rank,
           kills: stats.killsBy.player + stats.killsBy.ally,
           alliesLost: stats.alliesLost,
           alliesLeft: combat.allies.filter((a) => a.alive).length,

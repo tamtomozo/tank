@@ -5,6 +5,8 @@
   // localStorage (this browser only).
   //   cleared    completed operations: an operation with `requires` (js/data/operations.js)
   //              opens once that one is done, so each planet is played stage by stage
+  //   ranks      best overall rank (S/A/B/C, js/results.js) per completed operation, shown as a
+  //              medal on the operation select (js/medal.js)
   //   xp         platoon experience → crew level (CREW_LEVELS); every level above 1 adds a
   //              tuning point to the radar charts (js/tuning.js)
   //   wear       wear of the player's tank (0..WEAR_MAX): less armour and top speed until repaired
@@ -33,7 +35,7 @@
   const XP_NO_LOSSES = 10;
 
   function fresh() {
-    return { cleared: [], xp: 0, wear: 0, allies: MAX_ALLIES, scrap: 0, equipment: {}, support: 100, collaborator: null };
+    return { cleared: [], ranks: {}, xp: 0, wear: 0, allies: MAX_ALLIES, scrap: 0, equipment: {}, support: 100, collaborator: null };
   }
 
   class Campaign {
@@ -58,6 +60,9 @@
         }
       }
       this.state.cleared = Array.isArray(this.state.cleared) ? this.state.cleared.map(String) : [];
+      if (!this.state.ranks || typeof this.state.ranks !== 'object' || Array.isArray(this.state.ranks)) {
+        this.state.ranks = {};
+      }
       if (!this.state.equipment || typeof this.state.equipment !== 'object' || Array.isArray(this.state.equipment)) {
         this.state.equipment = {};
       }
@@ -78,6 +83,11 @@
 
     isCleared(opId) {
       return this.state.cleared.includes(opId);
+    }
+
+    // Best rank of a completed operation (null if never completed, or completed before ranks were kept)
+    bestRank(opId) {
+      return this.state.ranks[opId] || null;
     }
 
     isUnlocked(op) {
@@ -187,7 +197,7 @@
 
     // ---- end of an operation ----
     // A completed operation: progress, experience, wear and what is left of the platoon carry over.
-    // r = { opId, kills, alliesLost, alliesLeft, damageRatio, scrap, civilLost, collaborator }.
+    // r = { opId, rank, kills, alliesLost, alliesLeft, damageRatio, scrap, civilLost, collaborator }.
     // Returns the changes for the report.
     recordSuccess(r) {
       const s = this.state;
@@ -200,6 +210,7 @@
       s.allies = Math.max(0, Math.min(MAX_ALLIES, r.alliesLeft));
       s.scrap = Math.max(0, Math.round(r.scrap));
       if (!s.cleared.includes(r.opId)) s.cleared.push(r.opId);
+      if (r.rank && global.Medal.isBetter(r.rank, s.ranks[r.opId])) s.ranks[r.opId] = r.rank;
       this._save();
       return {
         xpGain,

@@ -48,6 +48,7 @@
       const campaign = global.Campaign;
       const unlocked = campaign.isUnlocked(op);
       const cleared = campaign.isCleared(op.id);
+      const rank = cleared ? campaign.bestRank(op.id) : null;
       const card = el('button', 'op-card');
       card.type = 'button';
       if (cleared) card.classList.add('is-cleared');
@@ -56,17 +57,32 @@
         card.disabled = true;
       }
       const body = el('div', 'op-card-body');
-      const label = el('span', 'op-card-label', op.stage ? `第${op.stage}段階　${op.phase || ''}` : '作戦名');
-      if (cleared) label.append(el('span', 'op-card-badge', '完了'));
       body.append(
-        label,
         el('strong', 'op-card-name', unlocked ? `「${op.name}」` : '「？？？」'),
         el('p', 'op-card-goal', unlocked ? `目標: ${op.goal}` : '目標: 機密'),
         el('p', 'op-card-summary', unlocked ? op.summary : this._lockNote(op))
       );
+      // A completed stage shows the medal of its best result; the metal tells how well it went
+      if (cleared) card.append(this._medal(rank));
       card.append(body, el('span', 'op-card-go', unlocked ? 'ブリーフィングへ ▶' : '🔒 未解放'));
       if (unlocked) card.addEventListener('click', () => this.finish({ operation: op }));
       return card;
+    }
+
+    // Medal of a completed stage (rank null: completed before ranks were kept → plain medal)
+    _medal(rank) {
+      const Medal = global.Medal;
+      const box = el('span', 'op-card-medal');
+      const medal = Medal.create(rank || 'C', rank ? '' : 'is-unranked');
+      const title = rank ? `${Medal.name(rank)}（${Medal.grade(rank)}）` : '作戦完了';
+      medal.setAttribute('aria-label', `作戦完了 — ${title}`);
+      box.title = rank ? `最高評価: ${title}` : '作戦完了（評価の記録なし — 再出撃で記録されます）';
+      box.append(medal);
+      if (rank) {
+        box.append(el('span', 'op-card-medal-name', Medal.name(rank)));
+        box.dataset.rank = rank;
+      }
+      return box;
     }
   }
 

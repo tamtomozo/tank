@@ -1,0 +1,85 @@
+/* Operation medal — js/medal.js. The metal (and ribbon) tells how well the operation went. */
+
+.medal {
+  --medal-hi: #e2e8f0;
+  --medal-mid: #64748b;
+  --medal-lo: #1e293b;
+  --medal-ribbon: #334155;
+  --medal-stripe: #94a3b8;
+  --medal-glow: transparent;
+  display: block;
+  inline-size: 3rem;
+  block-size: auto;
+  aspect-ratio: 64 / 84;
+  overflow: visible;
+  filter: drop-shadow(0 0 0.5rem var(--medal-glow)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.5));
+}
+
+/* S: gold, crimson ribbon */
+.medal[data-rank="S"] {
+  --medal-hi: #fffbeb;
+  --medal-mid: #facc15;
+  --medal-lo: #92400e;
+  --medal-ribbon: #b91c1c;
+  --medal-stripe: #fde047;
+  --medal-glow: rgb(250 204 21 / 0.6);
+}
+
+/* A: silver, navy ribbon */
+.medal[data-rank="A"] {
+  --medal-hi: #ffffff;
+  --medal-mid: #cbd5e1;
+  --medal-lo: #475569;
+  --medal-ribbon: #1e3a8a;
+  --medal-stripe: #e2e8f0;
+  --medal-glow: rgb(203 213 225 / 0.45);
+}
+
+/* B: bronze, green ribbon */
+.medal[data-rank="B"] {
+  --medal-hi: #fed7aa;
+  --medal-mid: #c2703d;
+  --medal-lo: #5b2a0e;
+  --medal-ribbon: #166534;
+  --medal-stripe: #fdba74;
+  --medal-glow: rgb(234 88 12 / 0.3);
+}
+
+/* C: iron, grey ribbon (defaults above) */
+
+.medal-ribbon { fill: var(--medal-ribbon); }
+.medal-ribbon-stripe { fill: var(--medal-stripe); opacity: 0.85; }
+.medal-ribbon-edge { stroke: rgb(0 0 0 / 0.35); stroke-width: 1; }
+.medal-burst { stroke: rgb(0 0 0 / 0.25); stroke-width: 0.6; }
+.medal-disc { stroke: var(--medal-lo); stroke-width: 1; }
+.medal-inner-ring { stroke: var(--medal-lo); stroke-width: 0.8; opacity: 0.55; }
+.medal-star { fill: var(--medal-lo); opacity: 0.75; }
+.medal-shine { stroke: rgb(255 255 255 / 0.7); stroke-width: 1.6; stroke-linecap: round; }
+
+/* Gold medal's own shape (js/medal.js goldBody) */
+.medal-ribbon-gold { stroke: #fde047; stroke-width: 1.4; opacity: 0.9; }
+.medal-clasp-gem { fill: #dc2626; stroke: #7f1d1d; stroke-width: 0.5; }
+.medal-stem { stroke: #a16207; stroke-width: 1.1; stroke-linecap: round; }
+.medal-leaf { fill: #ca8a04; stroke: #713f12; stroke-width: 0.5; }
+.medal-ray-small { fill: #a16207; stroke: #713f12; stroke-width: 0.4; }
+.medal-facet-lit { fill: #fef9c3; stroke: #a16207; stroke-width: 0.35; stroke-linejoin: round; }
+.medal-facet-dark { fill: #eab308; stroke: #a16207; stroke-width: 0.35; stroke-linejoin: round; }
+.medal-enamel-rim { stroke: #713f12; stroke-width: 0.5; }
+.medal-enamel { fill: #b91c1c; stroke: #7f1d1d; stroke-width: 0.6; }
+.medal-centre-star { fill: #fde047; stroke: #92400e; stroke-width: 0.4; }
+.medal-glint {
+  fill: #ffffff;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: medal-glint 2.6s ease-in-out infinite;
+}
+.medal-glint + .medal-glint { animation-delay: 1.3s; }
+
+@keyframes medal-glint {
+  0%, 60%, 100% { opacity: 0; transform: scale(0.3) rotate(0deg); }
+  75% { opacity: 1; transform: scale(1) rotate(45deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .medal-glint { animation: none; opacity: 0.9; }
+}
