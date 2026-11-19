@@ -1,0 +1,454 @@
+/* Staff credits (.title-credits in #title-screen) — js/credits.js.
+   The STAFF CREDITS link sits in the title's lower right corner. Opening the credits makes the
+   logo, story, medals and prompt step back (.title-screen.is-credits) and rolls the credits up over
+   the starfield; the roll stops on THANK YOU FOR PLAYING and "back to title" comes up under it. */
+
+/* ---- link on the title ---------------------------------------------------------------------- */
+.title-credits-link {
+  position: absolute;
+  inset-block-end: calc(6% + var(--safe-b, 0px));
+  inset-inline-end: clamp(0.9rem, 3vmin, 1.8rem);
+  z-index: 2;
+  display: grid;
+  justify-items: end;
+  gap: 0.1rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid rgb(125 211 252 / 0.28);
+  border-radius: 0.4rem;
+  background: rgb(2 4 10 / 0.45);
+  color: var(--text-muted);
+  font: inherit;
+  cursor: pointer;
+  transition: color 150ms ease, border-color 150ms ease, background-color 150ms ease, filter 0.4s ease;
+  animation: title-fade 0.8s ease-out 4.1s both;
+}
+
+.title-credits-link[hidden] {
+  display: none;
+}
+
+.title-credits-link:hover,
+.title-credits-link:focus-visible {
+  color: var(--text-main);
+  border-color: rgb(125 211 252 / 0.7);
+  background: rgb(14 40 64 / 0.6);
+}
+
+.title-credits-link:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 2px;
+}
+
+.title-credits-link-main {
+  font-family: var(--font-mono);
+  font-size: clamp(0.72rem, 1.9vmin, 0.88rem);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  margin-inline-end: -0.22em;
+  color: #7dd3fc;
+}
+
+.title-credits-link-sub {
+  font-size: clamp(0.6rem, 1.5vmin, 0.72rem);
+  letter-spacing: 0.12em;
+}
+
+/* Out of the way once the game starts, or while the credits are up (through filter: the intro
+   animation holds the opacity) */
+.title-screen.is-starting .title-credits-link,
+.title-screen.is-credits .title-credits-link {
+  filter: opacity(0);
+  pointer-events: none;
+}
+
+/* ---- the title steps back while the credits roll -------------------------------------------- */
+.title-head,
+.title-medals,
+.title-world {
+  transition: opacity 0.6s ease;
+}
+
+/* The prompt's intro animation holds its opacity, so it fades out through filter instead */
+.title-prompt {
+  transition: filter 0.6s ease;
+}
+
+.title-screen.is-credits {
+  cursor: default;
+}
+
+.title-screen.is-credits .title-head,
+.title-screen.is-credits .title-medals {
+  opacity: 0;
+}
+
+.title-screen.is-credits .title-world {
+  opacity: 0.2;
+}
+
+.title-screen.is-credits .title-prompt {
+  filter: opacity(0);
+}
+
+/* ---- credits -------------------------------------------------------------------------------- */
+.title-credits {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  cursor: default;
+  background: radial-gradient(ellipse 60% 85% at 50% 50%, rgb(2 4 10 / 0.7), rgb(2 4 10 / 0.35) 70%, transparent);
+  animation: title-fade 0.6s ease-out both;
+}
+
+.title-credits[hidden] {
+  display: none;
+}
+
+/* The roll: lines fade in at the bottom edge and out at the top. A drag moves it by hand. */
+.credits-viewport {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  touch-action: none;
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 14%, #000 86%, transparent);
+  mask-image: linear-gradient(180deg, transparent, #000 14%, #000 86%, transparent);
+}
+
+.credits-track {
+  position: relative; /* js/credits.js measures the closing line from here */
+  display: grid;
+  justify-items: center;
+  gap: clamp(3.5rem, 16vmin, 7rem);
+  padding-inline: 1rem;
+  text-align: center;
+  will-change: transform;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.credits-block {
+  display: grid;
+  justify-items: center;
+  gap: clamp(0.8rem, 3vmin, 1.4rem);
+  inline-size: min(40rem, 100%);
+}
+
+/* Opening: the logo, smaller than on the title */
+.credits-logo {
+  display: grid;
+  justify-items: center;
+  line-height: 0.92;
+  transform: skewX(-7deg);
+}
+
+.credits-logo-top {
+  font-size: clamp(0.75rem, 2.6vmin, 1.4rem);
+  font-weight: 800;
+  letter-spacing: 0.62em;
+  margin-inline-end: -0.62em;
+  color: #dbeafe;
+  text-shadow: 0 0 14px rgb(56 189 248 / 0.7);
+}
+
+.credits-logo-main,
+.credits-thanks {
+  font-weight: 900;
+  background: linear-gradient(180deg, #fffbeb 0%, #fde68a 30%, #f59e0b 50%, #92400e 54%, #d97706 72%, #fde68a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 3px 0 #451a03) drop-shadow(0 0 22px rgb(245 158 11 / 0.45));
+}
+
+.credits-logo-main {
+  font-size: clamp(2rem, 8vmin, 4.6rem);
+  letter-spacing: 0.04em;
+  margin-inline-end: -0.04em;
+}
+
+.credits-title {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: clamp(0.85rem, 2.6vmin, 1.2rem);
+  font-weight: 700;
+  letter-spacing: 0.5em;
+  margin-inline-end: -0.5em;
+  color: var(--accent-cyan);
+  text-shadow: 0 0 10px rgb(56 189 248 / 0.6);
+}
+
+/* Section heading: amber caps between two hairlines */
+.credits-heading {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.9em;
+  font-size: clamp(0.75rem, 2.2vmin, 1rem);
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  margin-inline-end: -0.4em;
+  color: var(--accent-bright);
+  text-shadow: 0 0 10px rgb(245 158 11 / 0.5);
+}
+
+.credits-heading::before,
+.credits-heading::after {
+  content: "";
+  inline-size: clamp(1.5rem, 6vmin, 3.5rem);
+  block-size: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-bright));
+}
+
+.credits-heading::after {
+  background: linear-gradient(90deg, var(--accent-bright), transparent);
+  margin-inline-start: -0.4em; /* the trailing letter-spacing sits before it */
+}
+
+html[lang="en"] .credits-heading {
+  letter-spacing: 0.25em;
+  margin-inline-end: -0.25em;
+}
+
+html[lang="en"] .credits-heading::after {
+  margin-inline-start: -0.25em;
+}
+
+/* Cast: role over name */
+.credits-roles {
+  margin: 0;
+  display: grid;
+  gap: clamp(1rem, 3.5vmin, 1.8rem);
+}
+
+.credits-role {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.credits-role dt {
+  font-size: clamp(0.72rem, 2vmin, 0.92rem);
+  letter-spacing: 0.2em;
+  color: var(--text-muted);
+}
+
+.credits-role dd,
+.credits-names li {
+  margin: 0;
+  font-size: clamp(1.15rem, 4vmin, 1.9rem);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--text-main);
+  text-shadow: 0 0 14px rgb(125 211 252 / 0.35);
+}
+
+/* Operations taken, planet by planet */
+.credits-ops {
+  display: grid;
+  gap: clamp(1.4rem, 5vmin, 2.4rem);
+}
+
+.credits-planet {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+}
+
+.credits-planet-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.credits-planet-head .planet-globe {
+  --globe-size: clamp(1.8rem, 5.5vmin, 2.8rem);
+}
+
+.credits-planet-name {
+  font-size: clamp(0.95rem, 3vmin, 1.4rem);
+  letter-spacing: 0.14em;
+  text-shadow: 0 0 10px currentColor;
+}
+
+.credits-op-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.credits-op {
+  font-size: clamp(0.95rem, 3vmin, 1.35rem);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-main);
+}
+
+.credits-none {
+  margin: 0;
+  font-size: clamp(0.75rem, 2.2vmin, 0.95rem);
+  letter-spacing: 0.15em;
+  color: rgb(152 171 196 / 0.75);
+}
+
+/* Medals: all of them in a row, then the count of each metal */
+.credits-medals {
+  display: grid;
+  justify-items: center;
+  gap: 0.9rem;
+}
+
+.credits-medal-row {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: clamp(0.35rem, 1.4vmin, 0.8rem);
+}
+
+.credits-medal .medal {
+  inline-size: clamp(1.9rem, 6vmin, 3rem);
+}
+
+.credits-medal-tally {
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.3rem 1.2rem;
+  font-size: clamp(0.78rem, 2.3vmin, 1rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.credits-medal-count[data-rank="S"] { color: #fde68a; }
+.credits-medal-count[data-rank="A"] { color: #e2e8f0; }
+.credits-medal-count[data-rank="B"] { color: #f0a46b; }
+.credits-medal-count[data-rank="C"] { color: #94a3b8; }
+
+/* Developers */
+.credits-names {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: clamp(0.6rem, 2.2vmin, 1rem);
+}
+
+/* Closing line: where the roll stops, in the middle of the screen. Half a screen of space before
+   it, so everything above has rolled out of sight by then and it stands alone. */
+.credits-closing {
+  margin-block-start: 50vh;
+  padding-block: 1rem;
+}
+
+.credits-thanks {
+  margin: 0;
+  font-size: clamp(2rem, 9vmin, 5rem);
+  line-height: 1.05;
+  letter-spacing: 0.08em;
+  margin-inline-end: -0.08em;
+}
+
+/* ---- controls over the roll ----------------------------------------------------------------- */
+.credits-close {
+  position: absolute;
+  inset-block-start: calc(clamp(0.7rem, 2.5vmin, 1.4rem) + var(--safe-t, 0px));
+  inset-inline-end: clamp(0.9rem, 3vmin, 1.8rem);
+  z-index: 1;
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgb(125 211 252 / 0.35);
+  border-radius: 50%;
+  background: rgb(2 4 10 / 0.6);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 1.05rem;
+  cursor: pointer;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.credits-close:hover,
+.credits-close:focus-visible {
+  border-color: rgb(125 211 252 / 0.8);
+  background: rgb(14 40 64 / 0.8);
+}
+
+.credits-close:focus-visible,
+.credits-back:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 2px;
+}
+
+/* How far the roll has come: a hairline along the top edge */
+.credits-progress {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  inline-size: calc(var(--p, 0) * 100%);
+  block-size: 2px;
+  background: linear-gradient(90deg, rgb(56 189 248 / 0.2), var(--accent-cyan));
+  pointer-events: none;
+}
+
+/* "Back to title": comes up under the closing line once the roll has stopped */
+.credits-end {
+  position: absolute;
+  inset-inline: 1rem;
+  inset-block-end: calc(8% + var(--safe-b, 0px));
+  display: flex;
+  justify-content: center;
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(0.5rem);
+  transition: opacity 0.6s ease, transform 0.6s ease, visibility 0s linear 0.6s;
+}
+
+.credits-end.is-shown {
+  visibility: visible;
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.6s ease 0.3s, transform 0.6s ease 0.3s, visibility 0s;
+}
+
+/* Landscape phones: shorter, tighter roll */
+@media (max-height: 560px) {
+  .title-credits-link {
+    inset-block-end: calc(3% + var(--safe-b, 0px));
+    padding: 0.3rem 0.55rem;
+  }
+
+  .title-credits-link-sub {
+    display: none;
+  }
+
+  .credits-track {
+    gap: 3rem;
+  }
+
+  .credits-end {
+    inset-block-end: calc(5% + var(--safe-b, 0px));
+  }
+
+  .credits-back {
+    padding-block: 0.5rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title-credits-link,
+  .title-credits {
+    animation: none;
+  }
+
+  .title-head,
+  .title-medals,
+  .title-world,
+  .title-prompt,
+  .credits-end,
+  .credits-end.is-shown {
+    transition: none;
+  }
+}

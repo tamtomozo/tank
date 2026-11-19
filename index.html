@@ -29,6 +29,7 @@
   <link rel="stylesheet" href="css/tuning.css">
   <link rel="stylesheet" href="css/hqbackdrop.css">
   <link rel="stylesheet" href="css/title.css">
+  <link rel="stylesheet" href="css/credits.css">
   <!-- phones: on-screen controls + compact HUD / dialogs (last: overrides the rules above) -->
   <link rel="stylesheet" href="css/touch.css">
   <!-- shared helpers & data first: every later script reads them at load time -->
@@ -45,6 +46,7 @@
   <script src="js/data/equipment.js" defer></script>
   <script src="js/audio.js" defer></script>
   <script src="js/bgm.js" defer></script>
+  <script src="js/creditsBgm.js" defer></script>
   <script src="js/planet/planet.js" defer></script>
   <script src="js/planet/terrain.js" defer></script>
   <script src="js/planet/ground.js" defer></script>
@@ -74,6 +76,7 @@
   <script src="js/tacticalMap.js" defer></script>
   <script src="js/hqBackdrop.js" defer></script>
   <script src="js/planetGlobe.js" defer></script>
+  <script src="js/credits.js" defer></script>
   <script src="js/titleScreen.js" defer></script>
   <script src="js/sortieSelect.js" defer></script>
   <script src="js/planetSelect.js" defer></script>
@@ -406,6 +409,73 @@
         <span class="only-touch" data-en="Tap the screen to start">画面をタップして開始</span>
       </span>
     </p>
+
+    <!-- Link to the staff credits (shown by js/titleScreen.js once the credits are wired up) -->
+    <button type="button" class="title-credits-link" hidden>
+      <span class="title-credits-link-main">STAFF CREDITS</span>
+      <span class="title-credits-link-sub" data-en="Credits">スタッフクレジット</span>
+    </button>
+
+    <!-- Staff credits (js/credits.js, css/credits.css): rolls up over the starfield like the end of
+         a film and stops on the closing line. Operations and medals are filled in from the campaign. -->
+    <section class="title-credits" role="dialog" aria-modal="true" aria-labelledby="credits-heading" hidden>
+      <button type="button" class="credits-close" aria-label="クレジットを閉じる" data-en-aria-label="Close the credits" title="閉じる (Esc)" data-en-title="Close (Esc)">✕</button>
+      <div class="credits-viewport">
+        <div class="credits-track">
+          <header class="credits-block credits-opening">
+            <div class="credits-logo" aria-hidden="true">
+              <span class="credits-logo-top">PLANET</span>
+              <span class="credits-logo-main">PANZER</span>
+            </div>
+            <h2 id="credits-heading" class="credits-title">STAFF CREDITS</h2>
+          </header>
+
+          <section class="credits-block">
+            <h3 class="credits-heading" data-en="Cast">登場人物</h3>
+            <dl class="credits-roles">
+              <div class="credits-role">
+                <dt data-en="Operator">オペレーター</dt>
+                <dd data-en="Mio">ミオ</dd>
+              </div>
+              <div class="credits-role">
+                <dt data-en="Commander, Planetary Armored Corps">惑星機甲軍 司令官</dt>
+                <dd data-en="General Hayase">ハヤセ将軍</dd>
+              </div>
+              <div class="credits-role">
+                <dt data-en="Platoon Commander">小隊長</dt>
+                <dd data-en="You">あなた</dd>
+              </div>
+            </dl>
+          </section>
+
+          <section class="credits-block">
+            <h3 class="credits-heading" data-en="Operations Taken">制圧した作戦</h3>
+            <div class="credits-ops"></div>
+          </section>
+
+          <section class="credits-block">
+            <h3 class="credits-heading" data-en="Medals Earned">獲得した勲章</h3>
+            <div class="credits-medals"></div>
+          </section>
+
+          <section class="credits-block">
+            <h3 class="credits-heading" data-en="Developers">開発者</h3>
+            <ul class="credits-names">
+              <li data-en="Tamuzo">タムゾウ</li>
+              <li>Claude</li>
+            </ul>
+          </section>
+
+          <section class="credits-block credits-closing">
+            <p class="credits-thanks">THANK YOU<br>FOR PLAYING</p>
+          </section>
+        </div>
+      </div>
+      <div class="credits-progress" aria-hidden="true"></div>
+      <div class="credits-end">
+        <button type="button" class="credits-back btn-primary-lg" data-en="Back to title">タイトルへ戻る</button>
+      </div>
+    </section>
   </div>
 
   <!-- Phones are landscape-only: while one is held upright (menus included) everything waits behind

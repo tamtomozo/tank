@@ -13,6 +13,7 @@
       this.clatterOsc = null;
       this.bgm = null; // operations-meeting BGM (js/bgm.js), built on first use
       this._bgmWanted = false; // asked to play before the AudioContext existed
+      this.creditsBgm = null; // staff-credits BGM (js/creditsBgm.js), built on first use
     }
 
     init() {
@@ -107,6 +108,18 @@
     stopBriefingBgm(fadeSec) {
       this._bgmWanted = false;
       if (this.bgm) this.bgm.stop(fadeSec);
+    }
+
+    // Staff-credits BGM: plays while the credits roll on the title screen (js/credits.js).
+    // Call it from the gesture that opens the credits, so the AudioContext can start.
+    startCreditsBgm() {
+      if (!this.ctx || !global.CreditsBgm) return;
+      if (!this.creditsBgm) this.creditsBgm = new global.CreditsBgm(this);
+      this.creditsBgm.start();
+    }
+
+    stopCreditsBgm(fadeSec) {
+      if (this.creditsBgm) this.creditsBgm.stop(fadeSec);
     }
 
     setMuted(muted) {

@@ -9,6 +9,8 @@
   // A click / tap / key press fires the tank's cannon and fades the title out to the operations
   // room and the planet select (js/sortieSelect.js). That first gesture is also what lets the
   // browser play sound (autoplay policy), so the operations-meeting BGM starts with the planet select.
+  // The STAFF CREDITS link in the corner opens the credits roll over the starfield (js/credits.js);
+  // presses on the link and inside the credits never start the game.
 
   const LEAVE_DELAY_MS = 650; // cannon shot + muzzle flash before the fade starts
   const FADE_MS = 1200; // = .title-screen.is-leaving transition (css/title.css)
@@ -48,6 +50,17 @@
 
       this._addPlanets(el.querySelector('.title-sc-planets'));
       this._addMedals(el.querySelector('.title-medals'));
+      this.creditsLink = el.querySelector('.title-credits-link');
+      this.credits = global.TitleCredits ? new global.TitleCredits(el.querySelector('.title-credits')) : null;
+      if (this.credits && this.creditsLink) {
+        this.creditsLink.hidden = false;
+        this.creditsLink.addEventListener('click', () => this._openCredits());
+        this.credits.onClose = () => {
+          this.audio.stopCreditsBgm();
+          this.el.classList.remove('is-credits');
+          this.creditsLink.inert = false;
+        };
+      }
       this.viewport = el.querySelector('.title-sc-viewport');
       this.track = el.querySelector('.title-sc-track');
       this.group = this.track ? this.track.querySelector('.title-sc-group') : null;
@@ -69,6 +82,8 @@
       if (this._cleanup) this._cleanup();
       this.el.hidden = false;
       const onGesture = (e) => {
+        if (this.credits && this.credits.isOpen) return; // the credits handle their own input
+        if (e.target instanceof Element && e.target.closest('.title-credits-link')) return;
         if (e.type === 'keydown') {
           if (e.repeat || IGNORED_KEYS.has(e.key)) return;
         } else if (e.button > 0) {
@@ -87,6 +102,15 @@
       // pointerup (not pointerdown): on touch screens only the release counts as a user gesture
       window.addEventListener('pointerup', onGesture, true);
       window.addEventListener('keydown', onGesture, true);
+    }
+
+    _openCredits() {
+      if (!this._cleanup || this._leaving) return; // only while waiting for the start
+      this.el.classList.add('is-credits'); // the logo, story and prompt step back (css/credits.css)
+      this.creditsLink.inert = true;
+      this.audio.init(); // the click / key press that opened the credits lets the sound start
+      this.audio.startCreditsBgm(); // sorrowful theme for the roll (js/creditsBgm.js)
+      this.credits.open();
     }
 
     _start(onStart) {
