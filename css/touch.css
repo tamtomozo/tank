@@ -581,11 +581,7 @@
   }
 
   .results-rank {
-    font-size: 1.4rem;
-  }
-
-  .results-medal .medal.is-large {
-    inline-size: 2.8rem;
+    font-size: 2rem;
   }
 
   .result-value {

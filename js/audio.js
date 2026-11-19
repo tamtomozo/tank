@@ -378,6 +378,66 @@
       this._bugleUntil = t;
     }
 
+    // Ceremonial fanfare for a medal (js/medalAward.js): a brass call over a held chord, longer
+    // and higher for the gold medal
+    playFanfare(gold = false) {
+      if (!this.ctx || this.muted) return;
+      const start = this.ctx.currentTime + 0.05;
+      const S = 0.13;
+      const L = 0.5;
+      // C C C | E - C E | G (gold adds a high C)
+      const notes = [
+        [523.25, S], [523.25, S], [523.25, S], [659.25, L],
+        [523.25, S], [659.25, S], [783.99, gold ? L : L * 2]
+      ];
+      if (gold) notes.push([1046.5, L * 2.4]);
+      const bus = this.ctx.createGain();
+      bus.gain.value = 0.45;
+      bus.connect(this.master);
+      let t = start;
+      for (const [freq, dur] of notes) {
+        const osc = this.ctx.createOscillator();
+        const filter = this.ctx.createBiquadFilter();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(freq * 0.97, t);
+        osc.frequency.exponentialRampToValueAtTime(freq, t + 0.035);
+        filter.type = 'lowpass';
+        filter.Q.value = 1.5;
+        filter.frequency.setValueAtTime(freq * 1.5, t);
+        filter.frequency.exponentialRampToValueAtTime(freq * 4.5, t + 0.05);
+        const end = t + dur;
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.15, t + 0.025);
+        gain.gain.exponentialRampToValueAtTime(0.1, t + 0.1);
+        gain.gain.setValueAtTime(0.1, end - 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.0001, end);
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(bus);
+        osc.start(t);
+        osc.stop(end + 0.02);
+        t = end + 0.03;
+      }
+      // Held chord under the last note
+      const last = notes[notes.length - 1][1];
+      const chordAt = t - last - 0.03;
+      const chord = gold ? [261.63, 329.63, 392.0, 523.25] : [261.63, 329.63, 392.0];
+      for (const freq of chord) {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, chordAt);
+        gain.gain.exponentialRampToValueAtTime(0.07, chordAt + 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.0001, chordAt + last + 0.6);
+        osc.connect(gain);
+        gain.connect(bus);
+        osc.start(chordAt);
+        osc.stop(chordAt + last + 0.65);
+      }
+    }
+
     playWaveClear() {
       if (!this.ctx || this.muted) return;
       const now = this.ctx.currentTime;

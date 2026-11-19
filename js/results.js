@@ -4,7 +4,8 @@
   // After-action report shown once the whole planet has been secured and the platoon is back at the
   // operations HQ (and Mio's final report ended). Mission time runs until the moment the planet was
   // secured; the drive back isn't counted.
-  // Overall rank (a medal, js/medal.js), mission time, per-compound capture times, kills, accuracy, damage, platoon losses,
+  // Overall score (the medal it earns is presented afterwards on the planet select,
+  // js/medalAward.js), mission time, per-compound capture times, kills, accuracy, damage, platoon losses,
   // scrap and items, plus a closing comment from Mio typed out one character at a time.
 
   const { ENEMY_INFO, ENEMY_KIND_ORDER } = global.GameData; // js/data/enemies.js
@@ -50,8 +51,6 @@
     constructor(dialog) {
       this.dialog = dialog;
       this.body = dialog.querySelector('#results-body');
-      this.rankEl = dialog.querySelector('#results-rank');
-      this.medalEl = dialog.querySelector('#results-medal');
       this.scoreEl = dialog.querySelector('#results-score');
       // Mio's closing comment: a call floating at the screen centre until clicked (js/mioCall.js);
       // the audio comes with each open()
@@ -83,11 +82,7 @@
       const { stats, combat, squad, player, world } = data;
       const r = computeRank(stats, player.maxHp);
 
-      // The rank as a medal: its metal shows how well the operation went
-      this.medalEl.replaceChildren(global.Medal.create(r.rank, 'is-large'));
-      this.rankEl.textContent = global.Medal.name(r.rank);
-      this.rankEl.dataset.rank = r.rank;
-      this.scoreEl.textContent = `SCORE ${r.score}`;
+      this.scoreEl.textContent = String(r.score);
 
       let cardIndex = 0;
       const card = (title, value, lines = []) => {

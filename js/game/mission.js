@@ -71,7 +71,9 @@
 
     // New sortie: the sortie-select screens (planet → operation) and the briefing (where the tanks
     // are tuned). The tuning itself is kept from the previous sortie.
-    function start() {
+    // options.award: the medal earned by the operation just completed, presented when the planet
+    // select opens (js/medalAward.js)
+    function start(options = {}) {
       audio.init();
       game.operation = null;
       resetSortie(null);
@@ -83,7 +85,7 @@
       // phase and Mio's mission-start report begin once the briefing is closed with 作戦開始.
       // Behind them the battlefield is hidden: the operations room, then the planet's tactical map.
       backdrop.show('room');
-      sortieSelect.open(openBriefing);
+      sortieSelect.open(openBriefing, { award: options.award || null });
     }
 
     // Briefing for the picked { planet, operation }; 作戦選択へ goes back to that planet's operation list.
@@ -272,9 +274,18 @@
         // Progress, experience, wear and what is left of the platoon carry over to the next
         // operation; the next stage of the planet's campaign opens (js/campaign.js)
         const stats = combat.stats;
+        const ranking = global.ResultsReport.computeRank(stats, player.maxHp);
+        // The medal for this rank is presented on the planet select after the report
+        const award = game.operation ? {
+          rank: ranking.rank,
+          score: ranking.score,
+          planetName: game.operation.planet.name,
+          operationName: game.operation.operation.name,
+          prevRank: global.Campaign.bestRank(game.operation.operation.id)
+        } : null;
         const carry = game.operation ? global.Campaign.recordSuccess({
           opId: game.operation.operation.id,
-          rank: global.ResultsReport.computeRank(stats, player.maxHp).rank,
+          rank: ranking.rank,
           kills: stats.killsBy.player + stats.killsBy.ally,
           alliesLost: stats.alliesLost,
           alliesLeft: combat.allies.filter((a) => a.alive).length,
@@ -284,7 +295,7 @@
           collaborator: combat.escort ? combat.escort.stage === 'done' : null,
           last: game.operation.operation.id === 'castra-3'
         }) : null;
-        results.open({ stats, combat, squad, player, world, audio, planetName: planetName(), carry }, () => start());
+        results.open({ stats, combat, squad, player, world, audio, planetName: planetName(), carry }, () => start({ award }));
       }
 
       // Tank destroyed

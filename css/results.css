@@ -26,26 +26,14 @@ dialog.results-dialog {
 }
 
 .results-rank-box {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
+  display: grid;
+  justify-items: center;
+  gap: 0.1rem;
   padding-block: 0.4rem;
-  padding-inline: 0.9rem 1.2rem;
+  padding-inline: 1.2rem;
   border-radius: 0.7rem;
   background: rgb(255 255 255 / 0.04);
   border: 1px solid rgb(148 180 218 / 0.25);
-}
-
-.results-medal .medal.is-large {
-  inline-size: 3.6rem;
-  animation: results-medal-in 0.7s cubic-bezier(0.2, 1.4, 0.4, 1) both;
-  animation-delay: 1.2s;
-}
-
-.results-rank-text {
-  display: grid;
-  justify-items: start;
-  gap: 0.1rem;
 }
 
 .results-rank-label {
@@ -55,19 +43,13 @@ dialog.results-dialog {
 }
 
 .results-rank {
-  font-size: 1.8rem;
-  line-height: 1.1;
+  font-size: 2.6rem;
+  line-height: 1;
   font-weight: 900;
-  letter-spacing: 0.08em;
+  font-family: var(--font-mono);
   color: #fde68a;
   text-shadow: 0 0 18px rgb(253 230 138 / 0.55);
 }
-
-/* Same metal as the medal (css/medal.css) */
-.results-rank[data-rank="S"] { color: #fde047; text-shadow: 0 0 22px rgb(250 204 21 / 0.75); }
-.results-rank[data-rank="A"] { color: #e2e8f0; text-shadow: 0 0 16px rgb(203 213 225 / 0.55); }
-.results-rank[data-rank="B"] { color: #fdba74; text-shadow: 0 0 14px rgb(234 88 12 / 0.45); }
-.results-rank[data-rank="C"] { color: #94a3b8; text-shadow: none; }
 
 .results-score {
   font-family: var(--font-mono);
@@ -121,17 +103,11 @@ dialog.results-dialog {
   font-variant-numeric: tabular-nums;
 }
 
-@keyframes results-medal-in {
-  from { opacity: 0; transform: translateY(-0.8rem) rotate(-12deg) scale(0.6); }
-  to { opacity: 1; transform: none; }
-}
-
 @keyframes result-card-in {
   from { opacity: 0; transform: translateY(0.6rem); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .result-card,
-  .results-medal .medal.is-large { animation: none; }
+  .result-card { animation: none; }
 }

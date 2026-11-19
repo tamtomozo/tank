@@ -109,22 +109,23 @@
 
     // onSelect({ planet, operation }) runs once an operation has been picked.
     // options.planetId reopens straight on that planet's operation list (back from the briefing).
-    open(onSelect, { planetId = null, delayMs = OPEN_DELAY_MS } = {}) {
+    // options.award: a medal to present over the planet select (after a completed operation).
+    open(onSelect, { planetId = null, delayMs = OPEN_DELAY_MS, award = null } = {}) {
       this.onSelect = onSelect;
       // The browser keeps audio muted until the first click / key press (autoplay policy), so the
       // very first sortie waits on a "click to connect" screen: the BGM then starts with the window.
       if (this.audio.ctx && !this.audio.unlocked) {
-        this._waitForAudioUnlock(() => this._show(planetId, delayMs));
+        this._waitForAudioUnlock(() => this._show(planetId, delayMs, award));
         return;
       }
       this._hideGate(); // shown from page load: not needed this time
-      this._show(planetId, delayMs);
+      this._show(planetId, delayMs, award);
     }
 
-    _show(planetId, delayMs) {
+    _show(planetId, delayMs, award) {
       const planet = planetId != null ? PLANETS.find((p) => p.id === planetId && p.available) : null;
       if (planet) this.operations.open(planet, delayMs);
-      else this.planets.open(null, delayMs);
+      else this.planets.open(null, delayMs, award);
     }
 
     // ---------------------------------------------------------------- audio unlock gate
