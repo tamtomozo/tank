@@ -8,12 +8,11 @@
   // Picking an operation closes ② and hands { planet, operation } to the caller, which opens the
   // briefing (js/game/mission.js). Mio guides each screen in a call floating at the centre.
   // The operations-meeting BGM (js/bgm.js) starts with the first screen and runs until the briefing
-  // closes with 作戦開始. Until the first click / key press the browser keeps audio muted, so the
-  // first opening waits behind the "click to connect" screen (#audio-gate) for that gesture.
+  // closes with 作戦開始. The very first opening waits behind the title screen (js/titleScreen.js):
+  // its click / key press is also what lets the browser play sound.
 
   const { PLANETS } = global.GameData; // js/data/operations.js
 
-  const GATE_FADE_MS = 1200; // the black "click to connect" screen fades out this slowly (see .audio-gate.is-leaving)
   const OPEN_DELAY_MS = 900; // pause on the empty battlefield before the first screen starts drawing
   const SWITCH_DELAY_MS = 250; // pause between one screen closing and the next one drawing
   const BOOT_INTRO_MS = 1450; // boot-up sequence length before Mio starts talking (css/hudframe.css)
@@ -80,9 +79,8 @@
       this.planets = new global.PlanetSelectScene(planetDialog, audio);
       this.operations = new global.OperationSelectScene(operationDialog, audio);
       this.onSelect = null;
-      this._gateCleanup = null; // set while the "click to connect" screen waits for the first gesture
-      this.gate = document.getElementById('audio-gate');
-      this._gateFadeTimer = null;
+      this.title = new global.TitleScreen(document.getElementById('title-screen'), audio);
+      this._titleShown = false; // the title screen comes up once, on the first opening after page load
 
       this.planets.onClose = (result) => {
         if (result) this.operations.open(result.planet, SWITCH_DELAY_MS);
@@ -104,7 +102,7 @@
 
     // True while either screen is shown OR waiting to appear (the game stays paused either way)
     get isOpen() {
-      return this.planets.isOpen || this.operations.isOpen || this._gateCleanup != null;
+      return this.planets.isOpen || this.operations.isOpen || this.title.isOpen;
     }
 
     // onSelect({ planet, operation }) runs once an operation has been picked.
@@ -112,13 +110,13 @@
     // options.award: a medal to present over the planet select (after a completed operation).
     open(onSelect, { planetId = null, delayMs = OPEN_DELAY_MS, award = null } = {}) {
       this.onSelect = onSelect;
-      // The browser keeps audio muted until the first click / key press (autoplay policy), so the
-      // very first sortie waits on a "click to connect" screen: the BGM then starts with the window.
-      if (this.audio.ctx && !this.audio.unlocked) {
-        this._waitForAudioUnlock(() => this._show(planetId, delayMs, award));
+      // First opening after page load: the title screen first. Its gesture also unlocks audio
+      // (autoplay policy), so the BGM starts with the window.
+      if (!this._titleShown) {
+        this._titleShown = true;
+        this.title.waitForStart(() => this._show(planetId, delayMs, award));
         return;
       }
-      this._hideGate(); // shown from page load: not needed this time
       this._show(planetId, delayMs, award);
     }
 
@@ -126,60 +124,6 @@
       const planet = planetId != null ? PLANETS.find((p) => p.id === planetId && p.available) : null;
       if (planet) this.operations.open(planet, delayMs);
       else this.planets.open(null, delayMs, award);
-    }
-
-    // ---------------------------------------------------------------- audio unlock gate
-    // Shows the "click to connect" screen until a user gesture (or the browser itself) lets the
-    // AudioContext run, then calls proceed() once. Escape does not count as a gesture for the
-    // browser's autoplay rules, so it is ignored here.
-    _waitForAudioUnlock(proceed) {
-      if (this._gateCleanup) this._gateCleanup();
-      const ctx = this.audio.ctx;
-      const finish = () => {
-        cleanup();
-        proceed();
-      };
-      const onGesture = (e) => {
-        if (e.type === 'keydown' && (e.key === 'Escape' || e.repeat)) return;
-        this.audio.init(); // resume() inside the gesture: the BGM is audible from here on
-        finish();
-      };
-      const onStateChange = () => {
-        if (this.audio.unlocked) finish();
-      };
-      const cleanup = () => {
-        window.removeEventListener('pointerup', onGesture, true);
-        window.removeEventListener('keydown', onGesture, true);
-        ctx.removeEventListener('statechange', onStateChange);
-        this._hideGate();
-        this._gateCleanup = null;
-      };
-      this._gateCleanup = cleanup;
-      // pointerup (not pointerdown): on touch screens only the release counts as a user gesture
-      window.addEventListener('pointerup', onGesture, true);
-      window.addEventListener('keydown', onGesture, true);
-      // Some browsers start the context on their own a moment later (autoplay allowed for the site)
-      ctx.addEventListener('statechange', onStateChange);
-      this._showGate();
-    }
-
-    _showGate() {
-      if (!this.gate) return;
-      clearTimeout(this._gateFadeTimer);
-      this._gateFadeTimer = null;
-      this.gate.classList.remove('is-leaving');
-      this.gate.hidden = false;
-    }
-
-    // Fade the black screen out slowly to reveal the operations room, then remove it
-    _hideGate() {
-      if (!this.gate || this.gate.hidden || this._gateFadeTimer != null) return;
-      this.gate.classList.add('is-leaving');
-      this._gateFadeTimer = setTimeout(() => {
-        this._gateFadeTimer = null;
-        this.gate.hidden = true;
-        this.gate.classList.remove('is-leaving');
-      }, GATE_FADE_MS);
     }
   }
 

@@ -596,11 +596,6 @@
   .dialog-header h2 {
     font-size: 1.1rem;
   }
-
-  .audio-gate-panel {
-    padding-block: 1.1rem;
-    padding-inline: 1.2rem;
-  }
 }
 
 /* Landscape phone: map and contents side by side, the map no taller than the screen allows */

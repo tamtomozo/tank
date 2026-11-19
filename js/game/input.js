@@ -34,8 +34,8 @@
       }
     };
 
-    // The PLANET PANZER title window is no longer shown; the game starts straight into the sortie select
-    // (see the end of bootstrap). Audio is unlocked on the first user gesture instead of the DEPLOY click.
+    // Audio is unlocked on the first user gesture (normally the one that closes the title screen,
+    // js/titleScreen.js).
     const unlockAudio = () => {
       audio.init();
       window.removeEventListener('pointerdown', unlockAudio, true);

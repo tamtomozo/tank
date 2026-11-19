@@ -1,7 +1,7 @@
 /* Backdrop of the pre-sortie windows — js/hqBackdrop.js.
    Covers the battlefield (and the in-game HUD) with the operations room during the sortie select,
-   and with the planet's tactical map during the briefing. The "click to connect" screen
-   (#audio-gate, z-index 50) and the modal dialogs (top layer) sit above it. */
+   and with the planet's tactical map during the briefing. The title screen
+   (#title-screen, z-index 50) and the modal dialogs (top layer) sit above it. */
 
 .hq-backdrop {
   position: fixed;

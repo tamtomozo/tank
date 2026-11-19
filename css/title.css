@@ -1,0 +1,558 @@
+/* Title screen (#title-screen) — js/titleScreen.js.
+   Shown from the first paint, above the operations-room backdrop (z-index 40) and below the modal
+   dialogs (top layer). Intro: stars fade in → the planet rises with the tank on its horizon → the
+   logo → "press any key". A gesture fires the cannon (.is-starting) and fades it out (.is-leaving). */
+
+.title-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  overflow: hidden;
+  cursor: pointer;
+  background:
+    radial-gradient(ellipse 60% 40% at 18% 22%, rgb(56 120 248 / 0.13), transparent 70%),
+    radial-gradient(ellipse 50% 35% at 82% 30%, rgb(168 85 247 / 0.1), transparent 70%),
+    radial-gradient(ellipse 90% 45% at 50% 78%, rgb(245 158 11 / 0.16), transparent 70%),
+    #02040a;
+}
+
+.title-screen[hidden] {
+  display: none;
+}
+
+/* Fade from the title to the operations room (duration = FADE_MS in js/titleScreen.js) */
+.title-screen.is-leaving {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1.2s ease-in-out;
+}
+
+.title-stars {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  animation: title-fade 1.4s ease-out both;
+}
+
+/* ---- planet + tank: rise into view together ------------------------------------------------ */
+.title-world {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  animation: title-rise 2.4s cubic-bezier(0.16, 0.8, 0.3, 1) 0.2s both;
+}
+
+.title-planet {
+  position: absolute;
+  inset-block-start: 76%;
+  inset-inline-start: 50%;
+  inline-size: 260vmax;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  translate: -50% 0;
+  background:
+    radial-gradient(circle at 50% 0%, rgb(255 214 160 / 0.5) 0, transparent 2.5%),
+    radial-gradient(circle at 50% 0%, #9a7854 0, #6b533d 4%, #3a2c21 11%, #120d0a 26%);
+  box-shadow:
+    0 0 18px 2px rgb(125 211 252 / 0.75),
+    0 0 70px 14px rgb(56 189 248 / 0.28),
+    0 0 220px 60px rgb(56 189 248 / 0.12);
+}
+
+/* Sunrise glare just behind the horizon */
+.title-glare {
+  position: absolute;
+  inset-block-start: 76%;
+  inset-inline-start: 50%;
+  inline-size: 120vmax;
+  block-size: 22vmax;
+  translate: -50% -50%;
+  background: radial-gradient(ellipse at center, rgb(253 230 138 / 0.35), rgb(245 158 11 / 0.12) 35%, transparent 70%);
+  animation: title-fade 2s ease-out 1s both;
+}
+
+/* Centred on the top of the horizon, under the logo and the story */
+.title-tank {
+  position: absolute;
+  inset-block-start: 76%;
+  inset-inline-start: 50%;
+  inline-size: clamp(130px, 17vmax, 250px);
+  translate: -50% -94%;
+  overflow: visible;
+}
+
+.title-tank-body {
+  fill: #03060c;
+  stroke: rgb(125 211 252 / 0.45);
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+
+.title-tank-wheel {
+  fill: #0b111b;
+  stroke: rgb(125 211 252 / 0.3);
+  stroke-width: 1;
+}
+
+/* Muzzle flash at the barrel tip: only when the game is started */
+.title-flash {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: 0% 50%;
+}
+
+.title-screen.is-starting .title-flash {
+  animation: title-muzzle 0.45s ease-out both;
+}
+
+/* The whole screen flashes with the shot, and the view jolts */
+.title-screen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #fff7e0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.title-screen.is-starting::after {
+  animation: title-screen-flash 0.5s ease-out both;
+}
+
+.title-screen.is-starting .title-world {
+  animation: title-jolt 0.35s ease-out both;
+}
+
+/* ---- medals earned (js/titleScreen.js): a row under the tank, one group per planet ---------- */
+.title-medals {
+  position: absolute;
+  inset-block-start: calc(76% + 0.5rem);
+  inset-inline: 1rem;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.3rem clamp(0.8rem, 3vmin, 1.6rem);
+  pointer-events: none;
+}
+
+.title-medals[hidden] {
+  display: none;
+}
+
+.title-medal-group {
+  display: flex;
+  gap: clamp(0.2rem, 0.8vmin, 0.45rem);
+}
+
+/* Each medal drops in after the planet has risen, one after another */
+.title-medal {
+  display: block;
+  animation: title-medal-in 0.5s cubic-bezier(0.3, 1.5, 0.5, 1) both;
+  animation-delay: calc(2.4s + var(--i, 0) * 0.12s);
+}
+
+.title-medal .medal {
+  inline-size: clamp(1.4rem, 4.2vmin, 2.1rem);
+}
+
+.title-screen.is-starting .title-medals {
+  animation: title-jolt 0.35s ease-out both;
+}
+
+/* ---- logo -------------------------------------------------------------------------------- */
+.title-head {
+  position: absolute;
+  inset-inline: 1rem;
+  inset-block-start: 0;
+  block-size: 66%; /* ends above the tank on the horizon */
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: clamp(0.25rem, 1.2vmin, 0.7rem);
+  text-align: center;
+  pointer-events: none;
+}
+
+.title-badge {
+  font-family: var(--font-mono);
+  font-size: clamp(0.62rem, 1.6vmin, 0.85rem);
+  letter-spacing: 0.4em;
+  color: var(--accent-cyan);
+  text-shadow: 0 0 8px rgb(56 189 248 / 0.6);
+  animation: title-fade 0.9s ease-out 1.5s both;
+}
+
+.title-logo {
+  margin: 0;
+  display: grid;
+  justify-items: center;
+  line-height: 0.92;
+  transform: skewX(-7deg);
+}
+
+.title-logo-top {
+  font-size: clamp(0.95rem, 3.6vmin, 2.1rem);
+  font-weight: 800;
+  letter-spacing: 0.62em;
+  margin-inline-end: -0.62em; /* trailing letter-spacing would push it off-centre */
+  color: #dbeafe;
+  text-shadow: 0 0 14px rgb(56 189 248 / 0.7);
+  animation: title-logo-in 1.1s cubic-bezier(0.2, 0.8, 0.3, 1) 0.9s both;
+}
+
+/* Gold metal, with a highlight sweeping across it every few seconds */
+.title-logo-main {
+  font-size: clamp(2.6rem, 12vmin, 7.6rem);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  margin-inline-end: -0.04em;
+  background:
+    linear-gradient(105deg, transparent 42%, rgb(255 255 255 / 0.85) 50%, transparent 58%) no-repeat,
+    linear-gradient(180deg, #fffbeb 0%, #fde68a 30%, #f59e0b 50%, #92400e 54%, #d97706 72%, #fde68a 100%);
+  background-size: 300% 100%, 100% 100%;
+  background-position: 150% 0, 0 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  /* blur() first so the intro (title-logo-main-in) can animate the same filter list */
+  filter: blur(0) drop-shadow(0 3px 0 #451a03) drop-shadow(0 0 22px rgb(245 158 11 / 0.45));
+  animation:
+    title-logo-main-in 1.2s cubic-bezier(0.2, 0.8, 0.3, 1) 1.1s both,
+    title-sweep 4.5s ease-in-out 2.6s infinite;
+}
+
+.title-sub {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.9em;
+  font-size: clamp(0.7rem, 1.9vmin, 1rem);
+  font-weight: 700;
+  letter-spacing: 0.5em;
+  margin-inline-end: -0.5em;
+  color: var(--text-main);
+  text-shadow: 0 0 10px rgb(0 0 0 / 0.9);
+  animation: title-fade 0.9s ease-out 1.8s both;
+}
+
+.title-sub::before,
+.title-sub::after {
+  content: "";
+  inline-size: clamp(1.5rem, 6vmin, 4rem);
+  block-size: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-bright));
+}
+
+.title-sub::after {
+  background: linear-gradient(90deg, var(--accent-bright), transparent);
+  margin-inline-start: -0.5em; /* the trailing letter-spacing sits before it */
+}
+
+/* ---- "press any key" ------------------------------------------------------------------------ */
+.title-prompt {
+  position: absolute;
+  inset-inline: 1rem;
+  inset-block-end: 6%;
+  display: grid;
+  justify-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  text-align: center;
+  pointer-events: none;
+  animation: title-fade 0.8s ease-out 4.1s both;
+}
+
+.title-prompt-main {
+  font-family: var(--font-mono);
+  font-size: clamp(0.95rem, 2.8vmin, 1.4rem);
+  font-weight: 700;
+  letter-spacing: 0.35em;
+  margin-inline-end: -0.35em;
+  color: var(--accent-bright);
+  text-shadow: 0 0 12px rgb(245 158 11 / 0.7);
+  animation: title-blink 1.1s ease-in-out 4.9s infinite alternate;
+}
+
+.title-prompt-hint {
+  font-size: clamp(0.72rem, 1.9vmin, 0.9rem);
+  color: var(--text-muted);
+  letter-spacing: 0.12em;
+}
+
+.title-screen.is-starting .title-prompt-main {
+  animation: title-blink 0.07s linear infinite alternate;
+}
+
+/* ---- story: the four parts of a 司令書, rolling up under the logo ----------------------------- */
+/* Colours as in the briefing's 司令書 (css/briefing.css .scenario-*). The box appears once the
+   logo is up; js/titleScreen.js then rolls the text up through it like end credits, on a loop. */
+.title-scenario {
+  inline-size: min(46rem, 100%);
+  margin-block-start: clamp(0.2rem, 1.2vmin, 0.8rem);
+  padding-inline: clamp(0.75rem, 3vmin, 2rem);
+  position: relative;
+  isolation: isolate; /* keeps the shade below (::before, z-index -1) behind the text */
+  animation: title-line-in 1s ease-out 2.1s both;
+}
+
+/* A soft shade behind the text for legibility: an ellipse larger than the box that fades out in
+   every direction, so it has no visible edge against the starfield */
+.title-scenario::before {
+  content: "";
+  position: absolute;
+  inset: -22% -14%;
+  z-index: -1;
+  background: radial-gradient(closest-side, rgb(2 4 10 / 0.6), rgb(2 4 10 / 0.38) 50%, rgb(2 4 10 / 0.12) 78%, transparent);
+  pointer-events: none;
+}
+
+/* The window the text scrolls through: lines fade in at the bottom and out at the top */
+.title-sc-viewport {
+  block-size: clamp(7.5rem, 30vmin, 14rem);
+  overflow: hidden;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 18%, #000 82%, transparent);
+  mask-image: linear-gradient(180deg, transparent, #000 18%, #000 82%, transparent);
+}
+
+.title-sc-track {
+  will-change: transform;
+}
+
+/* The whole story, rolled up from below the box (js/titleScreen.js moves .title-sc-track) */
+.title-sc-group {
+  display: grid;
+  justify-items: center;
+  gap: clamp(1.6rem, 6vmin, 3rem);
+  text-align: center;
+}
+
+.title-sc-part {
+  display: grid;
+  justify-items: center;
+  gap: clamp(0.2rem, 0.9vmin, 0.45rem);
+}
+
+.title-sc-part p {
+  margin: 0;
+  word-break: auto-phrase; /* Japanese lines break between phrases where supported */
+  text-shadow: 0 0 2px rgb(0 0 0 / 0.9), 0 0 12px rgb(2 4 10 / 0.85);
+}
+
+/* pre-head: who it is for */
+.title-sc-part.is-prehead p {
+  max-inline-size: 30em;
+  font-size: clamp(0.9rem, 2.8vmin, 1.3rem);
+  font-weight: 700;
+  line-height: 1.6;
+  letter-spacing: 0.12em;
+  color: #7dd3fc;
+  text-shadow: 0 0 12px rgb(56 189 248 / 0.55);
+}
+
+/* catch copy: the headline */
+.title-sc-part.is-catch p {
+  font-size: clamp(1.15rem, 4.2vmin, 2.1rem);
+  font-weight: 900;
+  line-height: 1.35;
+  letter-spacing: 0.06em;
+  color: #fde68a;
+  text-shadow: 0 0 20px rgb(245 158 11 / 0.55), 0 2px 0 #451a03;
+}
+
+/* deck copy: backs up the headline */
+.title-sc-part.is-deck p {
+  font-size: clamp(0.85rem, 2.6vmin, 1.25rem);
+  font-weight: 600;
+  line-height: 1.65;
+  letter-spacing: 0.04em;
+  color: var(--text-main);
+}
+
+/* lead: who it is aimed at and what they gain */
+.title-sc-part.is-lead p {
+  max-inline-size: 38em;
+  font-size: clamp(0.8rem, 2.4vmin, 1.12rem);
+  line-height: 1.75;
+  letter-spacing: 0.03em;
+  color: #cbd5e1;
+}
+
+/* The three planets: small turning globes with their names */
+.title-sc-planets {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.4rem clamp(0.9rem, 4vmin, 2.4rem);
+  padding-block: 0.25rem;
+}
+
+.title-sc-planet {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: start;
+}
+
+.title-sc-planet .planet-globe {
+  --globe-size: clamp(1.8rem, 5.2vmin, 2.8rem);
+}
+
+.title-sc-planet-name {
+  display: grid;
+  line-height: 1.25;
+}
+
+.title-sc-planet-name span {
+  font-size: clamp(0.6rem, 1.6vmin, 0.72rem);
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+}
+
+.title-sc-planet-name strong {
+  font-size: clamp(0.75rem, 2.1vmin, 0.95rem);
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 8px currentColor;
+}
+
+/* ---- keyframes ------------------------------------------------------------------------------ */
+@keyframes title-line-in {
+  from {
+    opacity: 0;
+    filter: blur(6px);
+    transform: translateY(0.5em);
+  }
+}
+
+@keyframes title-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes title-rise {
+  from { transform: translateY(32vh); }
+  to { transform: none; }
+}
+
+@keyframes title-logo-in {
+  from {
+    opacity: 0;
+    filter: blur(10px);
+    letter-spacing: 0.9em;
+  }
+}
+
+@keyframes title-logo-main-in {
+  from {
+    opacity: 0;
+    filter: blur(12px) drop-shadow(0 3px 0 #451a03) drop-shadow(0 0 22px rgb(245 158 11 / 0));
+    letter-spacing: 0.5em;
+  }
+}
+
+@keyframes title-sweep {
+  0% { background-position: 150% 0, 0 0; }
+  45%,
+  100% { background-position: -50% 0, 0 0; }
+}
+
+@keyframes title-medal-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.6rem) scale(0.6);
+  }
+}
+
+@keyframes title-blink {
+  from { opacity: 1; }
+  to { opacity: 0.3; }
+}
+
+@keyframes title-muzzle {
+  0% { opacity: 1; transform: scale(0.4); }
+  25% { opacity: 1; transform: scale(1.25); }
+  100% { opacity: 0; transform: scale(1.6); }
+}
+
+@keyframes title-screen-flash {
+  0% { opacity: 0; }
+  12% { opacity: 0.55; }
+  100% { opacity: 0; }
+}
+
+@keyframes title-jolt {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-6px, 3px); }
+  45% { transform: translate(4px, -2px); }
+  70% { transform: translate(-2px, 1px); }
+  100% { transform: none; }
+}
+
+/* Landscape phones: the horizon a little lower so the logo and the story have room */
+@media (max-height: 560px) {
+  .title-planet,
+  .title-glare {
+    inset-block-start: 80%;
+  }
+
+  .title-tank {
+    inset-block-start: 80%;
+    inset-inline-start: 50%;
+    inline-size: clamp(110px, 14vmax, 160px);
+  }
+
+  /* No room for the badge, subtitle and globes: the logo and the four parts only */
+  .title-head {
+    block-size: 71%;
+    gap: 0.2rem;
+  }
+
+  .title-badge {
+    display: none;
+  }
+
+  .title-sc-viewport {
+    block-size: clamp(6rem, 34vmin, 9rem);
+  }
+
+  .title-prompt {
+    inset-block-end: 3%;
+  }
+
+  .title-medals {
+    inset-block-start: calc(80% + 0.3rem);
+  }
+
+  .title-medal .medal {
+    inline-size: 1.25rem;
+  }
+
+  .title-prompt-hint {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title-stars,
+  .title-world,
+  .title-glare,
+  .title-badge,
+  .title-logo-top,
+  .title-logo-main,
+  .title-sub,
+  .title-prompt,
+  .title-prompt-main,
+  .title-screen.is-starting .title-world,
+  .title-screen.is-starting .title-prompt-main,
+  .title-screen.is-starting::after,
+  .title-screen.is-starting .title-medals,
+  .title-medal,
+  .title-scenario {
+    animation: none;
+  }
+
+  .title-screen.is-leaving {
+    transition: none;
+  }
+}

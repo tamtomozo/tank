@@ -350,77 +350,7 @@ dialog.sortie-dialog {
   margin-inline-end: auto;
 }
 
-/* First-load "click to connect" screen (#audio-gate): waits for the gesture that unlocks audio.
-   The screen is solid black from the first paint; only the panel fades in, after a short delay so
-   it doesn't flash when the browser unlocks audio by itself. */
-.audio-gate {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  display: grid;
-  place-items: center;
-  padding-inline: 1rem;
-  background: #000;
-  cursor: pointer;
-}
-
-/* Connected: fade from black to the operations room (duration = GATE_FADE_MS in js/sortieSelect.js) */
-.audio-gate.is-leaving {
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 1.2s ease-in-out;
-}
-
-.audio-gate[hidden] {
-  display: none;
-}
-
-.audio-gate-panel {
-  display: grid;
-  justify-items: center;
-  gap: 0.6rem;
-  padding-block: 1.4rem;
-  padding-inline: 2rem;
-  border: 1px solid var(--panel-border);
-  border-radius: 0.5rem;
-  background: var(--panel-bg);
-  text-align: center;
-  animation: audio-gate-in 0.5s ease-out 0.35s both;
-}
-
-.audio-gate-panel .dialog-badge {
-  justify-self: center;
-}
-
-.audio-gate-title {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--text-main);
-  letter-spacing: 0.08em;
-}
-
-.audio-gate-hint {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: 0.9rem;
-  color: var(--accent-cyan);
-  animation: audio-gate-blink 1.1s ease-in-out infinite alternate;
-}
-
-@keyframes audio-gate-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes audio-gate-blink {
-  from { opacity: 1; }
-  to { opacity: 0.35; }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .audio-gate-panel,
-  .audio-gate-hint,
   .planet-globe {
     animation: none;
   }

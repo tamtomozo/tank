@@ -28,6 +28,7 @@
   <link rel="stylesheet" href="css/depot.css">
   <link rel="stylesheet" href="css/tuning.css">
   <link rel="stylesheet" href="css/hqbackdrop.css">
+  <link rel="stylesheet" href="css/title.css">
   <!-- phones: on-screen controls + compact HUD / dialogs (last: overrides the rules above) -->
   <link rel="stylesheet" href="css/touch.css">
   <!-- shared helpers & data first: every later script reads them at load time -->
@@ -69,6 +70,7 @@
   <script src="js/tacticalMap.js" defer></script>
   <script src="js/hqBackdrop.js" defer></script>
   <script src="js/planetGlobe.js" defer></script>
+  <script src="js/titleScreen.js" defer></script>
   <script src="js/sortieSelect.js" defer></script>
   <script src="js/planetSelect.js" defer></script>
   <script src="js/medal.js" defer></script>
@@ -297,18 +299,92 @@
     </div>
   </div>
 
-  <!-- First-load "click to connect" screen: the browser keeps audio muted until the first click /
-       key press, so the sortie select (and its BGM) waits for one (js/sortieSelect.js).
-       Shown from the first paint so the page starts on a black screen; hidden by JS if not needed. -->
-  <div id="audio-gate" class="audio-gate" role="status">
-    <div class="audio-gate-panel">
-      <div class="dialog-badge">OPERATIONS HQ — STANDBY</div>
-      <p class="audio-gate-title">作戦本部 回線待機中</p>
-      <p class="audio-gate-hint">
-        <span class="only-pointer">クリック または いずれかのキーで接続</span>
-        <span class="only-touch">画面をタップして接続</span>
-      </p>
+  <!-- Title screen (js/titleScreen.js, css/title.css): shown from the first paint. The logo with the
+       story of the campaign under it, in the four parts of a 司令書 (pre-head / catch / deck / lead,
+       like each operation's briefing), scrolling up on a loop. Its click / tap / key press also lets the browser play sound,
+       so the sortie select (and its BGM) follows it. -->
+  <div id="title-screen" class="title-screen" role="dialog" aria-labelledby="title-logo">
+    <canvas class="title-stars" aria-hidden="true"></canvas>
+    <div class="title-world" aria-hidden="true">
+      <div class="title-glare"></div>
+      <div class="title-planet"></div>
+      <!-- tank silhouette on the horizon, facing right -->
+      <svg class="title-tank" viewBox="0 0 210 80">
+        <g class="title-tank-body">
+          <line x1="88" y1="16" x2="78" y2="1" stroke-width="1.6"/>
+          <g transform="rotate(-6 124 24)">
+            <rect x="118" y="21" width="74" height="6" rx="1.5"/>
+            <rect x="186" y="19" width="12" height="10" rx="1.5"/>
+          </g>
+          <path d="M70 36 L80 17 L120 14 L134 25 L136 36 Z"/>
+          <path d="M26 36 L178 36 L190 47 L180 57 L32 57 L16 47 Z"/>
+          <rect x="22" y="53" width="160" height="22" rx="11"/>
+        </g>
+        <g class="title-tank-wheel">
+          <circle cx="36" cy="64" r="7"/><circle cx="58" cy="65" r="7"/><circle cx="80" cy="65" r="7"/>
+          <circle cx="102" cy="65" r="7"/><circle cx="124" cy="65" r="7"/><circle cx="146" cy="65" r="7"/>
+          <circle cx="168" cy="64" r="7"/>
+        </g>
+        <g class="title-flash" transform="rotate(-6 124 24)">
+          <ellipse cx="214" cy="24" rx="20" ry="9" fill="#fde68a"/>
+          <ellipse cx="210" cy="24" rx="11" ry="5" fill="#fff"/>
+        </g>
+      </svg>
     </div>
+
+    <!-- Medals earned so far, under the tank (best rank per operation; js/titleScreen.js) -->
+    <div class="title-medals" role="group" aria-label="獲得した勲章" hidden></div>
+
+    <div class="title-head">
+      <div class="title-badge">PLANETARY ARMORED CORPS</div>
+      <h1 id="title-logo" class="title-logo">
+        <span class="title-logo-top">PLANET</span>
+        <span class="title-logo-main">PANZER</span>
+      </h1>
+      <p class="title-sub">惑星戦車バトル</p>
+      <!-- The four parts, scrolling up through the box on a loop (js/titleScreen.js) -->
+      <div class="title-scenario">
+        <div class="title-sc-viewport">
+          <div class="title-sc-track">
+            <div class="title-sc-group">
+              <!-- Told by a narrator. pre-head: who it is about -->
+              <div class="title-sc-part is-prehead">
+                <p>三つの惑星を、ひとつずつ落としていく遠征。</p>
+                <p>その先陣を切って降下する部隊を率いるのは、ひとりの小隊長である。</p>
+              </div>
+              <!-- catch copy: the headline -->
+              <div class="title-sc-part is-catch">
+                <p>三つの星を落とす。</p>
+                <p>その最初の一歩を刻むのは、司令部ではない。</p>
+                <p>小隊長の「前進」の号令だ。</p>
+              </div>
+              <!-- deck copy: backs up the headline, sparks curiosity (globes added by js/titleScreen.js) -->
+              <div class="title-sc-part is-deck">
+                <p>目標は、三つの惑星。</p>
+                <div class="title-sc-planets" aria-hidden="true"></div>
+                <p>砂嵐の吹く辺境ザハル、吹雪と極夜に閉ざされたヴェルグ、<wbr>そして工場と都市に覆われた敵の本星カストラ。</p>
+                <p>ひとつの星を落とすたびに、次の星への道が開く。<wbr>どこかで足が止まれば、遠征はそこで終わる。</p>
+                <p>この作戦が求めているのは、迷わず前へ出る指揮官だった。</p>
+              </div>
+              <!-- lead: what the commanders were given, and what they did with it -->
+              <div class="title-sc-part is-lead">
+                <p>作戦発動を目前にして、方面軍司令官から小隊長たちへ、一通の司令書が届けられた。</p>
+                <p>そこに記されていたのは三つのこと。<wbr>攻略する拠点と、その配置。<wbr>拠点を一つずつ制圧し、作戦本部へ生きて帰るまでの手順。<wbr>そして、部下を前へ進ませるために、小隊長が掲げるべき一言。</p>
+                <p>読み終えた者から順に、彼らは格納庫へ向かい、戦車の調整と装備の点検を始めた。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="title-prompt">
+      <span class="title-prompt-main">PRESS START</span>
+      <span class="title-prompt-hint">
+        <span class="only-pointer">クリック または いずれかのキーで開始</span>
+        <span class="only-touch">画面をタップして開始</span>
+      </span>
+    </p>
   </div>
 
   <!-- Phones are landscape-only: while one is held upright (menus included) everything waits behind
