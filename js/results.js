@@ -38,10 +38,11 @@
     const minutes = stats.elapsed / 60;
     const accuracy = stats.shotsFired > 0 ? stats.shotsHit / stats.shotsFired : 0;
     let score = 100;
-    score -= Math.min(30, Math.max(0, minutes - 8) * 3); // slower than 8 minutes costs points
-    score -= stats.alliesLost * 8;
-    score -= Math.min(25, (stats.damageTaken / Math.max(1, playerMaxHp)) * 10);
-    score += Math.max(-10, Math.min(15, (accuracy - 0.3) * 30));
+    score -= Math.min(30, Math.max(0, minutes - 7) * 4); // slower than 7 minutes costs points
+    score -= stats.alliesLost * 12;
+    score -= Math.min(40, (stats.damageTaken / Math.max(1, playerMaxHp)) * 25);
+    // 50% accuracy is neutral; a small bonus above it, a larger penalty below
+    score += Math.max(-20, Math.min(5, (accuracy - 0.5) * 40));
     score = Math.round(Math.max(0, Math.min(100, score)));
     const rank = score >= 90 ? 'S' : score >= 75 ? 'A' : score >= 60 ? 'B' : 'C';
     return { rank, score, accuracy };
