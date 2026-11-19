@@ -226,7 +226,7 @@
         return;
       }
       if (!this.operation || this.missionComplete) return;
-      this._updateSurvey(player);
+      const surveyFinished = this._updateSurvey(player);
       this._updateFeint(player);
       if (!this.bases.every((b) => b.cleared || b.optional)) return;
       if (this.survey && !this.survey.every((p) => p.done)) return;
@@ -247,12 +247,15 @@
       // Objective done: the mission clock stops right here
       this.missionComplete = true;
       this.stats.endClock = this._clockStamp();
-      this.events.push({ type: 'areaSecured' });
+      // bySurvey: the last survey point finished it (the player is out on the ice)
+      this.events.push({ type: 'areaSecured', bySurvey: surveyFinished });
     }
 
     // ---- survey points / feint ------------------------------------------------------------------
+    // Returns true on the frame the last survey point is visited
     _updateSurvey(player) {
-      if (!this.survey || !player.alive) return;
+      if (!this.survey || !player.alive) return false;
+      let finished = false;
       for (const [i, p] of this.survey.entries()) {
         if (p.done) continue;
         if (Math.hypot(this.world.deltaX(p.x, player.x), this.world.deltaY(p.y, player.y)) > SURVEY_RADIUS) continue;
@@ -260,7 +263,9 @@
         const left = this.survey.filter((q) => !q.done).length;
         this.audio.playWaveClear();
         this.events.push({ type: 'surveyed', point: p, index: i, left });
+        if (left === 0) finished = true;
       }
+      return finished;
     }
 
     _updateFeint(player) {

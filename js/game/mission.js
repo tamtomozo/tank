@@ -376,9 +376,11 @@
           }
         } else if (ev.type === 'areaSecured') {
           // Objective done: Mio reports it and orders the platoon home (controls locked until she
-          // has finished)
+          // has finished). Not when the last ice survey point finished it: the tank is out on the
+          // frozen lake, where stopping cracks the ice, so it keeps moving while she talks.
+          const onIce = ev.bySurvey && !(game.operation && game.operation.operation.surveyKind === 'patrol');
           for (const line of global.RadioComms.script.areaSecured(game.operation, planetName())) {
-            radio.say(line, { lockControls: true });
+            radio.say(line, { lockControls: !onIce });
           }
         } else if (ev.type === 'holdStart') {
           for (const line of global.RadioComms.script.holdStart(game.operation, combat.hold)) {
